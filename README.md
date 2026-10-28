@@ -98,28 +98,28 @@ cd DarfinOS
 
 ### Opção A — interface visual no terminal (TUI V4)
 
-Com `darfinos_tui_v4.py` e `DarfinOSInstallScript.sh` **na mesma pasta**:
+Com `DarfinOSInstallScript-TUI.py` e `DarfinOSInstallScript.sh` **na mesma pasta**:
 
 ```bash
-python3 darfinos_tui_v4.py
+python3 DarfinOSInstallScript-TUI.py
 ```
 
 Para testar a seleção e a montagem do comando **sem instalar nada**:
 
 ```bash
-python3 darfinos_tui_v4.py --dry-run
+python3 DarfinOSInstallScript-TUI.py --dry-run
 ```
 
 Para apontar para outro instalador Bash:
 
 ```bash
-python3 darfinos_tui_v4.py ./meu-script.sh
+python3 DarfinOSInstallScript-TUI.py ./meu-script.sh
 ```
 
 Para solicitar a versão remota do Bash:
 
 ```bash
-python3 darfinos_tui_v4.py --fetch
+python3 DarfinOSInstallScript-TUI.py --fetch
 ```
 
 > [!WARNING]
