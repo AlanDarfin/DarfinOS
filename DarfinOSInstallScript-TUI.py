@@ -1172,7 +1172,7 @@ def stream_install_v4(cmd: list[str], step_names: list[str], logfile: Path, jour
     started=time.monotonic(); event_buf=b''; output_buf=''; ended=False; pending=None
     active_fds={master,er}
     def run(win):
-        nonlocal current,log_mode,waiting,event_buf,output_buf,ended,pending
+        nonlocal current,log_mode,waiting,event_buf,output_buf
         curses.curs_set(0);win.keypad(True);win.nodelay(True)
         if curses.has_colors():
             curses.start_color(); curses.use_default_colors()
