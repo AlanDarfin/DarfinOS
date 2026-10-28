@@ -32,7 +32,7 @@ jobs:
       - name: Verificar sintaxe do Bash
         run: bash -n DarfinOSInstallScript.sh
       - name: Verificar compilação Python
-        run: python -m py_compile darfinos_tui_v4_2.py
+        run: python -m py_compile DarfinOSInstallScript-TUI.py
       - name: Rodar testes (sem rede, sudo ou instalações)
         run: python -m unittest discover -s tests -v
       - name: Verificar lista de etapas do Bash

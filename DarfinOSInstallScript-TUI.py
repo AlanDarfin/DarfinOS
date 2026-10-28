@@ -621,7 +621,7 @@ def draw_v3(win, st: State, visible: list[int], cursor: int, top: int,
                 put(win, h-4, 2, s.desc)
                 put(win, h-3, 2, 'Deps: ' + (', '.join(s.deps) or 'nenhuma'))
         put(win, h-2, 2, '↑↓ navegar  Espaço marcar  G grupo  A/N tudo/nada  / buscar  F filtro', colors('muted'))
-        put(win, h-1, 2, 'R revisar  Z retomar  B apps  P perfis  I detectar  M manutenção  H histórico  U atualizar  Q sair', colors('muted'))
+        put(win, h-1, 2, 'R revisar  O presets  Z retomar  B apps  P perfis  I detectar  M manutenção  H histórico  U atualizar  Q sair', colors('muted'))
     else:
         put(win, 5, 2, 'REVISÃO · Enter executa / Esc volta', curses.A_BOLD | colors('pink'))
         chosen = [s for s in st.steps if s.name in st.selected]
@@ -711,6 +711,7 @@ def ui_v3(win, st: State, digest: str) -> str:
             if value is not None: st.search = value; current = top = 0
         elif key in (ord('d'), ord('D')): st.add_deps()
         elif key in (ord('p'), ord('P')): profile_screen(win, st)
+        elif key in (ord('o'), ord('O')): preset_screen(win, st)
         elif key in (ord('i'), ord('I')): inspect_steps(st)
         elif key in (ord('b'), ord('B')): apps_screen(win, st, CURRENT_SCRIPT)
         elif key in (ord('m'), ord('M')): maintenance_screen(win)
@@ -873,8 +874,70 @@ def recovery_screen(win, st: State, script: Path):
         st.message = f'Retomada de {path.name}: {len(selection)} etapas. Revise antes de executar.'
         st.recovery_parent = path.name
 
+# Presets versionados: etapas explicitamente listadas, sem comandos arbitrários.
+PRESETS = {
+    'minimal': ('Base enxuta', ('pacman_conf', 'mirrors', 'sysupgrade', 'base', 'fonts', 'hardware', 'cli_tools')),
+    'desktop': ('SonicDE + XLibre e desktop', ('pacman_conf', 'mirrors', 'repo_xlibre', 'repo_sonicde', 'sysupgrade', 'base', 'fonts', 'hardware', 'xlibre', 'sonicde', 'desktop_extras', 'bluetooth', 'cli_tools', 'shells', 'flatpak', 'apps')),
+    'gaming': ('Desktop e jogos', ('pacman_conf', 'mirrors', 'repo_xlibre', 'repo_sonicde', 'sysupgrade', 'base', 'fonts', 'hardware', 'xlibre', 'sonicde', 'desktop_extras', 'bluetooth', 'cli_tools', 'flatpak', 'gaming')),
+    'full': ('Todas as etapas, inclusive Bedrock (RISCO)', tuple()),
+}
+
+
+def preset_selection(name: str, steps: list[Step]) -> set[str]:
+    if name not in PRESETS:
+        raise ValueError('Preset desconhecido: ' + name)
+    known = {step.name for step in steps}
+    chosen = set(known if name == 'full' else PRESETS[name][1])
+    unknown = chosen - known
+    if unknown:
+        raise ValueError('Preset incompatível com o Bash: ' + ', '.join(sorted(unknown)))
+    return chosen
+
+
+def apply_preset(st: State, name: str) -> None:
+    st.selected = preset_selection(name, st.steps)
+    st.profile_name = 'preset:' + name
+    st.message = f'Preset {name} aplicado: {len(st.selected)} etapas. Revise antes de instalar.'
+
+
+def preset_screen(win, st: State) -> None:
+    lines = ['PRESETS OFICIAIS · nenhum executa comandos ao selecionar', '']
+    for index, (name, (description, _)) in enumerate(PRESETS.items(), 1):
+        lines.append(f'{index}. {name:<10} {description}')
+    lines.extend(['', 'Full inclui etapas de alto risco, como Bedrock.',
+                  'Todos os presets exigem revisão antes de executar.'])
+    scroll_screen(win, 'PRESETS', '\n'.join(lines))
+    value = prompt(win, 'Preset (minimal/desktop/gaming/full):')
+    if value:
+        try:
+            apply_preset(st, value.strip().lower())
+        except ValueError as exc:
+            st.message = str(exc)
+
+
+def build_manifest(script: Path) -> dict:
+    steps = parse_script(script)
+    rows = inventory(script, {s.name for s in steps})
+    packages = {s.name: [] for s in steps}
+    for step, manager, name in rows:
+        packages[step].append({'manager': manager, 'name': name})
+    return {
+        'schema_version': 1,
+        'script_sha256': sha(script),
+        'accuracy': 'partial_static',
+        'warning': 'Prévia estática: variáveis, arrays, condicionais e chamadas indiretas não são resolvidos; não é lista exaustiva.',
+        'steps': [
+            {'id': s.name, 'description': s.desc, 'group': s.group,
+             'dependencies': s.deps, 'packages': packages[s.name]}
+            for s in steps
+        ],
+        'presets': {name: {'description': description, 'steps': [s.name for s in steps if s.name in preset_selection(name, steps)]}
+                    for name, (description, _) in PRESETS.items()},
+    }
+
+
 def main() -> int:
-    ap = argparse.ArgumentParser(description='DarfinOS TUI V4.2 · curses · sem pip')
+    ap = argparse.ArgumentParser(description='DarfinOS TUI V4.4 · curses · sem pip')
     ap.add_argument('script', nargs='?', type=Path, help='Script Bash local (opcional)')
     ap.add_argument('--local', action='store_true', help='Usa script Bash ao lado do TUI')
     ap.add_argument('--fetch', action='store_true', help='Consulta o GitHub em vez do Bash local')
@@ -884,7 +947,19 @@ def main() -> int:
     ap.add_argument('--history', action='store_true', help='Mostra histórico em texto')
     ap.add_argument('--resume', action='store_true', help='Pré-seleciona etapas não concluídas da última execução')
     ap.add_argument('--runs', action='store_true', help='Lista execuções registradas')
+    ap.add_argument('--preset', choices=tuple(PRESETS), help='Pré-seleciona um preset oficial')
+    ap.add_argument('--list-presets', action='store_true', help='Lista os presets sem abrir a TUI')
+    ap.add_argument('--manifest', action='store_true', help='Imprime manifesto JSON parcial, sem executar o Bash')
     args = ap.parse_args()
+    if args.list_presets:
+        for name, (description, _) in PRESETS.items():
+            print(f'{name:<10} {description}')
+        return 0
+    if args.manifest:
+        script = (args.script or LOCAL).expanduser().resolve()
+        if not script.is_file(): ap.error(f'Não encontrado: {script}')
+        print(json.dumps(build_manifest(script), ensure_ascii=False, indent=2))
+        return 0
     if args.runs:
         for path in sorted(RUN_DIR.glob('run-*.json'), reverse=True):
             data = read_json(path, {})
@@ -914,6 +989,9 @@ def main() -> int:
         steps = parse_script(script)
         st = State(steps=steps, source=origin,
                    selected=set() if args.empty else {s.name for s in steps})
+        if args.preset:
+            try: apply_preset(st, args.preset)
+            except ValueError as exc: ap.error(str(exc))
         if args.profile:
             try: load_named(st, args.profile)
             except ValueError as exc: st.message = str(exc)

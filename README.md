@@ -98,28 +98,28 @@ cd DarfinOS
 
 ### Opção A — interface visual no terminal (TUI V4)
 
-Com `DarfinOSInstallScript-TUI.py` e `DarfinOSInstallScript.sh` **na mesma pasta**:
+Com `darfinos_tui_v4.py` e `DarfinOSInstallScript.sh` **na mesma pasta**:
 
 ```bash
-python3 DarfinOSInstallScript-TUI.py
+python3 darfinos_tui_v4.py
 ```
 
 Para testar a seleção e a montagem do comando **sem instalar nada**:
 
 ```bash
-python3 DarfinOSInstallScript-TUI.py --dry-run
+python3 darfinos_tui_v4.py --dry-run
 ```
 
 Para apontar para outro instalador Bash:
 
 ```bash
-python3 DarfinOSInstallScript-TUI.py ./meu-script.sh
+python3 darfinos_tui_v4.py ./meu-script.sh
 ```
 
 Para solicitar a versão remota do Bash:
 
 ```bash
-python3 DarfinOSInstallScript-TUI.py --fetch
+python3 darfinos_tui_v4.py --fetch
 ```
 
 > [!WARNING]
@@ -274,3 +274,49 @@ E, sinceramente, isso já é motivo suficiente para existir.
 *DarfinOS — opiniões fortes, escolhas questionáveis e um sistema do seu próprio jeito.*
 
 </div>
+
+## 🧪 Testes automatizados e GitHub Actions (V4.3)
+
+O DarfinOS agora inclui uma suíte de testes **sem dependências Python externas**, baseada em `unittest`, e um workflow de integração contínua em `.github/workflows/tests.yml`.
+
+```bash
+bash -n DarfinOSInstallScript.sh
+python3 -m py_compile DarfinOSInstallScript-TUI.py
+python3 -m unittest discover -s tests -v
+```
+
+Os testes verificam o parser das 32 etapas, seleção de dependências, perfis, diário de execução, recuperação por SHA-256 e eventos reais das funções Bash em um ambiente isolado. **Não executam instalações nem comandos de administração do sistema.**
+
+O GitHub Actions verifica sintaxe e testes em múltiplas versões do Python. O ShellCheck gera um relatório de avisos, inicialmente não bloqueante para permitir a revisão gradual do script existente.
+
+Para o escopo, a execução local e as limitações, veja [docs/TESTES.md](docs/TESTES.md).
+
+> [!NOTE]
+> V4.3 é a versão do **pacote de testes e CI**. O nome do frontend permanece `DarfinOSInstallScript-TUI.py`, e o instalador Bash mantém as mesmas etapas e funcionalidades da V4.2.
+
+
+## ✦ V4.4 — Manifesto e presets
+
+A TUI (`DarfinOSInstallScript-TUI.py`) oferece quatro seleções iniciais de etapas:
+
+| Preset | Proposta |
+| --- | --- |
+| `minimal` | Base, fontes, hardware e ferramentas essenciais |
+| `desktop` | SonicDE, XLibre, desktop e aplicativos |
+| `gaming` | Desktop e ferramentas para jogos |
+| `full` | Todas as 32 etapas, **incluindo a conversão Bedrock** |
+
+**Atenção:** `full` inclui ações potencialmente irreversíveis. Nenhum preset executa comandos ao ser escolhido; revise cada etapa e suas dependências.
+
+```bash
+python3 DarfinOSInstallScript-TUI.py --list-presets
+python3 DarfinOSInstallScript-TUI.py --preset gaming --local
+python3 DarfinOSInstallScript-TUI.py --manifest > manifest.json
+python3 -m unittest discover -s tests -v
+```
+
+Dentro da TUI, pressione **O** para escolher um preset. **P** continua gerenciando perfis personalizados; **Z** continua abrindo a recuperação.
+
+O manifesto JSON possui `schema_version`, hash SHA-256 do Bash, descrições e dependências das 32 etapas, pacotes identificados por origem e presets. A marcação `accuracy: partial_static` significa que a lista de pacotes **não é exaustiva**: arrays, variáveis, condicionais e chamadas indiretas podem não aparecer. Os eventos `PKG` continuam registrando chamadas reais durante a instalação. A exportação não executa o instalador Bash.
+
+Para GitHub Actions, o workflow usa o nome atual do frontend `DarfinOSInstallScript-TUI.py`.
