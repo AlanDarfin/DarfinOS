@@ -981,7 +981,7 @@ def inventory(script: Path, selected: set[str]):
             kind = match.group(1)
             statement = match.group(2).replace('\\\n',' ')
             # Stop at shell operators and comments; skip nonliteral tokens.
-            statement = re.split(r'\s(?:\|\||&&|\||;|#)\s',statement,1)[0]
+            statement = re.split(r'\s(?:\|\||&&|\||;|#)\s', statement, maxsplit=1)[0]
             try: args = shlex.split(statement,comments=True)
             except ValueError: continue
             for item in args:
