@@ -197,6 +197,7 @@ fi
 # Funções utilitárias
 # ----------------------------------------------------------
 install_pkgs() {
+  darfinos_event "PKG:pacman:$*"
   # Mantém a confirmação do pacman mesmo com -y: uma instalação aparentemente
   # comum pode exigir remoções/substituições por conflitos de dependências.
   sudo pacman -S --needed "$@"
@@ -206,6 +207,7 @@ install_pkgs() {
 # nunca responder automaticamente a perguntas do pacman. Mesmo com -y,
 # o usuário deve revisar e aceitar a transação conscientemente.
 install_pkgs_replace() {
+  darfinos_event "PKG:pacman:$*"
   warn "A operação pode substituir pacotes existentes: $*"
   sudo pacman -S --needed "$@"
 }
@@ -219,6 +221,7 @@ detect_aur_helper() {
 }
 
 aur_install() {
+  darfinos_event "PKG:aur:$*"
   local helper
   helper=$(detect_aur_helper)
   if [[ -n "$helper" ]]; then
@@ -232,6 +235,7 @@ aur_install() {
 }
 
 flatpak_install() {
+  darfinos_event "PKG:flatpak:$*"
   local app failed=0
   for app in "$@"; do
     if flatpak info --system "$app" >/dev/null 2>&1; then
@@ -247,6 +251,15 @@ flatpak_install() {
   return "$failed"
 }
 
+# DarfinOS TUI V4: canal opcional de eventos; execução normal permanece igual.
+# FD separado evita que eventos contaminem logs, prompts ou saídas de comandos.
+darfinos_event() {
+  [[ "${DARFINOS_EVENT_FD:-}" =~ ^[0-9]+$ ]] || return 0
+  local payload="$1"
+  printf '%s\n' "$payload" >&"$DARFINOS_EVENT_FD" || true
+}
+
+
 # confirm "pergunta" [s|n]  -> o segundo argumento é o padrão (padrão: n)
 confirm() {
   local prompt="$1" default="${2:-n}" resp hint
@@ -255,6 +268,7 @@ confirm() {
     [[ $default == s ]]
     return
   fi
+  darfinos_event "PROMPT_CONFIRM:${default}:${prompt}"
   read -rp "$prompt $hint: " resp
   resp=${resp,,}
   [[ -z "$resp" ]] && resp=$default
@@ -265,6 +279,7 @@ confirm() {
 choose() {
   local prompt="$1" options="$2" default="$3" resp
   if (( ASSUME_YES )); then echo "$default"; return; fi
+  darfinos_event "PROMPT_CHOOSE:${default}:${options}:${prompt}"
   read -rp "$prompt [$options]: " resp
   resp=${resp,,}
   echo "${resp:-$default}"
@@ -424,7 +439,7 @@ FAILED_STEPS=()
 SKIPPED_STEPS=()
 run_step() {
   local name="$1" rc=0 dep failed failed_dep=""
-  step_enabled "$name" || { echo "--- pulando: $name"; return 0; }
+  step_enabled "$name" || { echo "--- pulando: $name"; darfinos_event "STEP_SKIP:$name:desmarcada"; return 0; }
 
   # Não continuar etapas dependentes de outra etapa que falhou nesta execução.
   for dep in ${STEP_DEPS[$name]:-}; do
@@ -436,11 +451,13 @@ run_step() {
   if [[ -n "$failed_dep" ]]; then
     warn "Pulando '$name': a dependência '$failed_dep' falhou."
     SKIPPED_STEPS+=("$name")
+    darfinos_event "STEP_SKIP:$name:dependencia:$failed_dep"
     return 0
   fi
 
   echo
   info "[$name] ${STEP_DESC[$name]:-}"
+  darfinos_event "STEP_START:$name"
   set +e
   ( set -e; "step_$name" )
   rc=$?
@@ -448,6 +465,9 @@ run_step() {
   if (( rc != 0 )); then
     FAILED_STEPS+=("$name")
     warn "Etapa '$name' terminou com erro (código $rc). Etapas dependentes serão puladas; as independentes continuarão."
+    darfinos_event "STEP_FAIL:$name:$rc"
+  else
+    darfinos_event "STEP_DONE:$name"
   fi
 }
 
