@@ -1287,7 +1287,7 @@ EOF
 
     info "Instalando pacotes adicionais do AUR..."
 
-    for pkg in arch-update stylepak-git topgrade-bin; do
+    for pkg in arch-update stylepak-git topgrade-bin opencode-bin; do
       aur_install "$pkg" || warn "Falha ao instalar $pkg; continuando."
     done
   else
