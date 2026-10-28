@@ -8,7 +8,7 @@ import unittest
 from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location('darfinos_tui', ROOT / 'darfinos_tui_v4_2.py')
+SPEC = importlib.util.spec_from_file_location('darfinos_tui', ROOT / 'DarfinOSInstallScript-TUI.py')
 TUI = importlib.util.module_from_spec(SPEC)
 import sys
 sys.modules[SPEC.name] = TUI
@@ -159,7 +159,7 @@ class CliTests(unittest.TestCase):
             with self.subTest(option=option), tempfile.TemporaryDirectory() as tmp:
                 env = os.environ.copy()
                 env['HOME'] = tmp
-                proc = subprocess.run([sys.executable, str(ROOT / 'darfinos_tui_v4_2.py'), option],
+                proc = subprocess.run([sys.executable, str(ROOT / 'DarfinOSInstallScript-TUI.py'), option],
                                       capture_output=True, text=True, env=env, timeout=10)
                 self.assertEqual(proc.returncode, 0, proc.stderr)
 
