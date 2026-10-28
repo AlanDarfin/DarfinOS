@@ -40,10 +40,10 @@
       "keyColor": "#ffcb2e"
     },
     {
-      "type": "command",
-      "key": " 󰃭  AGE     ",
-      "keyColor": "#ffcb2e",
-      "text": "birth_install=$(stat -c %W / | tr -d '0' == '' && stat -c %Y / || stat -c %W /); now=$(date +%s); echo $(((now-birth_install)/86400)) days"
+  "type": "command",
+  "key": " 󰃭  AGE     ",
+  "keyColor": "#ffcb2e",
+  "text": "birth_install=$(stat -c %W /); if [ \"$birth_install\" -eq 0 ]; then birth_install=$(stat -c %Y /); fi; now=$(date +%s); echo $(((now-birth_install)/86400)) days"
     },
     {
       "type": "uptime",
