@@ -8,7 +8,7 @@ Requer Python 3.10+ e Bash; `curses` precisa estar disponível na instalação d
 
 ```bash
 bash -n DarfinOSInstallScript.sh
-python3 -m py_compile darfinos_tui_v4_2.py
+python3 -m py_compile DarfinOSInstallScript-TUI.py
 python3 -m unittest discover -s tests -v
 bash DarfinOSInstallScript.sh --list
 ```
