@@ -570,69 +570,94 @@ def history_screen(win) -> None:
     scroll_screen(win, 'HISTÓRICO DO GITHUB', '\n'.join(lines))
 
 
+def progress_meter(completed: int, total: int, width: int) -> str:
+    """Pure visual helper; does not infer installation success."""
+    width = max(0, width)
+    filled = round(width * max(0, min(completed, total)) / max(1, total))
+    return '█' * filled + '░' * (width - filled)
+
+
+def visual_status(flag: str) -> tuple[str, str]:
+    return {
+        'DONE': ('✓', 'green'), 'FAIL': ('✗', 'red'),
+        'SKIP': ('–', 'yellow'), 'RUN': ('◌', 'blue'),
+        'PEND': ('·', 'muted'),
+    }.get(flag, ('?', 'muted'))
+
+
 def draw_v3(win, st: State, visible: list[int], cursor: int, top: int,
             mode: str, review_scroll: int, digest: str) -> None:
+    """V5: responsive dashboard, keeping V4 navigation and state intact."""
     h, w = win.getmaxyx()
     win.erase()
     if h < 16 or w < 54:
         put(win, 1, 2, 'Terminal pequeno: mínimo 54x16. Q sai.', colors('yellow'))
         win.refresh()
         return
-    split = w >= 100
+    wide = w >= 100
+    selected = len(st.selected)
     put(win, 0, 2, '◆ DARFINOS', curses.A_BOLD | colors('pink'))
-    put(win, 0, 15, 'CONTROL CENTER  /  V4', curses.A_BOLD)
-    put(win, 0, max(38, w - 20), f'{len(st.selected)}/{len(st.steps)} etapas', colors('green'))
+    put(win, 0, 15, 'V5  /  CONTROL CENTER', curses.A_BOLD)
+    put(win, 0, max(36, w - 20), f'{selected:02d}/{len(st.steps):02d} ETAPAS', colors('green'))
     line(win, 1)
-    put(win, 2, 2, f'ORIGEM: {st.source}'[:w-4], colors('muted'))
-    put(win, 3, 2, f'PERFIL: {st.profile_name}   SHA256: {digest[:16]}   -y: {"SIM" if st.yes else "NÃO"}', colors('muted'))
+    profile = st.profile_name or 'personalizado'
+    put(win, 2, 2, f'FONTE  {st.source}  ·  PERFIL  {profile}'[:w-4], colors('muted'))
+    put(win, 3, 2, f'SHA  {digest[:12]}   AUTO -y  {"SIM" if st.yes else "NÃO"}', colors('muted'))
+    bar_width = max(8, w - 39)
+    put(win, 3, min(w-2, 38), progress_meter(selected, len(st.steps), bar_width), colors('green'))
     line(win, 4)
     if mode == 'list':
-        width = (w * 60 // 100) if split else w - 2
-        list_height = h - (8 if split else 12)
-        put(win, 5, 2, 'ETAPAS  /  Espaço seleciona', curses.A_BOLD | colors('pink'))
+        pane = w * 60 // 100 if wide else w - 2
+        list_height = max(1, h - (8 if wide else 12))
+        put(win, 5, 2, '01  ETAPAS  /  [ESPAÇO] MARCAR', curses.A_BOLD | colors('pink'))
         for pos in range(top, min(len(visible), top + list_height)):
-            s = st.steps[visible[pos]]
+            step = st.steps[visible[pos]]
             y = 6 + pos - top
             active = pos == cursor
+            checked = step.name in st.selected
             attr = curses.A_REVERSE if active else 0
-            if active: put(win, y, 1, ' ' * (width - 2), attr)
-            selected = s.name in st.selected
-            label = f'{"[x]" if selected else "[ ]"} {s.name:<20} {s.desc}'
-            put(win, y, 2, label[:width-4], attr | (colors('green') if selected else 0))
-        if not visible: put(win, 7, 3, 'Nenhum resultado para a busca.', colors('yellow'))
-        if split:
-            x = width + 1
+            if active:
+                put(win, y, 1, ' ' * (pane - 2), attr)
+            marker = '■' if checked else '□'
+            label = f'{marker} {step.name:<20} {step.desc}'
+            put(win, y, 2, label[:pane-4], attr | (colors('green') if checked else 0))
+        if not visible:
+            put(win, 7, 3, 'Nenhum resultado para a busca.', colors('yellow'))
+        if wide:
+            x = pane + 1
             for y in range(5, h-3): put(win, y, x, '│', colors('muted'))
-            put(win, 5, x+2, 'DETALHES', curses.A_BOLD | colors('pink'))
+            put(win, 5, x+2, '02  INSPEÇÃO DA ETAPA', curses.A_BOLD | colors('pink'))
             if visible:
-                s = st.steps[visible[cursor]]
-                details = [s.name, '', 'Grupo: ' + s.group, '', s.desc, '',
-                           'Dependências: ' + (', '.join(s.deps) or 'nenhuma'), '',
-                           'Detecção: ' + st.statuses.get(s.name, 'não consultado')]
+                step = st.steps[visible[cursor]]
+                details = [step.name.upper(), '', 'GRUPO  ' + step.group, '', step.desc,
+                           '', 'DEPENDÊNCIAS', ', '.join(step.deps) or 'nenhuma',
+                           '', 'DETECÇÃO', st.statuses.get(step.name, 'não consultado')]
                 yy = 7
                 for item in details:
                     for part in textwrap.wrap(item, max(12, w-x-5)) or ['']:
-                        if yy < h-3: put(win, yy, x+2, part); yy += 1
+                        if yy < h-3:
+                            put(win, yy, x+2, part)
+                            yy += 1
         else:
             line(win, h-6)
             if visible:
-                s = st.steps[visible[cursor]]
-                put(win, h-5, 2, f'{s.name} · {s.group}', curses.A_BOLD | colors('pink'))
-                put(win, h-4, 2, s.desc)
-                put(win, h-3, 2, 'Deps: ' + (', '.join(s.deps) or 'nenhuma'))
-        put(win, h-2, 2, '↑↓ navegar  Espaço marcar  G grupo  A/N tudo/nada  / buscar  F filtro', colors('muted'))
-        put(win, h-1, 2, 'R revisar  O presets  Z retomar  B apps  P perfis  I detectar  M manutenção  H histórico  U atualizar  Q sair', colors('muted'))
+                step = st.steps[visible[cursor]]
+                put(win, h-5, 2, f'INSPEÇÃO  {step.name}  /  {step.group}', curses.A_BOLD | colors('pink'))
+                put(win, h-4, 2, step.desc)
+                put(win, h-3, 2, 'Deps: ' + (', '.join(step.deps) or 'nenhuma'))
+        put(win, h-2, 2, '↑↓ navegar · Espaço marcar · G grupo · A/N todos/nenhum · / busca · F filtro', colors('muted'))
+        put(win, h-1, 2, 'R revisar · O presets · Z retomar · B apps · P perfis · I detectar · M manutenção · H histórico · U atualizar · Q sair', colors('muted'))
     else:
-        put(win, 5, 2, 'REVISÃO · Enter executa / Esc volta', curses.A_BOLD | colors('pink'))
-        chosen = [s for s in st.steps if s.name in st.selected]
-        lines = [f' + {s.name:<22} {s.desc}' for s in chosen]
-        lines += ['', 'Dependências ausentes:']
-        lines += [f' ! {name}: {", ".join(deps)}' for name, deps in st.missing().items()]
-        lines += ['', 'D: incluir dependências   Y: alternar -y   B: aplicativos',
-                  'ATENÇÃO: script remoto pode executar comandos com sudo.']
-        for i, row in enumerate(lines[review_scroll:review_scroll + h - 9]):
+        put(win, 5, 2, '02  REVISÃO DA INSTALAÇÃO  /  ENTER CONFIRMA', curses.A_BOLD | colors('pink'))
+        chosen = [step for step in st.steps if step.name in st.selected]
+        rows = [f' ■ {step.name:<22} {step.desc}' for step in chosen]
+        rows += ['', 'DEPENDÊNCIAS AUSENTES']
+        rows += [f' ! {name}: {", ".join(deps)}' for name, deps in st.missing().items()]
+        rows += ['', 'D: incluir dependências   Y: alternar -y   B: aplicativos',
+                 'ATENÇÃO: o instalador pode executar comandos com sudo.']
+        for i, row in enumerate(rows[review_scroll:review_scroll + h - 9]):
             put(win, 6+i, 2, row)
-        put(win, h-2, 2, '↑↓ rolar  D dependências  Enter executar  Esc voltar', colors('muted'))
+        put(win, h-2, 2, '↑↓ rolar · D dependências · Enter executar · Esc voltar', colors('muted'))
     put(win, h-1 if mode == 'review' else h-3, 2, st.message[:w-4], colors('yellow'))
     win.refresh()
 
@@ -937,7 +962,7 @@ def build_manifest(script: Path) -> dict:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description='DarfinOS TUI V4.4 · curses · sem pip')
+    ap = argparse.ArgumentParser(description='DarfinOS TUI V5 · curses · sem pip')
     ap.add_argument('script', nargs='?', type=Path, help='Script Bash local (opcional)')
     ap.add_argument('--local', action='store_true', help='Usa script Bash ao lado do TUI')
     ap.add_argument('--fetch', action='store_true', help='Consulta o GitHub em vez do Bash local')
@@ -1115,43 +1140,49 @@ def _modal(win, title, detail, choices=None, secret=False):
 
 
 def _install_draw(win, names, status, current, tail, elapsed, log_mode, count, waiting, packages):
-    h,w=win.getmaxyx(); win.erase()
-    if h<15 or w<48:
-        put(win,0,1,'Terminal pequeno. Amplie para 48x15.',colors('yellow'))
-        win.refresh(); return
-    done=sum(status.get(n)=='DONE' for n in names)
-    fail=sum(status.get(n)=='FAIL' for n in names)
-    skip=sum(status.get(n)=='SKIP' for n in names)
-    total=len(names); finished=done+fail+skip
-    spinner='|/-\\'[int(time.monotonic()*5)%4]
-    put(win,0,2,'◆ DARFINOS  /  INSTALANDO',curses.A_BOLD|colors('pink'))
-    put(win,0,max(31,w-24),f'{int(elapsed)//60:02d}:{int(elapsed)%60:02d}  {spinner}',colors('yellow'))
-    line(win,1)
-    put(win,2,2,f'Etapa atual: {current or "Preparando ambiente / autenticação"}'[:w-4],curses.A_BOLD)
-    put(win,3,2,f'Concluídas: {done}   Falhas: {fail}   Ignoradas: {skip}   Total: {total}',colors('muted'))
-    bw=max(8,w-6); filled=int(bw*finished/max(1,total))
-    put(win,4,2,'█'*filled+'░'*(bw-filled),colors('green'))
-    put(win,5,2,f'{finished}/{total} etapas finalizadas · {len(packages)} pacotes mencionados na execução',colors('muted'))
-    line(win,6)
-    available=h-11
+    """V5 live installation cockpit; statuses come only from Bash events."""
+    h, w = win.getmaxyx()
+    win.erase()
+    if h < 15 or w < 48:
+        put(win, 0, 1, 'Terminal pequeno. Amplie para 48x15.', colors('yellow'))
+        win.refresh()
+        return
+    done = sum(status.get(n) == 'DONE' for n in names)
+    fail = sum(status.get(n) == 'FAIL' for n in names)
+    skip = sum(status.get(n) == 'SKIP' for n in names)
+    total = len(names)
+    finished = done + fail + skip
+    spinner = '◐◓◑◒'[int(time.monotonic()*5)%4]
+    put(win, 0, 2, '◆ DARFINOS  /  V5 LIVE', curses.A_BOLD | colors('pink'))
+    put(win, 0, max(29, w-22), f'{int(elapsed)//60:02d}:{int(elapsed)%60:02d}  {spinner}', colors('yellow'))
+    line(win, 1)
+    put(win, 2, 2, f'AGORA  {current or "Preparando ambiente / autenticação"}'[:w-4], curses.A_BOLD)
+    put(win, 3, 2, f'✓ {done} concluídas', colors('green'))
+    put(win, 3, 22, f'✗ {fail} falhas', colors('red'))
+    put(win, 3, 39, f'– {skip} ignoradas', colors('yellow'))
+    put(win, 4, 2, progress_meter(finished, total, max(8, w-6)), colors('green'))
+    put(win, 5, 2, f'{finished}/{total} etapas encerradas  ·  {len(packages)} pacotes registrados  ·  progresso por etapa', colors('muted'))
+    line(win, 6)
+    available = max(1, h-11)
     if log_mode:
-        put(win,7,2,'SAÍDA RECENTE  ·  L retorna ao painel',curses.A_BOLD|colors('pink'))
-        display=list(tail)[-available:]
+        put(win, 7, 2, 'LOG AO VIVO  /  L VOLTA AO PAINEL', curses.A_BOLD | colors('pink'))
+        display = [(str(t), 'muted') for t in list(tail)[-available:]]
     else:
-        put(win,7,2,'STATUS DAS ETAPAS  ·  L mostra logs',curses.A_BOLD|colors('pink'))
-        display=[]
-        for n in names:
-            flag=status.get(n,'PEND')
-            sym={'DONE':'✓','FAIL':'✗','SKIP':'-','RUN':'◌','PEND':'·'}[flag]
-            display.append(f'{sym} {n:<23} {flag}')
-        if len(display)>available:
-            idx=names.index(current) if current in names else 0
-            start=max(0,min(idx-available//2,len(display)-available))
-            display=display[start:start+available]
-    for i,t in enumerate(display): put(win,8+i,2,t[:w-4])
-    line(win,h-3)
-    put(win,h-2,2,('AGUARDANDO RESPOSTA · ' if waiting else '')+'L logs/painel · T terminal · Ctrl+C interromper',colors('yellow'))
-    put(win,h-1,2,'Perguntas reconhecidas aparecem em janelas. T permite responder prompts desconhecidos.',colors('muted'))
+        put(win, 7, 2, 'ESTADO DAS ETAPAS  /  L MOSTRA LOGS', curses.A_BOLD | colors('pink'))
+        display = []
+        for name in names:
+            flag = status.get(name, 'PEND')
+            sym, color = visual_status(flag)
+            display.append((f'{sym} {name:<23} {flag}', color))
+        if len(display) > available:
+            idx = names.index(current) if current in names else 0
+            offset = max(0, min(idx-available//2, len(display)-available))
+            display = display[offset:offset+available]
+    for i, (entry, color) in enumerate(display):
+        put(win, 8+i, 2, entry[:w-4], colors(color))
+    line(win, h-3)
+    put(win, h-2, 2, ('● AGUARDANDO RESPOSTA  ·  ' if waiting else '') + 'L painel/logs · T terminal · Ctrl+C interrompe', colors('yellow'))
+    put(win, h-1, 2, 'Prompts reconhecidos abrem modais; T abre o terminal para prompts desconhecidos.', colors('muted'))
     win.refresh()
 
 

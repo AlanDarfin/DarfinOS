@@ -320,3 +320,14 @@ Dentro da TUI, pressione **O** para escolher um preset. **P** continua gerencian
 O manifesto JSON possui `schema_version`, hash SHA-256 do Bash, descrições e dependências das 32 etapas, pacotes identificados por origem e presets. A marcação `accuracy: partial_static` significa que a lista de pacotes **não é exaustiva**: arrays, variáveis, condicionais e chamadas indiretas podem não aparecer. Os eventos `PKG` continuam registrando chamadas reais durante a instalação. A exportação não executa o instalador Bash.
 
 Para GitHub Actions, o workflow usa o nome atual do frontend `DarfinOSInstallScript-TUI.py`.
+
+## TUI V5 — atualização visual
+
+A V5 atualiza o painel de seleção e o monitor de instalação, preservando o Bash, o protocolo de eventos, os presets, o manifesto, a recuperação e as demais funcionalidades da V4.4.
+
+- Interface adaptável para terminais a partir de 54×16; painel lateral de detalhes em janelas largas.
+- Indicadores de etapas selecionadas, estados coloridos e barras de progresso com significado explícito.
+- Durante a instalação, **L** alterna entre o painel de estados e o log; **T** abre o terminal PTY integral.
+- Os indicadores de conclusão representam etapas **encerradas** (incluindo falhas e ignoradas), não sucesso garantido.
+
+Veja [`docs/TUI_V5.md`](docs/TUI_V5.md) para limitações e testes. O frontend continua sendo `DarfinOSInstallScript-TUI.py`.
