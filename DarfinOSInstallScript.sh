@@ -1295,6 +1295,28 @@ EOF
   fi
 }
 
+  # --------------------------------------------------------
+  # OMNIROUTE — GATEWAY DE IA (INICIALIZAÇÃO MANUAL)
+  # --------------------------------------------------------
+  info "Configurando OmniRoute..."
+
+  if command -v npm >/dev/null 2>&1; then
+    if confirm "Deseja instalar/atualizar o OmniRoute?" n; then
+      if npm install -g omniroute; then
+        info "OmniRoute instalado."
+        info "Para iniciar manualmente, execute: omniroute"
+        info "Acesse o painel local em: http://localhost:20128"
+        info "Para encerrar, use Ctrl+C no terminal."
+      else
+        warn "Falha ao instalar o OmniRoute."
+      fi
+    else
+      info "Instalação do OmniRoute ignorada."
+    fi
+  else
+    warn "npm não encontrado. Instale o Node.js/npm antes do OmniRoute."
+  fi
+
 # ==========================================================
 # BEDROCK LINUX — INSTALAÇÃO INTERATIVA
 # ==========================================================
