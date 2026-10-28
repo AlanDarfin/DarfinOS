@@ -1052,6 +1052,7 @@ step_flatpak() {
 
   # Ferramentas
   flatpak_install \
+    com.visualstudio.code \
     org.gtk.Gtk3theme.Breeze \
     io.github.kolunmi.Bazaar \
     com.github.sdv43.whaler \
