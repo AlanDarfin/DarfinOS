@@ -1,0 +1,61 @@
+name: DarfinOS · Testes
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Python ${{ matrix.python-version }} · testes offline
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.12', '3.13']
+    steps:
+      - name: Obter código
+        uses: actions/checkout@v4
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Verificar sintaxe do Bash
+        run: bash -n DarfinOSInstallScript.sh
+      - name: Verificar compilação Python
+        run: python -m py_compile darfinos_tui_v4_2.py
+      - name: Rodar testes (sem rede, sudo ou instalações)
+        run: python -m unittest discover -s tests -v
+      - name: Verificar lista de etapas do Bash
+        run: bash DarfinOSInstallScript.sh --list
+
+  shellcheck:
+    name: ShellCheck · relatório de qualidade
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar ShellCheck
+        run: sudo apt-get update -qq && sudo apt-get install -y shellcheck
+      - name: Analisar Bash (avisos não bloqueiam enquanto houver legado)
+        run: |
+          shellcheck -S warning DarfinOSInstallScript.sh > shellcheck-report.txt 2>&1 || {
+            echo '::warning::ShellCheck encontrou avisos. Veja o relatório no artifact.'
+            cat shellcheck-report.txt
+          }
+      - name: Publicar relatório
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shellcheck-report
+          path: shellcheck-report.txt
+          if-no-files-found: ignore
