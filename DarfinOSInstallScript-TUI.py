@@ -621,7 +621,7 @@ def draw_v3(win, st: State, visible: list[int], cursor: int, top: int,
                 put(win, h-4, 2, s.desc)
                 put(win, h-3, 2, 'Deps: ' + (', '.join(s.deps) or 'nenhuma'))
         put(win, h-2, 2, '↑↓ navegar  Espaço marcar  G grupo  A/N tudo/nada  / buscar  F filtro', colors('muted'))
-        put(win, h-1, 2, 'R revisar  B aplicativos  P perfis  I detectar  M manutenção  H histórico  U atualizar  Q sair', colors('muted'))
+        put(win, h-1, 2, 'R revisar  Z retomar  B apps  P perfis  I detectar  M manutenção  H histórico  U atualizar  Q sair', colors('muted'))
     else:
         put(win, 5, 2, 'REVISÃO · Enter executa / Esc volta', curses.A_BOLD | colors('pink'))
         chosen = [s for s in st.steps if s.name in st.selected]
@@ -714,6 +714,7 @@ def ui_v3(win, st: State, digest: str) -> str:
         elif key in (ord('i'), ord('I')): inspect_steps(st)
         elif key in (ord('b'), ord('B')): apps_screen(win, st, CURRENT_SCRIPT)
         elif key in (ord('m'), ord('M')): maintenance_screen(win)
+        elif key in (ord('z'), ord('Z')): recovery_screen(win, st, CURRENT_SCRIPT)
         elif key in (ord('h'), ord('H')): history_screen(win)
         elif key in (ord('y'), ord('Y')): st.yes = not st.yes
         elif key in (ord('r'), ord('R'), 10, 13): mode = 'review'; scroll = 0
@@ -785,8 +786,95 @@ def stream_install_v3(cmd: list[str], step_names: list[str], logfile: Path) -> i
             except subprocess.TimeoutExpired: process.kill(); process.wait()
 
 
+# V4.2: diário atômico para retomada conservadora.
+RUN_DIR = Path.home() / '.local/state/darfinos-tui/runs'
+
+def latest_run():
+    files = sorted(RUN_DIR.glob('run-*.json'), reverse=True)
+    for path in files:
+        data = read_json(path, None)
+        if isinstance(data, dict) and data.get('schema') == 1:
+            return path, data
+    return None, None
+
+def recovery_selection(st: State, script: Path, record: dict) -> tuple[set[str], str]:
+    if not isinstance(record.get('statuses'), dict):
+        raise ValueError('Registro sem estados válidos.')
+    if record.get('script_sha256') != sha(script):
+        raise ValueError('O Bash mudou desde a execução. Retomada bloqueada; revise o diff ou use a versão anterior.')
+    known = st.lookup
+    previous = record.get('statuses', {})
+    original = set(record.get('selected', []))
+    if not original or not original <= set(known):
+        raise ValueError('O histórico contém etapas ausentes ou inválidas.')
+    # RUN significa interrupção em etapa possivelmente parcialmente aplicada.
+    retry = {name for name in original if previous.get(name) != 'DONE'}
+    if not retry:
+        raise ValueError('Todas as etapas registradas já foram concluídas.')
+    # Dependências concluídas não precisam ser executadas de novo.
+    queue = list(retry)
+    while queue:
+        name = queue.pop()
+        for dep in known[name].deps:
+            if dep in known and dep not in retry and previous.get(dep) != 'DONE':
+                retry.add(dep)
+                queue.append(dep)
+    uncertain = [n for n in retry if previous.get(n) in ('RUN', 'PEND', None)]
+    warning = ('ATENÇÃO: etapas RUN/PEND podem ter sido aplicadas parcialmente: ' + ', '.join(uncertain)) if uncertain else 'Etapas falhas/ignoradas selecionadas para nova tentativa.'
+    return retry, warning
+
+def prepare_run(script: Path, names: list[str], log: Path, parent: str | None = None):
+    RUN_DIR.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
+    path = RUN_DIR / f'run-{stamp}.json'
+    data = {'schema': 1, 'started_at': datetime.now(timezone.utc).isoformat(),
+            'script_sha256': sha(script), 'script_path': str(script),
+            'selected': names, 'statuses': {n:'PEND' for n in names},
+            'log': str(log), 'exit_code': None, 'parent_run': parent,
+            'events': [], 'state': 'RUNNING'}
+    atomic_json(path, data)
+    path.chmod(0o600)
+    return path, data
+
+def update_run(path: Path, data: dict, event: str | None = None, code: int | None = None):
+    if event:
+        parts = event.split(':', 2)
+        if len(parts) >= 2 and parts[0] in ('STEP_START','STEP_DONE','STEP_FAIL','STEP_SKIP'):
+            name = parts[1]
+            if name in data['statuses']:
+                data['statuses'][name] = {'STEP_START':'RUN','STEP_DONE':'DONE',
+                    'STEP_FAIL':'FAIL','STEP_SKIP':'SKIP'}[parts[0]]
+                data['events'].append({'time':datetime.now(timezone.utc).isoformat(), 'event':event})
+    if code is not None:
+        data['exit_code'] = code
+        data['finished_at'] = datetime.now(timezone.utc).isoformat()
+        data['state'] = 'DONE' if code == 0 and all(v == 'DONE' for v in data['statuses'].values()) else 'INCOMPLETE'
+    atomic_json(path, data)
+
+def recovery_screen(win, st: State, script: Path):
+    path, record = latest_run()
+    if record is None:
+        st.message = 'Nenhuma instalação anterior registrada na V4.2.'
+        return
+    try:
+        selection, warning = recovery_selection(st, script, record)
+    except ValueError as exc:
+        scroll_screen(win, 'RECUPERAÇÃO BLOQUEADA', str(exc) + '\n\nRegistro: ' + str(path))
+        return
+    details = [f'Registro: {path.name}', f'Origem: {record.get("started_at", "?")}',
+               f'Estado: {record.get("state", "?")}', f'SHA256: {record["script_sha256"][:20]}', '',
+               'Concluídas anteriormente: ' + ', '.join(n for n,v in record['statuses'].items() if v=='DONE'),
+               '', 'Serão selecionadas para nova tentativa:', *('  - '+n+' ['+record['statuses'].get(n,'?')+']' for n in sorted(selection)),
+               '', warning, '', 'A retomada NÃO desfaz mudanças anteriores.']
+    scroll_screen(win, 'DIAGNÓSTICO DA ÚLTIMA INSTALAÇÃO', '\n'.join(details))
+    answer = prompt(win, 'Selecionar etapas pendentes? Digite RETOMAR para confirmar:')
+    if answer == 'RETOMAR':
+        st.selected = selection
+        st.message = f'Retomada de {path.name}: {len(selection)} etapas. Revise antes de executar.'
+        st.recovery_parent = path.name
+
 def main() -> int:
-    ap = argparse.ArgumentParser(description='DarfinOS TUI V4 · curses · sem pip')
+    ap = argparse.ArgumentParser(description='DarfinOS TUI V4.2 · curses · sem pip')
     ap.add_argument('script', nargs='?', type=Path, help='Script Bash local (opcional)')
     ap.add_argument('--local', action='store_true', help='Usa script Bash ao lado do TUI')
     ap.add_argument('--fetch', action='store_true', help='Consulta o GitHub em vez do Bash local')
@@ -794,7 +882,14 @@ def main() -> int:
     ap.add_argument('--empty', action='store_true', help='Inicia sem selecionar etapas')
     ap.add_argument('--profile', help='Carrega perfil salvo')
     ap.add_argument('--history', action='store_true', help='Mostra histórico em texto')
+    ap.add_argument('--resume', action='store_true', help='Pré-seleciona etapas não concluídas da última execução')
+    ap.add_argument('--runs', action='store_true', help='Lista execuções registradas')
     args = ap.parse_args()
+    if args.runs:
+        for path in sorted(RUN_DIR.glob('run-*.json'), reverse=True):
+            data = read_json(path, {})
+            print(path.name, data.get('state'), data.get('exit_code'), data.get('started_at'))
+        return 0
     if args.history:
         for rec in read_json(HISTORY, []): print(rec)
         return 0
@@ -822,6 +917,13 @@ def main() -> int:
         if args.profile:
             try: load_named(st, args.profile)
             except ValueError as exc: st.message = str(exc)
+        if args.resume:
+            _, old = latest_run()
+            if not old: ap.error('Nenhuma execução anterior registrada')
+            try:
+                st.selected, st.message = recovery_selection(st, script, old)
+            except ValueError as exc: ap.error(str(exc))
+            st.recovery_parent = latest_run()[0].name
         try: action = curses.wrapper(ui_v3, st, digest)
         except KeyboardInterrupt: return 130
         if action == 'quit': return 0
@@ -846,7 +948,9 @@ def main() -> int:
             if answer not in ('s', 'sim'): return 0
             timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
             log = LOG_DIR / f'install-{timestamp}.log'
-            code = stream_install_v4(cmd, [s.name for s in steps if s.name in st.selected], log)
+            names = [s.name for s in steps if s.name in st.selected]
+            journal, run_data = prepare_run(script, names, log, getattr(st, 'recovery_parent', None))
+            code = stream_install_v4(cmd, names, log, journal, run_data)
             print(f'\nCódigo de saída: {code} | Log: {log}')
             return code
 
@@ -973,7 +1077,7 @@ def _install_draw(win, names, status, current, tail, elapsed, log_mode, count, w
     win.refresh()
 
 
-def stream_install_v4(cmd: list[str], step_names: list[str], logfile: Path) -> int:
+def stream_install_v4(cmd: list[str], step_names: list[str], logfile: Path, journal=None, run_data=None) -> int:
     """PTY para stdin/stdout; pipe dedicado para eventos; curses para monitoramento."""
     import errno
     logfile.parent.mkdir(parents=True,exist_ok=True)
@@ -1012,6 +1116,7 @@ def stream_install_v4(cmd: list[str], step_names: list[str], logfile: Path) -> i
                         while b'\n' in event_buf:
                             raw,event_buf=event_buf.split(b'\n',1)
                             evt=raw.decode('utf-8','replace').strip()
+                            if journal is not None: update_run(journal, run_data, event=evt)
                             parts=evt.split(':',2); typ=parts[0]
                             if typ.startswith('STEP_') and len(parts)>=2:
                                 name=parts[1]
@@ -1087,10 +1192,18 @@ def stream_install_v4(cmd: list[str], step_names: list[str], logfile: Path) -> i
                                 try:chunk=os.read(er,65536)
                                 except OSError:chunk=b''
                                 event_buf+=chunk
-                                # Consume events next loop; this terminal mode handles stdin itself.
+                                # Eventos serão processados ao voltar ao painel.
                                 if len(event_buf)>200000:event_buf=event_buf[-100000:]
                     finally:
                         termios.tcsetattr(sys.stdin.fileno(),termios.TCSADRAIN,old)
+                        # Processa eventos recebidos durante o terminal integral.
+                        while b'\n' in event_buf:
+                            raw,event_buf=event_buf.split(b'\n',1)
+                            evt=raw.decode('utf-8','replace').strip()
+                            if journal is not None: update_run(journal, run_data, event=evt)
+                            bits=evt.split(':',2)
+                            if len(bits)>=2 and bits[1] in statuses:
+                                statuses[bits[1]]={'STEP_START':'RUN','STEP_DONE':'DONE','STEP_FAIL':'FAIL','STEP_SKIP':'SKIP'}.get(bits[0],statuses[bits[1]])
                         curses.reset_prog_mode();win.refresh()
                 elif key==3:
                     try:os.killpg(proc.pid,signal.SIGINT)
@@ -1114,7 +1227,9 @@ def stream_install_v4(cmd: list[str], step_names: list[str], logfile: Path) -> i
             except ProcessLookupError:pass
             try:proc.wait(timeout=3)
             except subprocess.TimeoutExpired:proc.kill();proc.wait()
-    return proc.wait()
+    result = proc.wait()
+    if journal is not None: update_run(journal, run_data, code=result)
+    return result
 
 if __name__ == '__main__':
     sys.exit(main())
