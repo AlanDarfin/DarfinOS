@@ -11,7 +11,7 @@
 ![XLibre](https://img.shields.io/badge/DISPLAY-XLibre-FFCB2E?style=for-the-badge&labelColor=171717)
 ![Bash + Python](https://img.shields.io/badge/TOOLS-Bash_%2B_Python-FFCB2E?style=for-the-badge&labelColor=171717)
 
-**[🌐 Site do projeto](https://github.com/AlanDarfin/darfinos-website) · [⬇️ Releases](https://github.com/AlanDarfin/DarfinOS/releases) · [📖 Documentação](docs/) · [🧪 Actions](https://github.com/AlanDarfin/DarfinOS/actions)**
+**[🌐 Site do projeto](https://github.com/AlanDarfin/darfinos-website) · [📖 Documentação](docs/) · [🧪 Actions](https://github.com/AlanDarfin/DarfinOS/actions)**
 
 [Instalação](#-começando) · [TUI V5](#-darfinos-tui-v5--control-center) · [Etapas](#-o-que-o-darfinos-configura) · [Créditos](#-os-projetos-por-trás-do-darfinos) · [Documentação](#-documentação) · [Segurança](#-avisos-importantes) · [Contato](#-contato)
 
