@@ -1,8 +1,23 @@
-# Testes e integração contínua — DarfinOS
+<div align="center">
+
+# ⚡ Testes & Qualidade
+
+**DarfinOS — Seu Arch, minhas regras.**
+
+[← README](../README.md) · [📚 Documentação](./) · [🌐 Site](https://github.com/AlanDarfin/darfinos-website)
+
+</div>
+
+---
 
 Esta camada adiciona testes **sem instalar pacotes**, sem chamar `sudo` e sem precisar de Arch Linux. O instalador de produção permanece independente dos testes.
 
-## Executar localmente
+![GitHub Actions](https://img.shields.io/github/actions/workflow/status/AlanDarfin/DarfinOS/tests.yml?branch=main&label=Testes&style=for-the-badge&labelColor=171717&color=FFCB2E)
+
+> [!NOTE]
+> Os testes automatizados validam componentes do projeto, **não** substituem uma instalação de teste em VM nem garantem compatibilidade com todo hardware.
+
+## 🧪 Executar localmente
 
 Requer Python 3.10+ e Bash; `curses` precisa estar disponível na instalação do Python.
 
