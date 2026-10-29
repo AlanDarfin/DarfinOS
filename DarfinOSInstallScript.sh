@@ -1401,8 +1401,6 @@ EOF
   else
     info "Instalação dos pacotes adicionais ignorada."
   fi
-}
-
   # --------------------------------------------------------
   # OMNIROUTE — GATEWAY DE IA (INICIALIZAÇÃO MANUAL)
   # --------------------------------------------------------
@@ -1424,6 +1422,8 @@ EOF
   else
     warn "npm não encontrado. Instale o Node.js/npm antes do OmniRoute."
   fi
+
+}
 
 # ==========================================================
 # BEDROCK LINUX — INSTALAÇÃO INTERATIVA
