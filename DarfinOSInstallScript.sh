@@ -1221,6 +1221,21 @@ step_apps() {
     flatpak_install "$discord_app"
   fi
 
+  if [[ "$discord_client" == discord ]] && confirm "Deseja instalar BetterDiscord no Discord oficial?" n; then
+    warn "BetterDiscord modifica o cliente Discord e pode contrariar os termos de uso."
+    if flatpak info --system com.discordapp.Discord >/dev/null 2>&1; then
+      warn "O Discord foi instalado via Flatpak. O BetterDiscord CLI pode não detectar ou modificar essa instalação isolada automaticamente."
+      info "Instalação oficial: https://docs.betterdiscord.app/users/getting-started/installation"
+      info "Para instalar automaticamente, utilize uma instalação nativa do Discord compatível com bdcli."
+    elif command -v bdcli >/dev/null 2>&1; then
+      bdcli install --channel stable || warn "Falha ao aplicar BetterDiscord."
+    else
+      info "BetterDiscord CLI oficial: npm install -g @betterdiscord/cli"
+      info "Depois execute: bdcli install --channel stable"
+      warn "Instalação automática ignorada: bdcli não encontrado."
+    fi
+  fi
+
   if confirm "Deseja configurar o mod Shelter para Discord?" n; then
     info "Guia oficial do Shelter: https://shelter.uwu.network/install"
     warn "O Shelter depende do cliente escolhido. Por segurança, consulte o método compatível no guia oficial; a instalação não será executada automaticamente."
