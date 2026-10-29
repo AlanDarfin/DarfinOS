@@ -534,7 +534,42 @@ EOF
 # o pacman modificado do CachyOS; exige revisão e consentimento explícitos.
 step_repo_cachyos() {
   require_x86_64
-  if grep -qE '^\\[cachyos([^]]*)?\\][[:space:]]*
+  if grep -qE '^\\[cachyos[^]]*\\][[:space:]]*$' /etc/pacman.conf; then
+    info "Repositórios CachyOS já presentes no pacman.conf; não serão reinstalados."
+    return 0
+  fi
+
+  warn "O instalador oficial pode alterar pacman e a ordem dos repositórios."
+  info "Documentação: https://wiki.cachyos.org/pt/features/optimized_repos/"
+  if (( ASSUME_YES )); then
+    info "Modo -y: ignorando CachyOS; exige confirmação explícita."
+    return 0
+  fi
+  confirm "Deseja preparar a instalação dos repositórios CachyOS?" n || return 0
+
+  local workdir="$TMP_DIR/cachyos-repo-install"
+  mkdir -p "$workdir"
+  curl -fL --retry 3 --connect-timeout 10 --max-time 120 \
+    https://mirror.cachyos.org/cachyos-repo.tar.xz \
+    -o "$workdir/cachyos-repo.tar.xz" || return 1
+
+  if ! tar -tJf "$workdir/cachyos-repo.tar.xz" | awk '
+    /^\\// || /(^|\\/)\\.\\.(\\/|$)/ { bad=1 }
+    END { exit bad ? 1 : 0 }
+  '; then
+    warn "Arquivo contém caminhos inseguros."
+    return 1
+  fi
+  tar -xJf "$workdir/cachyos-repo.tar.xz" -C "$workdir" || return 1
+
+  local installer="$workdir/cachyos-repo/cachyos-repo.sh"
+  [[ -f "$installer" ]] || { warn "Instalador não encontrado."; return 1; }
+  info "Revise o script oficial antes de autorizar execução como root: $installer"
+  confirm "Você revisou e autoriza executar o script como root?" n || return 0
+  sudo bash "$installer"
+}
+
+step_repo_xlibre() {
   require_x86_64
   if grep -qE '^\[xlibre[^]]*\][[:space:]]*$' /etc/pacman.conf; then
     local existing_xlibre
