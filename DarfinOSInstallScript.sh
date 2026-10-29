@@ -553,11 +553,13 @@ step_repo_cachyos() {
     https://mirror.cachyos.org/cachyos-repo.tar.xz \
     -o "$workdir/cachyos-repo.tar.xz" || return 1
 
-  if ! tar -tJf "$workdir/cachyos-repo.tar.xz" | awk '
-    /^\\// || /(^|\\/)\\.\\.(\\/|$)/ { bad=1 }
+  # Verifica cada componente do caminho sem regex com barras escapadas.
+  if ! tar -tJf "$workdir/cachyos-repo.tar.xz" | awk -F/ '
+    /^\\// { bad=1 }
+    { for (i=1; i<=NF; i++) if ($i=="..") bad=1 }
     END { exit bad ? 1 : 0 }
   '; then
-    warn "Arquivo contém caminhos inseguros."
+    warn "Arquivo CachyOS inválido ou com caminhos inseguros."
     return 1
   fi
   tar -xJf "$workdir/cachyos-repo.tar.xz" -C "$workdir" || return 1
@@ -1557,6 +1559,14 @@ step_terminal_extras() {
     return 1
   fi
 
+  # Registra falhas preexistentes (por exemplo, sudoers do Bedrock).
+  local global_sudoers_ok=1
+  if ! sudo visudo -c; then
+    global_sudoers_ok=0
+    warn "A validação global do sudoers já falhava antes desta alteração."
+    warn "A configuração do DarfinOS será validada separadamente."
+  fi
+
   if sudo test -e "$sudoers_file"; then
     sudo cp -p "$sudoers_file" "$backup" || return 1
   fi
@@ -1566,8 +1576,8 @@ step_terminal_extras() {
     return 1
   fi
 
-  if ! sudo visudo -c; then
-    warn "Validação global falhou; revertendo configuração do sudo."
+  if (( global_sudoers_ok )) && ! sudo visudo -c; then
+    warn "A configuração global passou a falhar após a alteração; revertendo."
     if [[ -f "$backup" ]]; then
       sudo install -o root -g root -m 0440 "$backup" "$sudoers_file"
     else
@@ -1576,6 +1586,9 @@ step_terminal_extras() {
     return 1
   fi
 
+  if (( ! global_sudoers_ok )); then
+    warn "Permanece uma falha global preexistente no sudoers; revise-a separadamente."
+  fi
   ok "Personalizações do sudo ativadas: ${sudo_options[*]}"
 }
 
