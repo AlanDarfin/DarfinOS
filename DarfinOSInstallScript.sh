@@ -36,7 +36,7 @@ STEPS=(
   # Aplicativos
   flatpak apps gaming browser
   # Manutenção
-  maintenance firewall cleanup bobagens bedrock
+  maintenance firewall cleanup bobagens bedrock terminal_extras
 )
 
 declare -A STEP_DESC=(
@@ -72,6 +72,7 @@ declare -A STEP_DESC=(
   [cleanup]="Limpeza de órfãos e caches"
   [bobagens]="Coisas extras ai"
   [bedrock]="Instalação do Bedrock Linux"
+  [terminal_extras]="Extras do terminal (sudo pwfeedback e insults)"
 )
 
 # ----------------------------------------------------------
@@ -1477,6 +1478,57 @@ step_bedrock() {
   fi
 
   rm -rf "$temp_dir"
+}
+
+# ==========================================================
+# EXTRAS DO TERMINAL — SUDO
+# ==========================================================
+step_terminal_extras() {
+  local -a sudo_options=()
+  local sudoers_file="/etc/sudoers.d/90-darfinos-terminal"
+  local candidate="$TMP_DIR/darfinos-terminal-sudoers"
+  local backup="$TMP_DIR/darfinos-terminal-sudoers.previous"
+
+  if confirm "Mostrar asteriscos ao digitar a senha no sudo (pwfeedback)?" n; then
+    sudo_options+=(pwfeedback)
+  fi
+  if confirm "Ativar mensagens engraçadas para senhas incorretas (insults)?" n; then
+    sudo_options+=(insults)
+  fi
+
+  if (( ${#sudo_options[@]} == 0 )); then
+    info "Nenhuma personalização do sudo selecionada."
+    return 0
+  fi
+
+  printf 'Defaults %s\n' "$(IFS=,; echo "${sudo_options[*]}")" > "$candidate"
+  chmod 0440 "$candidate"
+
+  if ! sudo visudo -cf "$candidate"; then
+    warn "Configuração do sudo inválida; nada foi alterado."
+    return 1
+  fi
+
+  if sudo test -e "$sudoers_file"; then
+    sudo cp -p "$sudoers_file" "$backup" || return 1
+  fi
+
+  if ! sudo install -o root -g root -m 0440 "$candidate" "$sudoers_file"; then
+    warn "Falha ao instalar a configuração do sudo."
+    return 1
+  fi
+
+  if ! sudo visudo -c; then
+    warn "Validação global falhou; revertendo configuração do sudo."
+    if [[ -f "$backup" ]]; then
+      sudo install -o root -g root -m 0440 "$backup" "$sudoers_file"
+    else
+      sudo rm -f -- "$sudoers_file"
+    fi
+    return 1
+  fi
+
+  ok "Personalizações do sudo ativadas: ${sudo_options[*]}"
 }
 
 # ==========================================================
