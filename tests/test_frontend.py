@@ -16,12 +16,12 @@ SPEC.loader.exec_module(TUI)
 BASH = ROOT / 'DarfinOSInstallScript.sh'
 
 class ParserTests(unittest.TestCase):
-    def test_original_32_steps_and_unique_names(self):
+    def test_34_steps_and_unique_names(self):
         steps = TUI.parse_script(BASH)
-        self.assertEqual(len(steps), 32)
-        self.assertEqual(len({s.name for s in steps}), 32)
+        self.assertEqual(len(steps), 34)
+        self.assertEqual(len({s.name for s in steps}), 34)
         self.assertEqual(steps[0].name, 'pacman_conf')
-        self.assertEqual(steps[-1].name, 'bedrock')
+        self.assertEqual(steps[-1].name, 'terminal_extras')
 
     def test_known_dependencies(self):
         lookup = {s.name: s for s in TUI.parse_script(BASH)}
@@ -168,4 +168,4 @@ class CliTests(unittest.TestCase):
         proc = subprocess.run(['bash', str(BASH), '--list'], capture_output=True,
                               text=True, timeout=10)
         self.assertEqual(proc.returncode, 0, proc.stderr)
-        self.assertEqual(len([line for line in proc.stdout.splitlines() if line.strip()]), 32)
+        self.assertEqual(len([line for line in proc.stdout.splitlines() if line.strip()]), 34)
