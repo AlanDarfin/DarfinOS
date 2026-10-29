@@ -58,7 +58,7 @@ declare -A STEP_DESC=(
   [cli_tools]="Ferramentas de terminal (fzf, eza, yazi, starship...)"
   [dev_tools]="Desenvolvimento (neovim, gcc, clang, rust, go, node...)"
   [pkg_managers]="pip, pipx, cargo, npm e go: instalação, PATH e config"
-  [shells]="fish + zsh, starship/zoxide/fzf e shell padrão"
+  [shells]="fish + zsh, tema DarfinOS, starship/zoxide/fzf e shell padrão"
   [git_setup]="Configuração do git e chave SSH"
   [zerotier]="ZeroTier"
   [hamachi]="Hamachi"
@@ -979,6 +979,38 @@ function y
     rm -f -- "$tmp"
 end
 EOF
+
+  # --- tema de cores do Fish (opcional e seguro para reexecução) ---
+  if confirm "Aplicar o tema de cores DarfinOS no Fish?" s; then
+    local theme_dir="$HOME/.config/fish/themes"
+    local theme_file="$theme_dir/DarfinOS.theme"
+    local theme_tmp
+    mkdir -p "$theme_dir"
+    theme_tmp=$(mktemp) || return 1
+    if curl -fsSL --retry 2 --max-time 30 \
+      "https://raw.githubusercontent.com/AlanDarfin/DarfinOS/main/themes/fish/DarfinOS.theme" \
+      -o "$theme_tmp"; then
+      if [[ ! -s "$theme_tmp" ]] || ! grep -q 'fish_color_command' "$theme_tmp"; then
+        warn "Tema Fish baixado está vazio ou inválido; mantendo configuração anterior."
+      else
+        if [[ -f "$theme_file" ]] && ! cmp -s "$theme_tmp" "$theme_file"; then
+          cp -p "$theme_file" "$theme_file.bak" || warn "Não foi possível criar backup do tema anterior."
+        fi
+        if install -m 644 "$theme_tmp" "$theme_file"; then
+          if command -v fish >/dev/null 2>&1 && fish -c 'fish_config theme choose DarfinOS'; then
+            ok "Tema DarfinOS aplicado como padrão no Fish."
+          else
+            warn "Tema salvo em $theme_file, mas não foi possível ativá-lo automaticamente."
+          fi
+        else
+          warn "Não foi possível salvar o tema do Fish."
+        fi
+      fi
+    else
+      warn "Falha ao baixar o tema Fish do repositório; configuração atual preservada."
+    fi
+    rm -f "$theme_tmp"
+  fi
 
   # --- zsh ---
   rc_block ~/.zshrc shell <<'EOF'
