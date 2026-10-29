@@ -1114,21 +1114,60 @@ def inventory(script: Path, selected: set[str]):
                 continue
             origin = 'flatpak' if kind == 'flatpak_install' else 'aur' if kind == 'aur_install' else 'pacman'
             result.extend((step, origin, arg) for arg in args)
+    # Opções de cliente Discord selecionadas dinamicamente em step_apps.
+    if 'apps' in selected and re.search(r'(?m)^step_apps\(\)\s*\{', source):
+        for client in ('dev.vencord.Vesktop', 'io.github.Legcord.Legcord',
+                       'com.discordapp.Discord'):
+            if client in source:
+                result.append(('apps', 'flatpak', client))
     return list(dict.fromkeys(result))
 
 
+def package_match_score(query: str, name: str):
+    """Prioriza coincidências literais; tolera erros pequenos de digitação."""
+    query, name = query.casefold().strip(), name.casefold()
+    if not query:
+        return 100
+    short = name.rsplit('.', 1)[-1]
+    if short == query or name == query:
+        return 100
+    if short.startswith(query):
+        return 95
+    if query in short:
+        return 90
+    if query in name:
+        return 80
+    tokens = re.split(r'[._/+\-]', name)
+    if any(token.startswith(query) for token in tokens):
+        return 75
+    if len(query) < 3:
+        return None
+    ratio = max((difflib.SequenceMatcher(None, query, token).ratio()
+                 for token in tokens if token), default=0)
+    if ratio >= 0.72:
+        return round(ratio * 70)
+    return None
+
+
 def apps_screen(win, st: State, script: Path):
-    """Inventário pesquisável por pacote, etapa, origem ou situação."""
+    """Pesquisa fuzzy pelo nome; origem e etapa têm filtros separados."""
     rows = inventory(script, st.selected)
     native, flat = installed_packages()
     entries = [(step, origin, pkg,
                 'instalado' if pkg in (flat if origin == 'flatpak' else native)
                 else 'não encontrado') for step, origin, pkg in rows]
-    search = ''
-    offset = 0
+    search, origin_filter, offset = '', 'todos', 0
+    origins = ('todos', 'pacman', 'aur', 'flatpak')
     while True:
-        filtered = [entry for entry in entries if search.casefold() in
-                    ' '.join(entry).casefold()]
+        ranked = []
+        for entry in entries:
+            if origin_filter != 'todos' and entry[1] != origin_filter:
+                continue
+            score = package_match_score(search, entry[2])
+            if score is not None:
+                ranked.append((score, entry))
+        ranked.sort(key=lambda item: (-item[0], item[1][2].casefold()))
+        filtered = [entry for _, entry in ranked]
         h, w = win.getmaxyx()
         height = max(1, h - 7)
         offset = max(0, min(offset, max(0, len(filtered) - height)))
@@ -1136,7 +1175,7 @@ def apps_screen(win, st: State, script: Path):
         put(win, 0, 2, f'◆ PACOTES · {len(filtered)}/{len(entries)} resultados',
             curses.A_BOLD | colors('pink'))
         line(win, 1)
-        put(win, 2, 2, ('Busca: ' + (search or '(todos)'))[:max(0, w - 4)],
+        put(win, 2, 2, (f'Busca: {search or "(todos)"}  |  Origem: {origin_filter}')[:max(0, w - 4)],
             colors('yellow'))
         put(win, 3, 2, f'{"ETAPA":<17} {"ORIGEM":<9} {"PACOTE":<38} STATUS'[:max(0,w-4)],
             curses.A_BOLD)
@@ -1145,22 +1184,23 @@ def apps_screen(win, st: State, script: Path):
             put(win, 4 + index, 2, row[:max(0, w - 4)])
         if not filtered:
             put(win, 4, 2, 'Nenhum pacote corresponde à pesquisa.', colors('muted'))
-        put(win, h - 2, 2, 'Prévia: pacotes dinâmicos podem não aparecer.'[:max(0,w-4)],
+        put(win, h - 2, 2, 'Prévia: escolhas dinâmicas podem depender da instalação.'[:max(0,w-4)],
             colors('muted'))
-        put(win, h - 1, 2, '/ buscar · C limpar · ↑↓/PgUp/PgDn rolar · Esc voltar'[:max(0,w-4)],
+        put(win, h - 1, 2, '/ buscar · O origem · C limpar · ↑↓ rolar · Esc voltar'[:max(0,w-4)],
             colors('yellow'))
         win.refresh()
         key = win.getch()
         if key in (27, ord('q'), ord('Q')):
             return
         if key == ord('/'):
-            value = prompt(win, 'Pesquisar pacotes:', search)
+            value = prompt(win, 'Pesquisar nome do pacote:', search)
             if value is not None:
-                search = value.strip()
-                offset = 0
-        elif key in (ord('c'), ord('C')):
-            search = ''
+                search, offset = value.strip(), 0
+        elif key in (ord('o'), ord('O')):
+            origin_filter = origins[(origins.index(origin_filter) + 1) % len(origins)]
             offset = 0
+        elif key in (ord('c'), ord('C')):
+            search, origin_filter, offset = '', 'todos', 0
         elif key in (curses.KEY_DOWN, ord('j')):
             offset += 1
         elif key in (curses.KEY_UP, ord('k')):
