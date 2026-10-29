@@ -171,6 +171,28 @@ def load_profile(state: State):
     state.message = "Perfil restaurado."
 
 
+def init_darfinos_palette():
+    """Paleta dourada: 256 cores quando disponível, fallback ANSI de 8 cores."""
+    if not curses.has_colors():
+        return
+    curses.start_color()
+    try:
+        curses.use_default_colors()
+        background = -1
+    except curses.error:
+        background = curses.COLOR_BLACK
+    if curses.COLORS >= 256:
+        # Dourado elétrico, âmbar, mel, creme e amarelo suave.
+        palette = {'pink': 220, 'green': 226, 'red': 172,
+                   'yellow': 214, 'muted': 186, 'blue': 178}
+    else:
+        palette = {'pink': curses.COLOR_YELLOW, 'green': curses.COLOR_YELLOW,
+                   'red': curses.COLOR_YELLOW, 'yellow': curses.COLOR_YELLOW,
+                   'muted': curses.COLOR_WHITE, 'blue': curses.COLOR_YELLOW}
+    for name, number in C.items():
+        curses.init_pair(number, palette[name], background)
+
+
 def colors(name: str) -> int:
     return curses.color_pair(C[name]) if curses.has_colors() else 0
 
@@ -291,14 +313,7 @@ def draw(win, st: State, visible: list[int], current: int, top: int, mode: str, 
 def ui(win, st: State) -> bool:
     curses.curs_set(0)
     win.keypad(True)
-    if curses.has_colors():
-        curses.start_color()
-        curses.use_default_colors()
-        for name, number in C.items():
-            foreground = {"pink": curses.COLOR_MAGENTA, "green": curses.COLOR_YELLOW,
-                          "red": curses.COLOR_RED, "yellow": curses.COLOR_YELLOW,
-                          "muted": curses.COLOR_CYAN, "blue": curses.COLOR_BLUE}[name]
-            curses.init_pair(number, foreground, -1)
+    init_darfinos_palette()
     mode, current, top, review_scroll = "list", 0, 0, 0
     while True:
         visible = st.filtered()
@@ -683,14 +698,7 @@ def profile_screen(win, st: State) -> None:
 def ui_v3(win, st: State, digest: str) -> str:
     curses.curs_set(0)
     win.keypad(True)
-    if curses.has_colors():
-        curses.start_color()
-        curses.use_default_colors()
-        for name, number in C.items():
-            fg = {'pink': curses.COLOR_MAGENTA, 'green': curses.COLOR_YELLOW,
-                  'red': curses.COLOR_RED, 'yellow': curses.COLOR_YELLOW,
-                  'muted': curses.COLOR_CYAN, 'blue': curses.COLOR_BLUE}[name]
-            curses.init_pair(number, fg, -1)
+    init_darfinos_palette()
     mode, current, top, scroll = 'list', 0, 0, 0
     while True:
         h, w = win.getmaxyx()
@@ -1314,12 +1322,7 @@ def stream_install_v4(cmd: list[str], step_names: list[str], logfile: Path, jour
     def run(win):
         nonlocal current,log_mode,waiting,event_buf,output_buf
         curses.curs_set(0);win.keypad(True);win.nodelay(True)
-        if curses.has_colors():
-            curses.start_color(); curses.use_default_colors()
-            for name,number in C.items():
-                curses.init_pair(number,{'pink':curses.COLOR_MAGENTA,'green':curses.COLOR_YELLOW,
-                  'red':curses.COLOR_RED,'yellow':curses.COLOR_YELLOW,'muted':curses.COLOR_CYAN,
-                  'blue':curses.COLOR_BLUE}[name],-1)
+        init_darfinos_palette()
         with logfile.open('wb') as log:
             while True:
                 _install_draw(win,step_names,statuses,current,tail,time.monotonic()-started,
