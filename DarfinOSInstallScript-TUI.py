@@ -1067,29 +1067,53 @@ ANSI_ESCAPE = re.compile(r'\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1b\\))
 
 
 def inventory(script: Path, selected: set[str]):
-    """Prévia estática conservadora. Chamadas dinâmicas são indicadas à parte."""
+    """Extrai somente argumentos literais de chamadas de instalação completas."""
     source = script.read_text(encoding='utf-8')
     result = []
-    for step in selected:
+    call = re.compile(r'^\s*(install_pkgs_replace|install_pkgs|aur_install|flatpak_install)(?=\s|$)')
+    package = re.compile(r'[a-zA-Z0-9][a-zA-Z0-9_.+@/-]*\Z')
+    for step in sorted(selected):
         m = re.search(r'^step_' + re.escape(step) + r'\(\)\s*\{', source, re.M)
-        if not m: continue
-        # Track nested braces, including shell functions with simple literal calls.
-        begin = m.end(); depth = 1; pos = begin
+        if not m:
+            continue
+        # Limita ao corpo da etapa; a extração é uma prévia, não um parser Bash.
+        begin = m.end()
+        depth, pos = 1, begin
         while pos < len(source) and depth:
-            if source[pos] == '{': depth += 1
-            elif source[pos] == '}': depth -= 1
+            if source[pos] == '{':
+                depth += 1
+            elif source[pos] == '}':
+                depth -= 1
             pos += 1
-        body = source[begin:pos-1]
-        for match in re.finditer(r'(?m)^\s*(install_pkgs_replace|install_pkgs|aur_install|flatpak_install)\s+((?:\\\n|[^\n])+(?:\n\s+[^\n]+)*)',body):
-            kind = match.group(1)
-            statement = match.group(2).replace('\\\n',' ')
-            # Stop at shell operators and comments; skip nonliteral tokens.
-            statement = re.split(r'\s(?:\|\||&&|\||;|#)\s', statement, maxsplit=1)[0]
-            try: args = shlex.split(statement,comments=True)
-            except ValueError: continue
-            for item in args:
-                if re.fullmatch(r'[a-zA-Z0-9][\w.+@/-]*',item) and not item.startswith('-'):
-                    result.append((step,'flatpak' if kind=='flatpak_install' else 'aur' if kind=='aur_install' else 'pacman',item))
+        body = source[begin:pos - 1]
+        lines = body.splitlines()
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+            found = call.match(line)
+            i += 1
+            if not found:
+                continue
+            kind = found.group(1)
+            statement = line[found.end():]
+            # Somente a continuação explícita com barra invertida pertence à chamada.
+            while statement.rstrip().endswith('\\') and i < len(lines):
+                statement = statement.rstrip()[:-1] + ' ' + lines[i].strip()
+                i += 1
+            # Evita atribuir tokens de estruturas de controle a pacotes.
+            statement = re.split(r'\s*(?:&&|\|\||[;|<>])\s*', statement, maxsplit=1)[0]
+            try:
+                args = shlex.split(statement, comments=True)
+            except ValueError:
+                continue
+            if not args or any(not package.fullmatch(arg) or arg in {
+                'if', 'then', 'fi', 'else', 'local', 'return', 'confirm',
+                'info', 'printf', 'chmod', 'enable_service', 'aur_install',
+                'install_pkgs', 'flatpak_install',
+            } for arg in args):
+                continue
+            origin = 'flatpak' if kind == 'flatpak_install' else 'aur' if kind == 'aur_install' else 'pacman'
+            result.extend((step, origin, arg) for arg in args)
     return list(dict.fromkeys(result))
 
 
