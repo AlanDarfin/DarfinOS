@@ -1,10 +1,17 @@
 <div align="center">
 
-# ◆ DarfinOS
+# ⚡ DarfinOS
 
 ### Uma distro Linux com opiniões que não são as suas.
 
-**Arch Linux · SonicDE · XLibre · automação · experimentação**
+**Seu Arch, minhas regras.**
+
+![Arch Linux](https://img.shields.io/badge/BASE-Arch_Linux-FFCB2E?style=for-the-badge&labelColor=171717&logo=archlinux&logoColor=white)
+![SonicDE](https://img.shields.io/badge/DESKTOP-SonicDE-FFCB2E?style=for-the-badge&labelColor=171717)
+![XLibre](https://img.shields.io/badge/DISPLAY-XLibre-FFCB2E?style=for-the-badge&labelColor=171717)
+![Bash + Python](https://img.shields.io/badge/TOOLS-Bash_%2B_Python-FFCB2E?style=for-the-badge&labelColor=171717)
+
+**[🌐 Site do projeto](https://github.com/AlanDarfin/darfinos-website) · [⬇️ Releases](https://github.com/AlanDarfin/DarfinOS/releases) · [📖 Documentação](docs/) · [🧪 Actions](https://github.com/AlanDarfin/DarfinOS/actions)**
 
 [Instalação](#-começando) · [TUI V5](#-darfinos-tui-v5--control-center) · [Etapas](#-o-que-o-darfinos-configura) · [Créditos](#-os-projetos-por-trás-do-darfinos) · [Documentação](#-documentação) · [Segurança](#-avisos-importantes) · [Contato](#-contato)
 
@@ -29,6 +36,13 @@ O resultado é deliberadamente pessoal, um tanto underground e sem muita preocup
 - **Modularidade.** Instalar tudo ou selecionar somente as etapas desejadas.
 - **Experimentação.** Explorar combinações incomuns, sem fingir que elas servem para todo mundo.
 - **Transparência.** Código aberto para inspeção, logs e confirmações em operações sensíveis.
+
+## 🖼️ Conheça o DarfinOS
+
+O site do projeto reúne **capturas de tela, explicações visuais e links rápidos** para conhecer o ambiente e as ferramentas que inspiram sua identidade. O README concentra as instruções práticas; a galeria visual fica no site.
+
+> [!TIP]
+> **Quer ver antes de instalar?** Explore a [página do projeto](https://github.com/AlanDarfin/darfinos-website) e os [arquivos publicados](https://github.com/AlanDarfin/DarfinOS/releases). O DarfinOS é um projeto de **personalização e pós-instalação do Arch**, não uma ISO independente.
 
 ## 🧩 Os projetos por trás do DarfinOS
 
@@ -297,6 +311,16 @@ O workflow **[DarfinOS · Testes](.github/workflows/tests.yml)** executa verific
 | `~/.cache/darfinos-tui/` | Cópias do Bash, histórico de versões e diffs |
 
 Esses são os caminhos padrão documentados; variantes locais podem modificá-los.
+
+## ⚡ Links rápidos
+
+| Projeto | Para que serve | Acesso |
+| --- | --- | --- |
+| **Arch Linux** | Base do DarfinOS | [Site oficial](https://archlinux.org/) |
+| **SonicDE** | Ambiente gráfico | [Site oficial](https://sonicde.org/) |
+| **XLibre** | Servidor gráfico X11 | [Site oficial](https://xlibre.org/) |
+| **Bedrock Linux** | Integração experimental entre distribuições | [Site oficial](https://bedrocklinux.org/) |
+| **LinuxToys** | Grande inspiração para a proposta de automação | [GitHub](https://github.com/psygreg/linux_toys) |
 
 ## 📚 Documentação
 
