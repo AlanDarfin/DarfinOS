@@ -295,7 +295,7 @@ def ui(win, st: State) -> bool:
         curses.start_color()
         curses.use_default_colors()
         for name, number in C.items():
-            foreground = {"pink": curses.COLOR_MAGENTA, "green": curses.COLOR_GREEN,
+            foreground = {"pink": curses.COLOR_MAGENTA, "green": curses.COLOR_YELLOW,
                           "red": curses.COLOR_RED, "yellow": curses.COLOR_YELLOW,
                           "muted": curses.COLOR_CYAN, "blue": curses.COLOR_BLUE}[name]
             curses.init_pair(number, foreground, -1)
@@ -687,7 +687,7 @@ def ui_v3(win, st: State, digest: str) -> str:
         curses.start_color()
         curses.use_default_colors()
         for name, number in C.items():
-            fg = {'pink': curses.COLOR_MAGENTA, 'green': curses.COLOR_GREEN,
+            fg = {'pink': curses.COLOR_MAGENTA, 'green': curses.COLOR_YELLOW,
                   'red': curses.COLOR_RED, 'yellow': curses.COLOR_YELLOW,
                   'muted': curses.COLOR_CYAN, 'blue': curses.COLOR_BLUE}[name]
             curses.init_pair(number, fg, -1)
@@ -1208,7 +1208,7 @@ def stream_install_v4(cmd: list[str], step_names: list[str], logfile: Path, jour
         if curses.has_colors():
             curses.start_color(); curses.use_default_colors()
             for name,number in C.items():
-                curses.init_pair(number,{'pink':curses.COLOR_MAGENTA,'green':curses.COLOR_GREEN,
+                curses.init_pair(number,{'pink':curses.COLOR_MAGENTA,'green':curses.COLOR_YELLOW,
                   'red':curses.COLOR_RED,'yellow':curses.COLOR_YELLOW,'muted':curses.COLOR_CYAN,
                   'blue':curses.COLOR_BLUE}[name],-1)
         with logfile.open('wb') as log:
