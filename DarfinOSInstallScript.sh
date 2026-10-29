@@ -58,7 +58,7 @@ declare -A STEP_DESC=(
   [cli_tools]="Ferramentas de terminal (fzf, eza, yazi, starship...)"
   [dev_tools]="Desenvolvimento (neovim, gcc, clang, rust, go, node...)"
   [pkg_managers]="pip, pipx, cargo, npm e go: instalação, PATH e config"
-  [shells]="fish + zsh, tema DarfinOS, starship/zoxide/fzf e shell padrão"
+  [shells]="fish + Fisher + zsh, tema DarfinOS, starship/zoxide/fzf e shell padrão"
   [git_setup]="Configuração do git e chave SSH"
   [zerotier]="ZeroTier"
   [hamachi]="Hamachi"
@@ -979,6 +979,30 @@ function y
     rm -f -- "$tmp"
 end
 EOF
+
+  # --- Fisher: gerenciador de plugins do Fish ---
+  if confirm "Instalar o Fisher (gerenciador de plugins do Fish)?" s; then
+    if ! command -v fish >/dev/null 2>&1; then
+      warn "Fish não encontrado; não é possível instalar o Fisher."
+    elif fish -c 'functions -q fisher'; then
+      ok "Fisher já está instalado."
+    else
+      local fisher_tmp
+      fisher_tmp=$(mktemp) || return 1
+      if curl -fsSL --retry 2 --max-time 30 \
+        "https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish" \
+        -o "$fisher_tmp" && [[ -s "$fisher_tmp" ]]; then
+        if FISHER_BOOTSTRAP="$fisher_tmp" fish -c 'source $FISHER_BOOTSTRAP; fisher install jorgebucaran/fisher'; then
+          ok "Fisher instalado. Use 'fisher install autor/plugin' para adicionar plugins."
+        else
+          warn "Falha ao instalar Fisher; consulte https://github.com/jorgebucaran/fisher"
+        fi
+      else
+        warn "Não foi possível baixar o Fisher; configuração do Fish preservada."
+      fi
+      rm -f "$fisher_tmp"
+    fi
+  fi
 
   # --- tema de cores do Fish (opcional e seguro para reexecução) ---
   if confirm "Aplicar o tema de cores DarfinOS no Fish?" s; then
