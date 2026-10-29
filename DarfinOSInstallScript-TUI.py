@@ -1118,16 +1118,61 @@ def inventory(script: Path, selected: set[str]):
 
 
 def apps_screen(win, st: State, script: Path):
+    """Inventário pesquisável por pacote, etapa, origem ou situação."""
     rows = inventory(script, st.selected)
     native, flat = installed_packages()
-    lines = [f'{"ETAPA":<17} {"ORIGEM":<9} {"APLICATIVO / PACOTE":<40} STATUS', '']
-    for step,origin,pkg in rows:
-        installed = pkg in (flat if origin=='flatpak' else native)
-        lines.append(f'{step:<17} {origin:<9} {pkg:<40} {"instalado" if installed else "não encontrado"}')
-    lines.extend(['','Prévia parcial: apenas chamadas literais diretamente identificáveis.',
-                  'Arrays, variáveis, comandos indiretos e condicionais podem alterar a lista.',
-                  'A lista efetiva também aparece nos eventos PKG durante a execução.'])
-    scroll_screen(win, f'APLICATIVOS PREVISTOS · {len(rows)} itens identificados', '\n'.join(lines))
+    entries = [(step, origin, pkg,
+                'instalado' if pkg in (flat if origin == 'flatpak' else native)
+                else 'não encontrado') for step, origin, pkg in rows]
+    search = ''
+    offset = 0
+    while True:
+        filtered = [entry for entry in entries if search.casefold() in
+                    ' '.join(entry).casefold()]
+        h, w = win.getmaxyx()
+        height = max(1, h - 7)
+        offset = max(0, min(offset, max(0, len(filtered) - height)))
+        win.erase()
+        put(win, 0, 2, f'◆ PACOTES · {len(filtered)}/{len(entries)} resultados',
+            curses.A_BOLD | colors('pink'))
+        line(win, 1)
+        put(win, 2, 2, ('Busca: ' + (search or '(todos)'))[:max(0, w - 4)],
+            colors('yellow'))
+        put(win, 3, 2, f'{"ETAPA":<17} {"ORIGEM":<9} {"PACOTE":<38} STATUS'[:max(0,w-4)],
+            curses.A_BOLD)
+        for index, (step, origin, pkg, status) in enumerate(filtered[offset:offset + height]):
+            row = f'{step:<17} {origin:<9} {pkg:<38} {status}'
+            put(win, 4 + index, 2, row[:max(0, w - 4)])
+        if not filtered:
+            put(win, 4, 2, 'Nenhum pacote corresponde à pesquisa.', colors('muted'))
+        put(win, h - 2, 2, 'Prévia: pacotes dinâmicos podem não aparecer.'[:max(0,w-4)],
+            colors('muted'))
+        put(win, h - 1, 2, '/ buscar · C limpar · ↑↓/PgUp/PgDn rolar · Esc voltar'[:max(0,w-4)],
+            colors('yellow'))
+        win.refresh()
+        key = win.getch()
+        if key in (27, ord('q'), ord('Q')):
+            return
+        if key == ord('/'):
+            value = prompt(win, 'Pesquisar pacotes:', search)
+            if value is not None:
+                search = value.strip()
+                offset = 0
+        elif key in (ord('c'), ord('C')):
+            search = ''
+            offset = 0
+        elif key in (curses.KEY_DOWN, ord('j')):
+            offset += 1
+        elif key in (curses.KEY_UP, ord('k')):
+            offset -= 1
+        elif key == curses.KEY_NPAGE:
+            offset += height
+        elif key == curses.KEY_PPAGE:
+            offset -= height
+        elif key == curses.KEY_HOME:
+            offset = 0
+        elif key == curses.KEY_END:
+            offset = max(0, len(filtered) - height)
 
 
 def _modal(win, title, detail, choices=None, secret=False):
