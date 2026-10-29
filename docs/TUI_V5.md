@@ -1,8 +1,25 @@
-# DarfinOS TUI V5 — Interface visual
+<div align="center">
+
+# ⚡ Control Center · TUI V5
+
+**DarfinOS — Seu Arch, minhas regras.**
+
+[← README](../README.md) · [📚 Documentação](./) · [🌐 Site](https://github.com/AlanDarfin/darfinos-website)
+
+</div>
+
+---
 
 A V5 mantém o frontend `curses` em Python padrão e o Bash da V4.4, adicionando uma interface mais organizada sem alterar a lógica do instalador.
 
-## O que mudou
+## 🖥️ Visão geral
+
+A TUI é a central de controle do instalador. Para ver o projeto em imagens e conhecer a experiência visual, visite a [galeria no site do DarfinOS](https://github.com/AlanDarfin/darfinos-website).
+
+> [!NOTE]
+> A interface é baseada em **Python + curses**, não depende de frameworks gráficos e mantém o Bash como responsável pela instalação.
+
+## ✨ O que mudou
 
 - Cabeçalho V5 com fonte, perfil, hash do instalador, estado de `-y` e barra de seleção.
 - Lista de etapas com marcadores `■` e `□`, foco destacado e inspeção de descrição, grupo, dependências e detecção.
