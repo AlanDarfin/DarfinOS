@@ -62,7 +62,7 @@ declare -A STEP_DESC=(
   [zerotier]="ZeroTier"
   [hamachi]="Hamachi"
   [syncthing]="Syncthing"
-  [docker]="Docker"
+  [docker]="Contêineres (Docker ou Podman)"
   [flatpak]="Flatpak + Flathub + ferramentas"
   [apps]="Aplicativos (Flatpak)"
   [gaming]="Steam, Wine, GameMode, MangoHud"
@@ -1044,18 +1044,36 @@ step_syncthing() {
 }
 
 step_docker() {
-  install_pkgs docker docker-compose docker-buildx lazydocker dive
-  if confirm "Habilitar o daemon Docker na inicialização e iniciá-lo agora?" n; then
-    enable_service docker.service
-  else
-    info "Docker instalado, mas o serviço ficou desabilitado. Inicie quando precisar: sudo systemctl start docker"
-  fi
-  if confirm "Adicionar $USER ao grupo docker (equivale, na prática, a conceder privilégios de root)?" n; then
-    sudo usermod -aG docker "$USER"
-    warn "Faça logout/login para aplicar a associação ao grupo docker."
-  fi
-  warn "Atenção: o Docker pode contornar regras de firewall ao publicar portas."
+  local engine
+  info "Escolha o mecanismo de contêineres:"
+  info "  docker - Docker Engine (padrão)"
+  info "  podman - Podman (sem daemon obrigatório; suporta rootless)"
+  engine=$(choose "Qual mecanismo de contêineres deseja instalar?" "docker/podman" "docker")
 
+  case "$engine" in
+    docker)
+      install_pkgs docker docker-compose docker-buildx lazydocker dive
+      if confirm "Habilitar o daemon Docker na inicialização e iniciá-lo agora?" n; then
+        enable_service docker.service
+      else
+        info "Docker instalado, mas o serviço ficou desabilitado. Inicie quando precisar: sudo systemctl start docker"
+      fi
+      if confirm "Adicionar $USER ao grupo docker (equivale, na prática, a conceder privilégios de root)?" n; then
+        sudo usermod -aG docker "$USER"
+        warn "Faça logout/login para aplicar a associação ao grupo docker."
+      fi
+      warn "Atenção: o Docker pode contornar regras de firewall ao publicar portas."
+      ;;
+    podman)
+      install_pkgs podman podman-compose buildah
+      ok "Podman instalado. Use 'podman' e 'podman-compose' sem daemon permanente."
+      info "Para usar a API compatível com Docker, habilite opcionalmente o socket do usuário: systemctl --user enable --now podman.socket"
+      ;;
+    *)
+      warn "Opção inválida: $engine"
+      return 1
+      ;;
+  esac
 }
 
 # ==========================================================
