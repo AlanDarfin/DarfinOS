@@ -55,7 +55,7 @@ declare -A STEP_DESC=(
   [desktop_extras]="Extras do desktop (portais, energia, KDE Connect...)"
   [bluetooth]="Bluetooth"
   [cli_tools]="Ferramentas de terminal (fzf, eza, yazi, starship...)"
-  [dev_tools]="Desenvolvimento (neovim, tmux, gcc, clang, rust, go, node...)"
+  [dev_tools]="Desenvolvimento (neovim, gcc, clang, rust, go, node...)"
   [pkg_managers]="pip, pipx, cargo, npm e go: instalação, PATH e config"
   [shells]="fish + zsh, starship/zoxide/fzf e shell padrão"
   [git_setup]="Configuração do git e chave SSH"
@@ -72,7 +72,7 @@ declare -A STEP_DESC=(
   [cleanup]="Limpeza de órfãos e caches"
   [bobagens]="Coisas extras ai"
   [bedrock]="Instalação do Bedrock Linux"
-  [terminal_extras]="Extras do terminal (sudo pwfeedback e insults)"
+  [terminal_extras]="Extras do terminal (tmux, ranger, OpenCode e sudo)"
 )
 
 # ----------------------------------------------------------
@@ -825,7 +825,7 @@ step_cli_tools() {
 }
 
 step_dev_tools() {
-  local pkgs=(git neovim tmux gcc clang cmake python nodejs npm go)
+  local pkgs=(git neovim gcc clang cmake python nodejs npm go)
 
   # 'rust' conflita com 'rustup'
   if has_pkg rustup; then
@@ -1350,7 +1350,7 @@ EOF
 
     info "Instalando pacotes adicionais do AUR..."
 
-    for pkg in arch-update stylepak-git topgrade-bin opencode-bin; do
+    for pkg in arch-update stylepak-git topgrade-bin; do
       aur_install "$pkg" || warn "Falha ao instalar $pkg; continuando."
     done
   else
@@ -1484,6 +1484,13 @@ step_bedrock() {
 # EXTRAS DO TERMINAL — SUDO
 # ==========================================================
 step_terminal_extras() {
+  info "Instalando ferramentas de terminal: tmux e ranger..."
+  install_pkgs tmux ranger
+
+  if confirm "Deseja instalar o OpenCode (opencode-bin via AUR)?" n; then
+    aur_install opencode-bin
+  fi
+
   local -a sudo_options=()
   local sudoers_file="/etc/sudoers.d/90-darfinos-terminal"
   local candidate="$TMP_DIR/darfinos-terminal-sudoers"
