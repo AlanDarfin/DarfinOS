@@ -555,7 +555,7 @@ step_repo_cachyos() {
 
   # Verifica cada componente do caminho sem regex com barras escapadas.
   if ! tar -tJf "$workdir/cachyos-repo.tar.xz" | awk -F/ '
-    /^\// { bad=1 }
+    substr($0,1,1)=="/" { bad=1 }
     { for (i=1; i<=NF; i++) if ($i=="..") bad=1 }
     END { exit bad ? 1 : 0 }
   '; then
