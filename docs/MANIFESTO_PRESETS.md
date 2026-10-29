@@ -1,8 +1,30 @@
-# Manifesto e presets (V4.4)
+<div align="center">
+
+# ⚡ Manifesto & Presets
+
+**DarfinOS — Seu Arch, minhas regras.**
+
+[← README](../README.md) · [📚 Documentação](./) · [🌐 Site](https://github.com/AlanDarfin/darfinos-website)
+
+</div>
+
+---
 
 O comando `python3 DarfinOSInstallScript-TUI.py --manifest` exporta JSON estático, sem executar o instalador. Use `--list-presets` para listar presets.
 
-## Contrato
+## ⚡ Presets em resumo
+
+| Preset | Objetivo | Atenção |
+| --- | --- | --- |
+| `minimal` | Ferramentas essenciais | Seleção reduzida |
+| `desktop` | SonicDE e XLibre | Altera componentes gráficos |
+| `gaming` | Desktop e jogos | Depende do hardware |
+| `full` | Todas as 32 etapas | Inclui Bedrock e opções avançadas |
+
+> [!IMPORTANT]
+> **Preset não é instalação automática.** Confira as etapas selecionadas antes de executar.
+
+## 📦 Contrato
 
 - `schema_version`: versão do formato JSON, atualmente 1.
 - `script_sha256`: identifica exatamente o Bash analisado.
