@@ -65,7 +65,7 @@ declare -A STEP_DESC=(
   [syncthing]="Syncthing"
   [docker]="Contêineres (Docker ou Podman)"
   [flatpak]="Flatpak + Flathub + ferramentas"
-  [apps]="Aplicativos (Flatpak)"
+  [apps]="Aplicativos (Flatpak/AUR, Discord, Shelter e Spicetify)"
   [gaming]="Steam, Wine, GameMode, MangoHud"
   [browser]="Navegador"
   [maintenance]="Timers de manutenção (paccache, fstrim)"
@@ -1149,39 +1149,83 @@ step_flatpak() {
 }
 
 step_apps() {
-  local discord_client discord_app
+  local discord_client discord_app spotify_ok=0 spicetify_script tmp
 
-  flatpak_install \
+  if flatpak_install \
     org.qbittorrent.qBittorrent \
     me.proton.Pass \
     com.protonvpn.www \
     md.obsidian.Obsidian \
     com.spotify.Client \
-    org.vinegarhq.Sober
+    org.vinegarhq.Sober; then
+    spotify_ok=1
+  else
+    flatpak info --system com.spotify.Client >/dev/null 2>&1 && spotify_ok=1
+  fi
+
+  if (( spotify_ok )) && confirm "Instalar e configurar Spicetify para Spotify?" n; then
+    if ! command -v spicetify >/dev/null 2>&1; then
+      tmp=$(mktemp) || return 1
+      if curl -fsSL --retry 2 --max-time 40 https://raw.githubusercontent.com/spicetify/cli/main/install.sh -o "$tmp"; then
+        info "Executando instalador oficial do Spicetify como usuário (sem sudo)."
+        bash "$tmp" || warn "Instalação do Spicetify falhou."
+      else
+        warn "Não foi possível baixar o instalador oficial do Spicetify."
+      fi
+      rm -f "$tmp"
+    fi
+    if command -v spicetify >/dev/null 2>&1; then
+      local spotify_path="" prefs_path="$HOME/.var/app/com.spotify.Client/config/spotify/prefs"
+      for spotify_path in \
+        /var/lib/flatpak/app/com.spotify.Client/current/active/files/extra/share/spotify \
+        "$HOME/.local/share/flatpak/app/com.spotify.Client/current/active/files/extra/share/spotify"; do
+        [[ -d "$spotify_path" ]] && break
+      done
+      if [[ -d "$spotify_path" && -f "$prefs_path" ]]; then
+        spicetify config spotify_path "$spotify_path" prefs_path "$prefs_path" || true
+        spicetify backup apply || warn "Spicetify não conseguiu aplicar o tema. O Spotify Flatpak pode exigir permissões adicionais."
+      else
+        warn "Abra o Spotify pelo menos uma vez e depois configure o Spicetify: caminho ou preferências do Flatpak não encontrados."
+      fi
+    else
+      warn "Spicetify não está no PATH; tente novamente após abrir outro terminal."
+    fi
+  fi
 
   info "Escolha seu cliente de Discord:"
   info "  vesktop - Vesktop (padrão)"
   info "  legcord - Legcord"
   info "  discord - Discord oficial"
+  info "  equibop - Equibop (AUR: equibop-bin)"
 
   discord_client=$(choose \
     "Qual cliente de Discord deseja instalar?" \
-    "vesktop/legcord/discord" \
+    "vesktop/legcord/discord/equibop" \
     "vesktop")
 
   case "$discord_client" in
     vesktop) discord_app="dev.vencord.Vesktop" ;;
     legcord) discord_app="io.github.Legcord.Legcord" ;;
     discord) discord_app="com.discordapp.Discord" ;;
+    equibop) discord_app="" ;;
     *)
       warn "Opção inválida: $discord_client"
       return 1
       ;;
   esac
 
-  flatpak_install "$discord_app"
-}
+  if [[ "$discord_client" == equibop ]]; then
+    aur_install equibop-bin
+    has_pkg equibop-bin || { warn "Equibop não foi instalado (verifique o AUR helper)."; return 1; }
+  else
+    flatpak_install "$discord_app"
+  fi
 
+  if confirm "Deseja configurar o mod Shelter para Discord?" n; then
+    info "Guia oficial do Shelter: https://shelter.uwu.network/install"
+    warn "O Shelter depende do cliente escolhido. Por segurança, consulte o método compatível no guia oficial; a instalação não será executada automaticamente."
+  fi
+}
 step_gaming() {
   has_pkg lib32-mesa || warn "Instale o driver de vídeo 32 bits (etapa 'hardware') para Steam/Wine."
   install_pkgs steam retroarch wine winetricks wine-mono wine-gecko gamemode lib32-gamemode mangohud
