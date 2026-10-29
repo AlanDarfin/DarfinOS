@@ -568,7 +568,9 @@ step_repo_cachyos() {
   [[ -f "$installer" ]] || { warn "Instalador não encontrado."; return 1; }
   info "Revise o script oficial antes de autorizar execução como root: $installer"
   confirm "Você revisou e autoriza executar o script como root?" n || return 0
-  sudo bash "$installer"
+  # O instalador upstream usa arquivos auxiliares relativos ao diretório atual.
+  # Executá-lo fora dessa pasta provoca erros como install-v4-repo.awk ausente.
+  ( cd -- "$(dirname -- "$installer")" && sudo bash "./$(basename -- "$installer")" )
 }
 
 step_repo_xlibre() {
