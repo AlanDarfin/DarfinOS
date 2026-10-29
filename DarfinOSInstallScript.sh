@@ -1085,14 +1085,37 @@ step_flatpak() {
 }
 
 step_apps() {
+  local discord_client discord_app
+
   flatpak_install \
     org.qbittorrent.qBittorrent \
     me.proton.Pass \
     com.protonvpn.www \
     md.obsidian.Obsidian \
-    dev.vencord.Vesktop \
     com.spotify.Client \
     org.vinegarhq.Sober
+
+  info "Escolha seu cliente de Discord:"
+  info "  vesktop - Vesktop (padrão)"
+  info "  legcord - Legcord"
+  info "  discord - Discord oficial"
+
+  discord_client=$(choose \
+    "Qual cliente de Discord deseja instalar?" \
+    "vesktop/legcord/discord" \
+    "vesktop")
+
+  case "$discord_client" in
+    vesktop) discord_app="dev.vencord.Vesktop" ;;
+    legcord) discord_app="io.github.Legcord.Legcord" ;;
+    discord) discord_app="com.discordapp.Discord" ;;
+    *)
+      warn "Opção inválida: $discord_client"
+      return 1
+      ;;
+  esac
+
+  flatpak_install "$discord_app"
 }
 
 step_gaming() {
