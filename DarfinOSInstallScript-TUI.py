@@ -121,15 +121,28 @@ class State:
     def lookup(self):
         return {s.name: s for s in self.steps}
 
+    @staticmethod
+    def required_deps(step: Step) -> list[str]:
+        # Atualizar o Arch não exige ativar repositórios gráficos opcionais.
+        # Se um repositório foi escolhido e falhou, o Bash ainda bloqueia sysupgrade.
+        if step.name == 'sysupgrade':
+            return [dep for dep in step.deps if dep not in ('repo_xlibre', 'repo_sonicde')]
+        return step.deps
+
     def missing(self) -> dict[str, list[str]]:
-        return {s.name: [d for d in s.deps if d not in self.selected]
-                for s in self.steps if s.name in self.selected and any(d not in self.selected for d in s.deps)}
+        result = {}
+        for step in self.steps:
+            if step.name in self.selected:
+                missing = [dep for dep in self.required_deps(step) if dep not in self.selected]
+                if missing:
+                    result[step.name] = missing
+        return result
 
     def add_deps(self):
         known = self.lookup
         stack = list(self.selected)
         while stack:
-            for dep in known[stack.pop()].deps:
+            for dep in self.required_deps(known[stack.pop()]):
                 if dep in known and dep not in self.selected:
                     self.selected.add(dep)
                     stack.append(dep)
