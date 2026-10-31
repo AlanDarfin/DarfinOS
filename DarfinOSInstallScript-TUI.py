@@ -121,25 +121,63 @@ class State:
     def lookup(self):
         return {s.name: s for s in self.steps}
 
+    @staticmethod
+    def required_deps(step: Step) -> list[str]:
+        # Atualizar o Arch não exige ativar repositórios gráficos opcionais.
+        # Se um repositório foi escolhido e falhou, o Bash ainda bloqueia sysupgrade.
+        if step.name == 'sysupgrade':
+            return [dep for dep in step.deps if dep not in ('repo_xlibre', 'repo_sonicde')]
+        return step.deps
+
     def missing(self) -> dict[str, list[str]]:
-        return {s.name: [d for d in s.deps if d not in self.selected]
-                for s in self.steps if s.name in self.selected and any(d not in self.selected for d in s.deps)}
+        result = {}
+        for step in self.steps:
+            if step.name in self.selected:
+                missing = [dep for dep in self.required_deps(step) if dep not in self.selected]
+                if missing:
+                    result[step.name] = missing
+        return result
 
     def add_deps(self):
         known = self.lookup
         stack = list(self.selected)
         while stack:
-            for dep in known[stack.pop()].deps:
+            for dep in self.required_deps(known[stack.pop()]):
                 if dep in known and dep not in self.selected:
                     self.selected.add(dep)
                     stack.append(dep)
         self.message = "Dependências conhecidas incluídas na seleção."
 
     def filtered(self):
-        term = self.search.casefold()
-        return [i for i, s in enumerate(self.steps) if
-                (not self.show_selected or s.name in self.selected) and
-                (not term or term in (s.name + " " + s.desc + " " + s.group).casefold())]
+        """Busca por nome, grupo ou descrição; tolera pequenos erros de digitação."""
+        query = self.search.casefold().strip()
+        matches = []
+        for index, step in enumerate(self.steps):
+            if self.show_selected and step.name not in self.selected:
+                continue
+            if not query:
+                matches.append((0, index))
+                continue
+            fields = (step.name, step.desc, step.group)
+            joined = " ".join(fields).casefold()
+            if step.name.casefold() == query:
+                score = 100
+            elif step.name.casefold().startswith(query):
+                score = 95
+            elif query in joined:
+                score = 85
+            elif len(query) >= 3:
+                words = re.findall(r"[\w-]+", joined)
+                score = round(70 * max((difflib.SequenceMatcher(None, query, word).ratio()
+                                        for word in words), default=0))
+                if score < 48:
+                    continue
+            else:
+                continue
+            matches.append((score, index))
+        if query:
+            matches.sort(key=lambda item: (-item[0], item[1]))
+        return [index for _, index in matches]
 
 
 def command(path: Path, state: State) -> list[str]:
@@ -969,6 +1007,55 @@ def build_manifest(script: Path) -> dict:
     }
 
 
+def diagnose_script(script: Path) -> dict:
+    """Auditoria estática e segura: não chama sudo, pacman ou instaladores."""
+    steps = parse_script(script)
+    source = script.read_text(encoding='utf-8')
+    known = {step.name for step in steps}
+    errors = []
+    warnings = []
+    graph = {step.name: step.deps for step in steps}
+    for step in steps:
+        if not re.search(r'^step_' + re.escape(step.name) + r'\(\)\s*\{', source, re.M):
+            errors.append(f'Função ausente: step_{step.name}')
+        for dependency in step.deps:
+            if dependency not in known:
+                errors.append(f'Dependência desconhecida: {step.name} -> {dependency}')
+    visiting, visited = set(), set()
+
+    def visit(name: str) -> None:
+        if name in visiting:
+            errors.append(f'Ciclo de dependências: {name}')
+            return
+        if name in visited:
+            return
+        visiting.add(name)
+        for dep in graph.get(name, []):
+            if dep in known:
+                visit(dep)
+        visiting.remove(name)
+        visited.add(name)
+
+    for name in graph:
+        visit(name)
+    if shutil.which('bash'):
+        result = subprocess.run(['bash', '-n', str(script)], capture_output=True, text=True)
+        if result.returncode:
+            errors.append('Sintaxe Bash inválida: ' + result.stderr.strip()[:350])
+    else:
+        warnings.append('Bash indisponível para validação de sintaxe.')
+    for program in ('pacman', 'sudo', 'git', 'curl'):
+        if not shutil.which(program):
+            warnings.append(f'{program} não encontrado neste ambiente.')
+    if not Path('/etc/arch-release').exists():
+        warnings.append('Este ambiente não parece ser Arch Linux.')
+    return {
+        'script': str(script), 'script_sha256': sha(script), 'steps': len(steps),
+        'presets': list(PRESETS), 'errors': errors, 'warnings': warnings,
+        'ready': not errors,
+    }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description='DarfinOS TUI V5 · curses · sem pip')
     ap.add_argument('script', nargs='?', type=Path, help='Script Bash local (opcional)')
@@ -983,6 +1070,9 @@ def main() -> int:
     ap.add_argument('--preset', choices=tuple(PRESETS), help='Pré-seleciona um preset oficial')
     ap.add_argument('--list-presets', action='store_true', help='Lista os presets sem abrir a TUI')
     ap.add_argument('--manifest', action='store_true', help='Imprime manifesto JSON parcial, sem executar o Bash')
+    ap.add_argument('--doctor', action='store_true', help='Audita Bash, etapas e dependências sem instalar')
+    ap.add_argument('--doctor-json', action='store_true', help='Emite diagnóstico estruturado em JSON')
+    ap.add_argument('--plan', action='store_true', help='Mostra as etapas de um preset sem executar')
     args = ap.parse_args()
     if args.list_presets:
         for name, (description, _) in PRESETS.items():
@@ -993,6 +1083,38 @@ def main() -> int:
         if not script.is_file(): ap.error(f'Não encontrado: {script}')
         print(json.dumps(build_manifest(script), ensure_ascii=False, indent=2))
         return 0
+    if args.doctor or args.doctor_json or args.plan:
+        script = (args.script or LOCAL).expanduser().resolve()
+        if not script.is_file():
+            ap.error(f'Não encontrado: {script}')
+        try:
+            if args.doctor or args.doctor_json:
+                report = diagnose_script(script)
+                if args.doctor_json:
+                    print(json.dumps(report, ensure_ascii=False, indent=2))
+                else:
+                    print(f"DarfinOS Doctor · {report['steps']} etapas · SHA256 {report['script_sha256'][:12]}")
+                    for error in report['errors']:
+                        print('ERRO:', error)
+                    for warning in report['warnings']:
+                        print('AVISO:', warning)
+                    if report['ready']:
+                        print('OK: estrutura de etapas e sintaxe do instalador válidas.')
+                return 0 if report['ready'] else 1
+            steps = parse_script(script)
+            selected = preset_selection(args.preset or 'minimal', steps)
+            state = State(steps, 'Plano local', selected=selected)
+            print(f"Plano DarfinOS · preset: {args.preset or 'minimal'} · {len(selected)} etapas")
+            for step in steps:
+                if step.name in selected:
+                    print(f"  {step.name:<20} {step.desc}")
+            missing = state.missing()
+            if missing:
+                print('Dependências ausentes na seleção:', missing)
+            print('Somente leitura. Nenhuma instalação foi iniciada.')
+            return 2 if missing else 0
+        except (OSError, ValueError) as exc:
+            ap.error(str(exc))
     if args.runs:
         for path in sorted(RUN_DIR.glob('run-*.json'), reverse=True):
             data = read_json(path, {})
@@ -1020,8 +1142,10 @@ def main() -> int:
         CURRENT_SCRIPT = script
         digest = sha(script)
         steps = parse_script(script)
+        # Nunca marcar Bedrock, firewall ou alterações avançadas por padrão.
         st = State(steps=steps, source=origin,
-                   selected=set() if args.empty else {s.name for s in steps})
+                   selected=set() if args.empty else preset_selection('minimal', steps),
+                   profile_name='manual' if args.empty else 'preset:minimal')
         if args.preset:
             try: apply_preset(st, args.preset)
             except ValueError as exc: ap.error(str(exc))

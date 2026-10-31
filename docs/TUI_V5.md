@@ -43,3 +43,12 @@ python3 DarfinOSInstallScript-TUI.py --local --dry-run
 ```
 
 O `--dry-run` não executa a instalação. Para explorar a interface, navegue e saia com **Q** antes de confirmar uma instalação real.
+
+
+## Atualização de segurança e produtividade
+
+- A seleção inicial usa `minimal` em vez de marcar todas as etapas (inclusive Bedrock).
+- Busca de etapas por nome, grupo e descrição, com correspondência aproximada para pequenos erros.
+- `--doctor` e `--doctor-json` verificam sintaxe e grafo das etapas sem instalar nada.
+- `--plan --preset gaming` imprime um plano estático, também sem sudo nem instalação.
+- `--empty` mantém a opção de começar com nenhuma etapa marcada.
