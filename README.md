@@ -11,7 +11,7 @@
 ![XLibre](https://img.shields.io/badge/DISPLAY-XLibre-FFCB2E?style=for-the-badge&labelColor=171717)
 ![Bash + Python](https://img.shields.io/badge/TOOLS-Bash_%2B_Python-FFCB2E?style=for-the-badge&labelColor=171717)
 
-**[🌐 Site do projeto](https://github.com/AlanDarfin/darfinos-website) · [📖 Documentação](docs/) · [🧪 Actions](https://github.com/AlanDarfin/DarfinOS/actions)**
+**[🌐 Site do projeto](https://darfinos.vercel.app/) · [📖 Documentação](docs/) · [🧪 Actions](https://github.com/AlanDarfin/DarfinOS/actions)**
 
 [Instalação](#-começando) · [TUI V5](#-darfinos-tui-v5--control-center) · [Etapas](#-o-que-o-darfinos-configura) · [Créditos](#-os-projetos-por-trás-do-darfinos) · [Documentação](#-documentação) · [Segurança](#-avisos-importantes) · [Contato](#-contato)
 
@@ -42,7 +42,7 @@ O resultado é deliberadamente pessoal, um tanto underground e sem muita preocup
 O site do projeto reúne **capturas de tela, explicações visuais e links rápidos** para conhecer o ambiente e as ferramentas que inspiram sua identidade. O README concentra as instruções práticas; a galeria visual fica no site.
 
 > [!TIP]
-> **Quer ver antes de instalar?** Explore a [página do projeto](https://github.com/AlanDarfin/darfinos-website) e os [arquivos publicados](https://github.com/AlanDarfin/DarfinOS/releases). O DarfinOS é um projeto de **personalização e pós-instalação do Arch**, não uma ISO independente.
+> **Quer ver antes de instalar?** Explore a [página do projeto](https://darfinos.vercel.app/) e os [arquivos publicados](https://github.com/AlanDarfin/DarfinOS/releases). O DarfinOS é um projeto de **personalização e pós-instalação do Arch**, não uma ISO independente.
 
 ## 🧩 Os projetos por trás do DarfinOS
 
@@ -77,7 +77,7 @@ O DarfinOS oferece uma **etapa opcional** relacionada ao Bedrock. Ela não é ne
 
 ## 🛠 O que o DarfinOS configura
 
-O instalador Bash organiza **32 etapas** em grupos. A seleção pode ser feita pela linha de comando ou pela TUI.
+O instalador Bash organiza **34 etapas** em grupos. A seleção pode ser feita pela linha de comando ou pela TUI.
 
 | Área | Exemplos de etapas | O que faz |
 | --- | --- | --- |
@@ -147,7 +147,7 @@ python3 DarfinOSInstallScript-TUI.py --resume
 O instalador continua independente da interface:
 
 ```bash
-# Consultar as 32 etapas
+# Consultar as 34 etapas
 bash DarfinOSInstallScript.sh --list
 
 # Executar interativamente
@@ -257,7 +257,7 @@ Na interface, use **`Z`** para acessar o diagnóstico.
 | `minimal` | Base enxuta e ferramentas essenciais | Menor conjunto de etapas |
 | `desktop` | SonicDE, XLibre, integração e aplicativos | Modifica a pilha gráfica |
 | `gaming` | Desktop e ferramentas para jogos | Inclui recursos voltados a jogos |
-| `full` | Todas as **32 etapas** | **Inclui Bedrock e outras operações avançadas** |
+| `full` | Todas as **34 etapas** | **Inclui Bedrock e outras operações avançadas** |
 
 Um preset **apenas marca etapas**; ele não executa nada por conta própria. Perfis personalizados (`P`) e presets oficiais (`O`) são recursos distintos.
 
@@ -279,7 +279,7 @@ O DarfinOS possui testes automatizados com **`unittest`**, sem dependências Pyt
 
 Os testes cobrem, entre outros pontos:
 
-- Parser das **32 etapas** e resolução de dependências.
+- Parser das **34 etapas** e resolução de dependências.
 - Perfis, presets e exportação do manifesto.
 - Registros de execução, recuperação e proteção contra Bash diferente.
 - Eventos de progresso e confirmações do Bash em cenários isolados.
@@ -299,6 +299,25 @@ O workflow **[DarfinOS · Testes](.github/workflows/tests.yml)** executa verific
 > Os testes offline **não instalam pacotes, não pedem sudo e não substituem testes reais** de sessão gráfica, PTY e prompts de ferramentas externas. A quantidade de testes pode mudar conforme o projeto evolui.
 
 **Documentação:** [docs/TESTES.md](docs/TESTES.md).
+
+## 🩺 Diagnóstico e planejamento (sem instalar)
+
+Antes de modificar o sistema, execute a auditoria estática da TUI e visualize o plano de um preset:
+
+```bash
+python3 DarfinOSInstallScript-TUI.py --doctor
+python3 DarfinOSInstallScript-TUI.py --doctor-json
+python3 DarfinOSInstallScript-TUI.py --plan --preset desktop
+python3 DarfinOSInstallScript-TUI.py --manifest > manifest.json
+```
+
+O **Doctor** valida sintaxe Bash, existência das funções, dependências desconhecidas e ciclos. Também avisa sobre utilitários ausentes e ambiente incompatível. O modo JSON facilita relatórios automatizados. **Nenhuma dessas opções pede sudo, instala pacotes ou altera configurações.**
+
+A abertura normal da TUI agora começa com o preset conservador **`minimal`** (não com todas as etapas). Para começar sem nada marcado use **`--empty`**, e para uma seleção mais abrangente escolha explicitamente **`--preset full`**. O modo `full` inclui operações avançadas, inclusive Bedrock; revise sempre antes de executar.
+
+O instalador Bash agora retorna **código diferente de zero** quando alguma etapa selecionada falha ou é ignorada por dependência com falha. Os eventos da TUI continuam sendo a fonte mais detalhada para diagnosticar cada etapa.
+
+Leia [o guia de segurança](docs/SEGURANCA.md) e [o changelog](CHANGELOG.md).
 
 ## 📁 Logs, estado e arquivos locais
 
@@ -323,6 +342,8 @@ Esses são os caminhos padrão documentados; variantes locais podem modificá-lo
 | **LinuxToys** | Grande inspiração para a proposta de automação | [GitHub](https://github.com/psygreg/linux_toys) |
 
 ## 📚 Documentação
+
+**[Guia de segurança](docs/SEGURANCA.md)** · **[Changelog](CHANGELOG.md)** · **[Como contribuir](CONTRIBUTING.md)**
 
 O README é a porta de entrada. Os documentos abaixo aprofundam os componentes específicos:
 

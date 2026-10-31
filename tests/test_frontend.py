@@ -23,6 +23,27 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(steps[0].name, 'pacman_conf')
         self.assertEqual(steps[-1].name, 'terminal_extras')
 
+    def test_search_tolerates_typo_and_respects_selected(self):
+        st = TUI.State(TUI.parse_script(BASH), 'test', selected={'gaming'})
+        st.search = 'gamng'
+        self.assertIn('gaming', [st.steps[i].name for i in st.filtered()])
+        st.show_selected = True
+        self.assertEqual([st.steps[i].name for i in st.filtered()], ['gaming'])
+
+    def test_doctor_is_read_only_and_checks_all_functions(self):
+        report = TUI.diagnose_script(BASH)
+        self.assertEqual(report['steps'], 34)
+        self.assertTrue(report['ready'], report['errors'])
+        self.assertEqual(report['errors'], [])
+
+    def test_doctor_detects_invalid_dependency(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'invalid.sh'
+            path.write_text(BASH.read_text().replace('[apps]="flatpak"', '[apps]="missing_step"'))
+            report = TUI.diagnose_script(path)
+            self.assertFalse(report['ready'])
+            self.assertTrue(any('missing_step' in msg for msg in report['errors']))
+
     def test_known_dependencies(self):
         lookup = {s.name: s for s in TUI.parse_script(BASH)}
         self.assertIn('flatpak', lookup['apps'].deps)
@@ -155,11 +176,11 @@ if __name__ == '__main__':
 class CliTests(unittest.TestCase):
     def test_help_and_runs_are_noninteractive(self):
         import subprocess
-        for option in ('--help', '--runs'):
+        for option in ('--help', '--runs', '--doctor', '--doctor-json', '--plan', '--plan --preset gaming'):
             with self.subTest(option=option), tempfile.TemporaryDirectory() as tmp:
                 env = os.environ.copy()
                 env['HOME'] = tmp
-                proc = subprocess.run([sys.executable, str(ROOT / 'DarfinOSInstallScript-TUI.py'), option],
+                proc = subprocess.run([sys.executable, str(ROOT / 'DarfinOSInstallScript-TUI.py'), *option.split()],
                                       capture_output=True, text=True, env=env, timeout=10)
                 self.assertEqual(proc.returncode, 0, proc.stderr)
 

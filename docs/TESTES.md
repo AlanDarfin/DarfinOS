@@ -56,3 +56,10 @@ O job **validate** bloqueia alterações com falhas de sintaxe ou testes. O job 
 Os testes **não** validam uma instalação real do Arch, pacman/AUR/Flatpak, integração do SonicDE/XLibre/Bedrock, conexão de rede ou fluxo completo de `curses`/PTY em um terminal humano. Esses cenários exigem testes manuais e/ou uma VM descartável. Não use CI como garantia de que o script é seguro para executar em qualquer máquina.
 
 Para alterações futuras: acrescente testes offline sempre que modificar a seleção, o protocolo de eventos ou a lógica de retomada.
+
+
+## Novas verificações
+
+Os testes verificam o diagnóstico estático de dependências, a presença das funções do Bash, a busca aproximada de etapas e as novas opções CLI `--doctor`, `--doctor-json` e `--plan`.
+
+A auditoria `--doctor` é somente leitura. O Bash agora retorna erro quando termina com etapas falhas ou bloqueadas, facilitando o acompanhamento automatizado.

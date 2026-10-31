@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 # ==========================================================
-# Pós-instalação Arch Linux — SonicDE + XLibre (v4.2)
+# DarfinOS — pós-instalação modular para Arch Linux
 # ==========================================================
 # Uso:
-#   ./PostInstall.sh                       # interativo, roda tudo
-#   ./PostInstall.sh -y                    # automatiza perguntas do script; pacman segue interativo
-#   ./PostInstall.sh --only docker,shells  # roda só estas etapas
-#   ./PostInstall.sh --skip gaming,hamachi # roda tudo, menos estas
-#   ./PostInstall.sh --list                # lista as etapas
+#   bash DarfinOSInstallScript.sh --list
+#   bash DarfinOSInstallScript.sh --only base,cli_tools
+#   bash DarfinOSInstallScript.sh --skip bedrock,cleanup
+#   bash DarfinOSInstallScript.sh -y       # automatiza perguntas elegíveis
 #
 # Segurança: -y não desativa as confirmações do pacman e NÃO aprova substituições,
 # confiança em chaves, remoções, ativação do firewall ou reinicialização. AUR e
@@ -109,7 +108,20 @@ ok()   { echo "${C_GREEN} ✔${C_OFF} $*"; }
 warn() { echo "${C_YELLOW} ⚠${C_OFF} $*"; }
 die()  { echo "${C_RED} ✘ $*${C_OFF}" >&2; exit 1; }
 
-usage() { sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() {
+  cat <<'HELP'
+DarfinOS · instalador modular de pós-instalação para Arch Linux
+Uso: bash DarfinOSInstallScript.sh [opções]
+  --list                 Lista as 34 etapas disponíveis (somente leitura).
+  --only a,b,c           Executa apenas as etapas informadas.
+  --skip a,b,c           Ignora as etapas informadas.
+  -y, --yes              Usa valores padrão apenas em perguntas elegíveis.
+  -h, --help             Exibe esta ajuda.
+Sem --only/--skip, todas as etapas serão avaliadas, inclusive opções avançadas.
+Para uma seleção inicial segura, use: python3 DarfinOSInstallScript-TUI.py --local
+Para validar sem alterar o sistema: python3 DarfinOSInstallScript-TUI.py --doctor
+HELP
+}
 
 # ----------------------------------------------------------
 # Opções
@@ -1396,7 +1408,9 @@ step_bobagens() {
   # --------------------------------------------------------
   # TEMA GTK PARA FLATPAK
   # --------------------------------------------------------
-  flatpak override --user --env=GTK_THEME=Breeze
+  # Não impõe Breeze: preserva o tema escolhido pelo usuário (ex.: Sonic Silver).
+  # Overrides de GTK_THEME são globais e podem conflitar com o tema do desktop.
+  info "Mantendo as preferências de tema GTK/Flatpak do usuário."
 
   # --------------------------------------------------------
   # PYROCLEAR — SUBSTITUTO DO CLEAR
@@ -1735,4 +1749,9 @@ fi
 
 if confirm "Reiniciar agora?" n; then
   sudo reboot
+fi
+
+# Uma execução parcial com falhas não deve ser reportada como sucesso ao CI/TUI.
+if (( ${#FAILED_STEPS[@]} || ${#SKIPPED_STEPS[@]} )); then
+  exit 1
 fi
