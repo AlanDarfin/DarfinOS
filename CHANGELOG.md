@@ -2,6 +2,15 @@
 
 O projeto segue desenvolvimento contínuo. Esta lista destaca mudanças verificáveis, sem prometer suporte universal a todas as combinações de Arch/derivados.
 
+## Em preparação — atualização e TUI de novembro de 2026
+
+- Topgrade integrado à TUI: **T** abre o atualizador com confirmação e preserva a interação nativa no terminal.
+- **`topgrade-bin`** e **`arch-update-bin`** passam para a etapa `maintenance` em vez de dependerem do pacote opcional de extras.
+- `arch-update-bin` entrega Arch-Update e o aplicativo `arch-update-tray` juntos; configuração do XDG Autostart e verificação periódica tentada com avisos claros.
+- `maintenance` passa a ser selecionada nos presets básicos, de desktop e jogos.
+- Inspeção e revisão da TUI mostram descrições longas, prévia parcial dos pacotes por origem e escondem dependências quando não há pendências.
+- Testes offline para a integração e as novas informações da interface.
+
 ## Em preparação — auditoria de outubro de 2026
 
 ### Segurança e estabilidade

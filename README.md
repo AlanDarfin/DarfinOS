@@ -87,7 +87,7 @@ O instalador Bash organiza **34 etapas** em grupos. A seleção pode ser feita p
 | Terminal e desenvolvimento | `cli_tools`, `dev_tools`, `pkg_managers`, `shells`, `git_setup` | Fish, Zsh, Starship, ferramentas CLI e desenvolvimento |
 | Rede e serviços | `zerotier`, `hamachi`, `syncthing`, `docker` | Rede virtual, sincronização e containers |
 | Aplicativos e jogos | `flatpak`, `apps`, `gaming`, `browser` | Flathub, aplicativos, Steam e ferramentas para jogos |
-| Manutenção e extras | `maintenance`, `firewall`, `cleanup`, `bobagens`, `bedrock` | Timers, firewall, limpeza e experimentos opcionais |
+| Manutenção e extras | `maintenance`, `firewall`, `cleanup`, `bobagens`, `bedrock` | Topgrade, Arch-Update com tray, timers, firewall e limpeza |
 
 Entre os programas e recursos previstos pelo projeto estão **Obsidian, Vesktop, Spotify, Proton Pass, Proton VPN, Steam, RetroArch, Wine, GameMode, MangoHud, Fastfetch, Neovim, tmux, fzf, eza, yazi, Syncthing e Docker**, conforme as opções e condições do sistema.
 
@@ -174,7 +174,7 @@ A TUI é escrita em **Python + `curses`**, sem dependências externas de interfa
 - **Layout responsivo**, projetado para terminais a partir de **54×16**; em terminais largos, exibe painel lateral de detalhes.
 - **Marcadores de seleção, foco destacado, estados coloridos e barras de progresso** com significado explícito.
 - **Busca, filtros, seleção por grupo, seleção total e inclusão de dependências**.
-- **Prévia de pacotes**, informações de cada etapa e detecção consultiva de itens já instalados.
+- **Detalhes de cada etapa**, prévia parcial de pacotes por gerenciador (pacman, AUR e Flatpak), e detecção consultiva do que já está instalado. Dependências só aparecem na inspeção/revisão se houver pendências.
 - **Perfis pessoais**, histórico/diff de versões baixadas e central de manutenção somente leitura.
 - **Presets oficiais** e integração com manifesto de aplicativos.
 
@@ -215,6 +215,7 @@ O painel mostra andamento, estados, tempo decorrido e logs. Há **modais para pe
 | `B` | Prévia de aplicativos |
 | `I` | Consultar pacotes instalados |
 | `M` | Manutenção (somente leitura) |
+| `T` | Executar Topgrade após confirmação (somente na seleção) |
 | `H` | Histórico e diferenças |
 | `U` | Atualizar fonte remota |
 | `Y` | Alternar `-y` |
@@ -222,6 +223,14 @@ O painel mostra andamento, estados, tempo decorrido e logs. Há **modais para pe
 | `Q` | Sair da seleção |
 
 **Durante a instalação:** `L` alterna painel/logs; `T` abre o terminal integral; `Ctrl+]` volta ao painel. Prompts desconhecidos devem ser respondidos no terminal integral, não por automação presumida.
+
+### Atualização do sistema
+
+A etapa `maintenance` faz parte dos presets `minimal`, `desktop` e `gaming`. Ela tenta instalar pelo helper AUR os pacotes **`topgrade-bin`** e **`arch-update-bin`**. O segundo já contém o **`arch-update-tray`**: não há um pacote extra de bandeja a instalar. O script configura a inicialização automática do ícone e a verificação periódica de atualizações quando o ambiente permite; se um serviço de usuário não estiver acessível no TTY, mostra um aviso e não interrompe as demais etapas.
+
+Pressione **`T` na tela de seleção da TUI** para executar o Topgrade em um terminal real, após confirmação explícita. Essa ação não é a mesma da tecla **`U`**, que apenas atualiza a fonte do instalador. O Topgrade **não é executado automaticamente** durante a instalação nem quando a TUI usa `--dry-run`. Revise suas próprias transações e prompts; ele pode atualizar diferentes gerenciadores detectados no computador.
+
+A seção de pacotes da TUI é uma **prévia estática parcial**, não uma promessa de tudo que será baixado. Etapas condicionais e instalações escolhidas em perguntas interativas podem apresentar outros itens; acompanhe o log para saber o que de fato ocorreu.
 
 Para detalhes do layout e das limitações, consulte **[docs/TUI_V5.md](docs/TUI_V5.md)**.
 

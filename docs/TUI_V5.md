@@ -22,14 +22,22 @@ A TUI é a central de controle do instalador. Para ver o projeto em imagens e co
 ## ✨ O que mudou
 
 - Cabeçalho V5 com fonte, perfil, hash do instalador, estado de `-y` e barra de seleção.
-- Lista de etapas com marcadores `■` e `□`, foco destacado e inspeção de descrição, grupo, dependências e detecção.
+- Lista de etapas com marcadores `■` e `□`, foco destacado e inspeção de descrição longa, grupo, detecção e pacotes previstos por origem. As dependências satisfeitas/ausentes não ocupam espaço: o painel só mostra as pendentes.
 - Layout responsivo: inspeção lateral a partir de 100 colunas e resumo abaixo em terminais menores (mínimo 54×16).
 - Painel ao vivo com barra de **etapas encerradas**, totais de `DONE`/`FAIL`/`SKIP`, destaque por estado e alternância entre eventos e logs com **L**.
-- Atalhos existentes preservados: **O** presets, **Z** retomada, **B** aplicativos, **P** perfis, **M** manutenção, **H** histórico, **T** terminal integral durante instalação.
+- Atalhos existentes preservados: **O** presets, **Z** retomada, **B** aplicativos, **P** perfis, **M** manutenção, **H** histórico. **T** inicia Topgrade na tela de seleção (após confirmação) e abre terminal integral durante instalação.
+
+## Integração de atualizações
+
+A etapa `maintenance` agora faz parte da instalação padrão sugerida pelos presets. Instala **Topgrade** por `topgrade-bin` e **Arch-Update com seu applet `arch-update-tray`** pelo pacote único `arch-update-bin`, quando existe helper AUR. Tenta habilitar `arch-update --tray --enable` (XDG Autostart) e `arch-update --check --enable` (timer do usuário). Falhas de configuração são mostradas como aviso, por exemplo ao iniciar de um TTY sem serviços de usuário ativos.
+
+A TUI usa **T** na seleção para abrir o Topgrade com os prompts originais do terminal; a atualização não é automática, requer confirmação e é desativada em `--dry-run`. A tecla **U** continua limitada à atualização da fonte do instalador. Na tela de execução, **T** continua significando terminal integral da instalação.
 
 ## Limitações
 
 A barra de instalação mede **etapas encerradas**, não pacotes baixados, nem progresso temporal. Uma etapa `FAIL` ou `SKIP` também conta como encerrada, mas **não** como sucesso. As informações de sucesso e falha vêm dos eventos do Bash.
+
+A inspeção e a revisão mostram **uma prévia parcial de pacotes** extraída de chamadas literais no Bash. Condicionais, arrays, pacotes derivados de variáveis e aplicativos escolhidos na execução podem não aparecer. Dependências só ocupam espaço se faltarem etapas no conjunto selecionado.
 
 O frontend não faz rollback e não altera os critérios de retomada da V4.2. A interface curses depende de um terminal interativo; os testes automatizados cobrem lógica pura e execução não interativa, não todos os tamanhos de terminal ou prompts de ferramentas externas.
 

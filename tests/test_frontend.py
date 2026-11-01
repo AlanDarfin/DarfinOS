@@ -78,6 +78,42 @@ class ParserTests(unittest.TestCase):
         self.assertTrue(any(step == 'base' and kind == 'pacman' and pkg == 'git'
                             for step, kind, pkg in result))
 
+    def test_maintenance_updaters_in_default_presets(self):
+        for preset in ('minimal', 'desktop', 'gaming', 'full'):
+            with self.subTest(preset=preset):
+                self.assertIn('maintenance', TUI.preset_selection(preset, TUI.parse_script(BASH)))
+        packages = TUI.inventory(BASH, {'maintenance'})
+        self.assertIn(('maintenance', 'aur', 'topgrade-bin'), packages)
+        self.assertIn(('maintenance', 'aur', 'arch-update-bin'), packages)
+        self.assertNotIn(('maintenance', 'aur', 'arch-update-tray'), packages)
+
+    def test_step_details_and_package_preview(self):
+        steps = TUI.parse_script(BASH)
+        st = TUI.State(steps, 'test', selected={'maintenance'})
+        TUI.load_package_preview(st, BASH)
+        step = st.lookup['maintenance']
+        self.assertIn('Topgrade', step.detail)
+        self.assertIn('topgrade-bin', TUI.package_summary(st.packages['maintenance']))
+        details = TUI.inspection_lines(st, step)
+        self.assertTrue(any('PACOTES PREVISTOS' in item for item in details))
+        self.assertFalse(any('DEPENDÊNCIAS PENDENTES' in item for item in details))
+
+    def test_show_only_missing_dependencies(self):
+        st = TUI.State(TUI.parse_script(BASH), 'test', selected={'flatpak', 'apps'})
+        self.assertFalse(any('DEPENDÊNCIAS PENDENTES' in line
+                             for line in TUI.inspection_lines(st, st.lookup['apps'])))
+        st.selected.remove('flatpak')
+        self.assertTrue(any('flatpak' in line and 'DEPENDÊNCIAS PENDENTES' in line
+                            for line in TUI.inspection_lines(st, st.lookup['apps'])))
+
+    def test_topgrade_disabled_in_dry_run(self):
+        st = TUI.State(TUI.parse_script(BASH), 'test')
+        with mock.patch.object(TUI.shutil, 'which') as which:
+            TUI.launch_topgrade(None, st, allow_updates=False)
+            which.assert_not_called()
+        self.assertIn('dry-run', st.message)
+
+
 class RecoveryTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
