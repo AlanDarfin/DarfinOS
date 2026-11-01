@@ -67,12 +67,50 @@ declare -A STEP_DESC=(
   [apps]="Aplicativos (Flatpak/AUR, Discord, Shelter e Spicetify)"
   [gaming]="Steam, Wine, GameMode, MangoHud"
   [browser]="Navegador"
-  [maintenance]="Timers de manutenção (paccache, fstrim)"
+  [maintenance]="Topgrade, Arch-Update (bandeja) e timers de manutenção"
   [firewall]="Firewall (ufw)"
   [cleanup]="Limpeza de órfãos e caches"
   [bobagens]="Coisas extras ai"
   [bedrock]="Instalação do Bedrock Linux"
   [terminal_extras]="Extras do terminal (tmux, ranger, OpenCode e sudo)"
+)
+
+# Explicações para a TUI: informações gerais, sem prometer instalações condicionais.
+declare -A STEP_INFO=(
+  [pacman_conf]="Configura o pacman e o multilib, preservando backup do arquivo anterior."
+  [mirrors]="Revisa os servidores de download usados pelo pacman e a renovação periódica."
+  [repo_cachyos]="Configura os repositórios opcionais de otimização do CachyOS."
+  [repo_xlibre]="Registra a chave e o repositório necessário ao servidor gráfico XLibre."
+  [repo_sonicde]="Registra a chave e o repositório do ambiente SonicDE."
+  [repo_chaotic]="Disponibiliza pacotes binários da comunidade pelo Chaotic-AUR."
+  [sysupgrade]="Sincroniza e atualiza todos os pacotes do sistema com pacman -Syu."
+  [base]="Instala utilitários essenciais para administrar e recuperar o Arch."
+  [aur_helper]="Configura yay ou paru para instalar pacotes do AUR."
+  [fonts]="Instala famílias de fontes para aplicações e a interface."
+  [hardware]="Configura microcode, drivers e recursos de memória conforme o hardware."
+  [xlibre]="Substitui componentes X.Org pelo servidor XLibre, quando selecionado."
+  [sonicde]="Instala e configura o ambiente gráfico SonicDE e serviços associados."
+  [desktop_extras]="Acrescenta integração, portais e utilitários do desktop."
+  [bluetooth]="Instala os componentes Bluetooth e prepara o serviço."
+  [cli_tools]="Adiciona utilitários de produtividade, navegação e busca no terminal."
+  [dev_tools]="Instala compiladores, linguagens e ferramentas de programação."
+  [pkg_managers]="Prepara gerenciadores de pacotes de linguagens e seus caminhos."
+  [shells]="Instala shells e personaliza o terminal com tema e plugins do DarfinOS."
+  [git_setup]="Auxilia na configuração de identidade Git e de autenticação SSH."
+  [zerotier]="Instala o cliente de redes virtuais ZeroTier e configura o serviço."
+  [hamachi]="Instala clientes de rede Hamachi e interfaces disponíveis."
+  [syncthing]="Instala e prepara a sincronização de arquivos entre dispositivos."
+  [docker]="Instala e configura opções de contêineres após confirmação."
+  [flatpak]="Prepara o Flatpak, o Flathub e integração de apps."
+  [apps]="Instala aplicativos selecionados; clientes e mods podem depender de escolhas."
+  [gaming]="Instala ferramentas de jogos, compatibilidade e monitoramento de desempenho."
+  [browser]="Oferece a instalação de navegador e a revisão de opções existentes."
+  [maintenance]="Instala Topgrade e Arch-Update com tray; habilita notificações e timers quando possível."
+  [firewall]="Configura regras de rede e firewall somente após consentimento."
+  [cleanup]="Revisa pacotes órfãos e cache; remoções exigem confirmação."
+  [bobagens]="Ferramentas e personalizações experimentais/opcionais com perguntas próprias."
+  [bedrock]="Executa processo avançado e opcional do Bedrock Linux com avisos."
+  [terminal_extras]="Adiciona ferramentas e personalizações avançadas do terminal."
 )
 
 # ----------------------------------------------------------
@@ -1326,11 +1364,45 @@ step_browser() {
 # ==========================================================
 
 step_maintenance() {
-  # Limpa cache do pacman semanalmente (mantém 3 versões)
-  sudo systemctl enable --now paccache.timer
-  # TRIM semanal para SSD
-  sudo systemctl enable --now fstrim.timer
-  # Atualização de Flatpaks fica a cargo do Discover/Bazaar
+  info "Instalando ferramentas padrão de atualização: Topgrade e Arch-Update com tray..."
+  if [[ -z "$(detect_aur_helper)" ]]; then
+    warn "Nenhum helper AUR disponível. Instale yay/paru (etapa aur_helper) para obter os atualizadores."
+  else
+    if ! command -v topgrade >/dev/null 2>&1; then
+      aur_install topgrade-bin || warn "Não foi possível instalar topgrade-bin."
+    else
+      ok "Topgrade já disponível."
+    fi
+    if ! command -v arch-update >/dev/null 2>&1; then
+      # arch-update-bin inclui o aplicativo arch-update-tray; não é um pacote separado.
+      aur_install arch-update-bin || warn "Não foi possível instalar arch-update-bin."
+    else
+      ok "Arch-Update já disponível."
+    fi
+  fi
+
+  if command -v arch-update >/dev/null 2>&1; then
+    if command -v arch-update-tray >/dev/null 2>&1; then
+      # Gera a entrada XDG Autostart; funcionará no próximo login gráfico.
+      arch-update --tray --enable || warn "Não foi possível habilitar a bandeja automaticamente."
+    else
+      warn "O Arch-Update instalado não inclui arch-update-tray; verifique a variante do pacote."
+    fi
+    # Um timer --user pode não estar disponível numa instalação executada de TTY.
+    arch-update --check --enable || warn "Verificação automática não ativada nesta sessão; use: arch-update --check --enable"
+  fi
+
+  if command -v systemctl >/dev/null 2>&1; then
+    if command -v paccache >/dev/null 2>&1; then
+      sudo systemctl enable --now paccache.timer || warn "Não foi possível habilitar paccache.timer."
+    else
+      warn "paccache não está instalado; a limpeza programada foi ignorada."
+    fi
+    sudo systemctl enable --now fstrim.timer || warn "Não foi possível habilitar fstrim.timer."
+  else
+    warn "systemctl indisponível; timers de manutenção não configurados."
+  fi
+  info "Para atualizar manualmente: topgrade (ou a opção T da TUI)."
 }
 
 step_firewall() {
@@ -1524,7 +1596,7 @@ EOF
 
     info "Instalando pacotes adicionais do AUR..."
 
-    for pkg in arch-update stylepak-git topgrade-bin; do
+    for pkg in stylepak-git; do
       aur_install "$pkg" || warn "Falha ao instalar $pkg; continuando."
     done
   else
