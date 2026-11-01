@@ -46,6 +46,7 @@ class Step:
     desc: str
     group: str
     deps: list[str] = field(default_factory=list)
+    detail: str = ''
 
 
 def block(source: str, key: str) -> str:
@@ -61,6 +62,10 @@ def parse_script(path: Path) -> list[Step]:
     pair = re.compile(r'^\s*\[([\w-]+)\]\s*=\s*["\'](.*)["\']\s*(?:#.*)?$', re.M)
     desc = dict(pair.findall(block(source, "STEP_DESC")))
     deps = {k: v.split() for k, v in pair.findall(block(source, "STEP_DEPS"))}
+    try:
+        details = dict(pair.findall(block(source, "STEP_INFO")))
+    except ValueError:
+        details = {}  # Compatibilidade com versões anteriores do Bash.
     result: list[Step] = []
     group = "GERAL"
     for raw in block(source, "STEPS").splitlines():
@@ -73,7 +78,8 @@ def parse_script(path: Path) -> list[Step]:
         for name in line.split("#", 1)[0].split():
             if not re.fullmatch(r"[\w-]+", name):
                 raise ValueError(f"Nome de etapa inesperado: {name}")
-            result.append(Step(name, desc.get(name, "Sem descrição"), group, deps.get(name, [])))
+            result.append(Step(name, desc.get(name, "Sem descrição"), group, deps.get(name, []),
+                               details.get(name, desc.get(name, "Sem descrição"))))
     if not result or len({s.name for s in result}) != len(result):
         raise ValueError("Lista de etapas vazia ou com nomes duplicados.")
     return result
@@ -115,6 +121,7 @@ class State:
     show_selected: bool = False
     message: str = ""
     statuses: dict[str, str] = field(default_factory=dict)
+    packages: dict[str, list[tuple[str, str]]] = field(default_factory=dict)
     profile_name: str = "default"
 
     @property
@@ -638,6 +645,45 @@ def visual_status(flag: str) -> tuple[str, str]:
     }.get(flag, ('?', 'muted'))
 
 
+def load_package_preview(st: State, script: Path) -> None:
+    """Prévia estática e parcial: a instalação real pode variar com escolhas e condições."""
+    grouped = {step.name: [] for step in st.steps}
+    for step, manager, package in inventory(script, set(grouped)):
+        grouped[step].append((manager, package))
+    st.packages = grouped
+
+
+def package_summary(packages: list[tuple[str, str]], limit: int = 5) -> str:
+    """Resumo compacto, nunca apresentado como lista completa de downloads."""
+    if not packages:
+        return 'sem pacotes literais detectados (etapa pode configurar ou instalar dinamicamente)'
+    items = [f'{name} ({manager})' for manager, name in packages[:limit]]
+    if len(packages) > limit:
+        items.append(f'+{len(packages)-limit} outros')
+    return ', '.join(items)
+
+
+def inspection_lines(st: State, step: Step) -> list[str]:
+    """Informações suficientes para a inspeção, sem mostrar dependências satisfeitas."""
+    lines = [step.name.upper() + '  /  ' + step.group, '', step.desc]
+    if step.detail and step.detail != step.desc:
+        lines.extend(['', step.detail])
+    lines.extend(['', 'DETECÇÃO  ' + st.statuses.get(step.name, 'não consultado')])
+    missing = [name for name in st.required_deps(step) if name not in st.selected]
+    if missing:
+        lines.extend(['', 'DEPENDÊNCIAS PENDENTES  ' + ', '.join(missing)])
+    packages = st.packages.get(step.name, [])
+    lines.extend(['', f'PACOTES PREVISTOS (PARCIAL · {len(packages)})'])
+    if packages:
+        for manager in ('pacman', 'aur', 'flatpak'):
+            names = [name for kind, name in packages if kind == manager]
+            if names:
+                lines.append(manager.upper() + ': ' + ', '.join(names))
+    else:
+        lines.append('Sem pacotes literais detectados; possíveis ações condicionais.')
+    return lines
+
+
 def draw_v3(win, st: State, visible: list[int], cursor: int, top: int,
             mode: str, review_scroll: int, digest: str) -> None:
     """V5: responsive dashboard, keeping V4 navigation and state intact."""
@@ -661,7 +707,7 @@ def draw_v3(win, st: State, visible: list[int], cursor: int, top: int,
     line(win, 4)
     if mode == 'list':
         pane = w * 60 // 100 if wide else w - 2
-        list_height = max(1, h - (8 if wide else 12))
+        list_height = max(1, h - (8 if wide else 15))
         put(win, 5, 2, '01  ETAPAS  /  [ESPAÇO] MARCAR', curses.A_BOLD | colors('pink'))
         for pos in range(top, min(len(visible), top + list_height)):
             step = st.steps[visible[pos]]
@@ -682,33 +728,47 @@ def draw_v3(win, st: State, visible: list[int], cursor: int, top: int,
             put(win, 5, x+2, '02  INSPEÇÃO DA ETAPA', curses.A_BOLD | colors('pink'))
             if visible:
                 step = st.steps[visible[cursor]]
-                details = [step.name.upper(), '', 'GRUPO  ' + step.group, '', step.desc,
-                           '', 'DEPENDÊNCIAS', ', '.join(step.deps) or 'nenhuma',
-                           '', 'DETECÇÃO', st.statuses.get(step.name, 'não consultado')]
+                details = inspection_lines(st, step)
                 yy = 7
                 for item in details:
-                    for part in textwrap.wrap(item, max(12, w-x-5)) or ['']:
-                        if yy < h-3:
-                            put(win, yy, x+2, part)
-                            yy += 1
+                    for part in textwrap.wrap(item, max(12, w-x-5),
+                                              break_long_words=False) or ['']:
+                        if yy >= h-3:
+                            break
+                        put(win, yy, x+2, part)
+                        yy += 1
         else:
-            line(win, h-6)
+            line(win, h-8)
             if visible:
                 step = st.steps[visible[cursor]]
-                put(win, h-5, 2, f'INSPEÇÃO  {step.name}  /  {step.group}', curses.A_BOLD | colors('pink'))
-                put(win, h-4, 2, step.desc)
-                put(win, h-3, 2, 'Deps: ' + (', '.join(step.deps) or 'nenhuma'))
+                put(win, h-7, 2, f'INSPEÇÃO  {step.name}  /  {step.group}', curses.A_BOLD | colors('pink'))
+                put(win, h-6, 2, step.detail or step.desc)
+                put(win, h-5, 2, 'Pacotes (prévia): ' + package_summary(st.packages.get(step.name, []), 3))
+                missing = [dep for dep in st.required_deps(step) if dep not in st.selected]
+                if missing:
+                    put(win, h-4, 2, 'Dependências pendentes: ' + ', '.join(missing), colors('yellow'))
         put(win, h-2, 2, '↑↓ navegar · Espaço marcar · G grupo · A/N todos/nenhum · / busca · F filtro', colors('muted'))
-        put(win, h-1, 2, 'R revisar · O presets · Z retomar · B apps · P perfis · I detectar · M manutenção · H histórico · U atualizar · Q sair', colors('muted'))
+        put(win, h-1, 2, 'R revisar · T Topgrade · O presets · Z retomar · B apps · P perfis · I detectar · M manutenção · H histórico · U fonte · Q sair', colors('muted'))
     else:
         put(win, 5, 2, '02  REVISÃO DA INSTALAÇÃO  /  ENTER CONFIRMA', curses.A_BOLD | colors('pink'))
         chosen = [step for step in st.steps if step.name in st.selected]
-        rows = [f' ■ {step.name:<22} {step.desc}' for step in chosen]
-        rows += ['', 'DEPENDÊNCIAS AUSENTES']
-        rows += [f' ! {name}: {", ".join(deps)}' for name, deps in st.missing().items()]
+        rows = []
+        for step in chosen:
+            rows.append(f' ■ {step.name:<20} {step.desc}')
+            packages = st.packages.get(step.name, [])
+            rows.append('    Pacotes (prévia parcial): ' + package_summary(packages, 7))
+        missing = st.missing()
+        if missing:
+            rows += ['', 'DEPENDÊNCIAS PENDENTES']
+            rows += [f' ! {name}: {", ".join(deps)}' for name, deps in missing.items()]
         rows += ['', 'D: incluir dependências   Y: alternar -y   B: aplicativos',
                  'ATENÇÃO: o instalador pode executar comandos com sudo.']
-        for i, row in enumerate(rows[review_scroll:review_scroll + h - 9]):
+        wrapped = []
+        for row in rows:
+            wrapped.extend(textwrap.wrap(row, max(12, w-4), break_long_words=False,
+                                         replace_whitespace=False) or [''])
+        offset = min(review_scroll, max(0, len(wrapped) - max(1, h - 9)))
+        for i, row in enumerate(wrapped[offset:offset + h - 9]):
             put(win, 6+i, 2, row)
         put(win, h-2, 2, '↑↓ rolar · D dependências · Enter executar · Esc voltar', colors('muted'))
     put(win, h-1 if mode == 'review' else h-3, 2, st.message[:w-4], colors('yellow'))
@@ -733,7 +793,39 @@ def profile_screen(win, st: State) -> None:
         st.message = str(exc)
 
 
-def ui_v3(win, st: State, digest: str) -> str:
+def launch_topgrade(win, st: State, allow_updates: bool = True) -> None:
+    """Execução interativa no terminal real; sem sudo automático ou shell."""
+    if not allow_updates:
+        st.message = 'Modo --dry-run ativo; Topgrade não será executado.'
+        return
+    executable = shutil.which('topgrade')
+    if not executable:
+        st.message = 'Topgrade não instalado. Execute a etapa maintenance primeiro.'
+        return
+    curses.def_prog_mode()
+    curses.endwin()
+    try:
+        print('\nDARFINOS · ATUALIZAR SISTEMA COM TOPGRADE')
+        print('O Topgrade pode atualizar pacman/AUR, Flatpak e outras ferramentas detectadas.')
+        print('Revise as solicitações de senha e as transações apresentadas pelo atualizador.')
+        answer = input('Iniciar Topgrade agora? [s/N]: ').strip().lower()
+        if answer in ('s', 'sim'):
+            try:
+                status = subprocess.run([executable], check=False).returncode
+                st.message = f'Topgrade terminou com código {status}.'
+            except OSError as exc:
+                st.message = f'Falha ao executar Topgrade: {exc}'
+        else:
+            st.message = 'Atualização cancelada.'
+        input('\nPressione Enter para retornar à TUI...')
+    except (EOFError, KeyboardInterrupt):
+        st.message = 'Atualização cancelada.'
+    finally:
+        curses.reset_prog_mode()
+        win.refresh()
+
+
+def ui_v3(win, st: State, digest: str, allow_updates: bool = True) -> str:
     curses.curs_set(0)
     win.keypad(True)
     init_darfinos_palette()
@@ -742,7 +834,7 @@ def ui_v3(win, st: State, digest: str) -> str:
         h, w = win.getmaxyx()
         visible = st.filtered()
         current = max(0, min(current, len(visible)-1))
-        height = max(1, h - (8 if w >= 100 else 12))
+        height = max(1, h - (8 if w >= 100 else 15))
         top = max(0, min(top, max(0, len(visible)-height)))
         if current < top: top = current
         if current >= top+height: top = current-height+1
@@ -786,6 +878,7 @@ def ui_v3(win, st: State, digest: str) -> str:
         elif key in (ord('i'), ord('I')): inspect_steps(st)
         elif key in (ord('b'), ord('B')): apps_screen(win, st, CURRENT_SCRIPT)
         elif key in (ord('m'), ord('M')): maintenance_screen(win)
+        elif key in (ord('t'), ord('T')): launch_topgrade(win, st, allow_updates)
         elif key in (ord('z'), ord('Z')): recovery_screen(win, st, CURRENT_SCRIPT)
         elif key in (ord('h'), ord('H')): history_screen(win)
         elif key in (ord('y'), ord('Y')): st.yes = not st.yes
@@ -947,9 +1040,9 @@ def recovery_screen(win, st: State, script: Path):
 
 # Presets versionados: etapas explicitamente listadas, sem comandos arbitrários.
 PRESETS = {
-    'minimal': ('Base enxuta', ('pacman_conf', 'mirrors', 'sysupgrade', 'base', 'fonts', 'hardware', 'cli_tools')),
-    'desktop': ('SonicDE + XLibre e desktop', ('pacman_conf', 'mirrors', 'repo_xlibre', 'repo_sonicde', 'sysupgrade', 'base', 'fonts', 'hardware', 'xlibre', 'sonicde', 'desktop_extras', 'bluetooth', 'cli_tools', 'shells', 'flatpak', 'apps')),
-    'gaming': ('Desktop e jogos', ('pacman_conf', 'mirrors', 'repo_xlibre', 'repo_sonicde', 'sysupgrade', 'base', 'fonts', 'hardware', 'xlibre', 'sonicde', 'desktop_extras', 'bluetooth', 'cli_tools', 'flatpak', 'gaming')),
+    'minimal': ('Base enxuta', ('pacman_conf', 'mirrors', 'sysupgrade', 'base', 'fonts', 'hardware', 'cli_tools', 'maintenance')),
+    'desktop': ('SonicDE + XLibre e desktop', ('pacman_conf', 'mirrors', 'repo_xlibre', 'repo_sonicde', 'sysupgrade', 'base', 'fonts', 'hardware', 'xlibre', 'sonicde', 'desktop_extras', 'bluetooth', 'cli_tools', 'shells', 'flatpak', 'apps', 'maintenance')),
+    'gaming': ('Desktop e jogos', ('pacman_conf', 'mirrors', 'repo_xlibre', 'repo_sonicde', 'sysupgrade', 'base', 'fonts', 'hardware', 'xlibre', 'sonicde', 'desktop_extras', 'bluetooth', 'cli_tools', 'flatpak', 'gaming', 'maintenance')),
     'full': ('Todas as etapas, inclusive Bedrock (RISCO)', tuple()),
 }
 
@@ -1104,10 +1197,13 @@ def main() -> int:
             steps = parse_script(script)
             selected = preset_selection(args.preset or 'minimal', steps)
             state = State(steps, 'Plano local', selected=selected)
+            load_package_preview(state, script)
             print(f"Plano DarfinOS · preset: {args.preset or 'minimal'} · {len(selected)} etapas")
             for step in steps:
                 if step.name in selected:
                     print(f"  {step.name:<20} {step.desc}")
+                    print("    " + (step.detail or step.desc))
+                    print("    Pacotes (prévia parcial): " + package_summary(state.packages.get(step.name, []), 8))
             missing = state.missing()
             if missing:
                 print('Dependências ausentes na seleção:', missing)
@@ -1146,6 +1242,7 @@ def main() -> int:
         st = State(steps=steps, source=origin,
                    selected=set() if args.empty else preset_selection('minimal', steps),
                    profile_name='manual' if args.empty else 'preset:minimal')
+        load_package_preview(st, script)
         if args.preset:
             try: apply_preset(st, args.preset)
             except ValueError as exc: ap.error(str(exc))
@@ -1159,7 +1256,7 @@ def main() -> int:
                 st.selected, st.message = recovery_selection(st, script, old)
             except ValueError as exc: ap.error(str(exc))
             st.recovery_parent = latest_run()[0].name
-        try: action = curses.wrapper(ui_v3, st, digest)
+        try: action = curses.wrapper(ui_v3, st, digest, not args.dry_run)
         except KeyboardInterrupt: return 130
         if action == 'quit': return 0
         if action == 'refresh':
