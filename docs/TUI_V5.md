@@ -37,7 +37,9 @@ A TUI usa **T** na seleção para abrir o Topgrade com os prompts originais do t
 
 A barra de instalação mede **etapas encerradas**, não pacotes baixados, nem progresso temporal. Uma etapa `FAIL` ou `SKIP` também conta como encerrada, mas **não** como sucesso. As informações de sucesso e falha vêm dos eventos do Bash.
 
-A inspeção e a revisão mostram **uma prévia parcial de pacotes** extraída de chamadas literais no Bash. Condicionais, arrays, pacotes derivados de variáveis e aplicativos escolhidos na execução podem não aparecer. Dependências só ocupam espaço se faltarem etapas no conjunto selecionado.\n\nO frontend não faz rollback e não altera os critérios de retomada da V4.2. A interface curses depende de um terminal interativo; os testes automatizados cobrem lógica pura e execução não interativa, não todos os tamanhos de terminal ou prompts de ferramentas externas.
+A inspeção e a revisão mostram **uma prévia parcial de pacotes** extraída de chamadas literais no Bash. Condicionais, arrays, pacotes derivados de variáveis e aplicativos escolhidos na execução podem não aparecer. Dependências só ocupam espaço se faltarem etapas no conjunto selecionado.
+
+O frontend não faz rollback e não altera os critérios de retomada da V4.2. A interface curses depende de um terminal interativo; os testes automatizados cobrem lógica pura e execução não interativa, não todos os tamanhos de terminal ou prompts de ferramentas externas.
 
 ## Testar
 
