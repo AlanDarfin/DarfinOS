@@ -91,7 +91,7 @@ class ParserTests(unittest.TestCase):
 
     def test_step_details_and_package_preview(self):
         steps = TUI.parse_script(BASH)
-        st = TUI.State(steps, 'test', selected={'maintenance'})
+        st = TUI.State(steps, 'test', selected={'maintenance', 'aur_helper'})
         TUI.load_package_preview(st, BASH)
         step = st.lookup['maintenance']
         self.assertIn('Topgrade', step.detail)
@@ -99,6 +99,8 @@ class ParserTests(unittest.TestCase):
         details = TUI.inspection_lines(st, step)
         self.assertTrue(any('PACOTES PREVISTOS' in item for item in details))
         self.assertFalse(any('DEPENDÊNCIAS PENDENTES' in item for item in details))
+        st.selected.remove('aur_helper')
+        self.assertIn('maintenance', st.missing())
 
     def test_show_only_missing_dependencies(self):
         st = TUI.State(TUI.parse_script(BASH), 'test', selected={'flatpak', 'apps'})
