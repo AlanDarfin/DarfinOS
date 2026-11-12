@@ -97,3 +97,17 @@ lista as etapas adicionadas, removidas e que exigem revisão especial para passa
 de uma seleção declarativa a outra. **Não** compara os pacotes já instalados
 nem habilita remoções automáticas. Execute `--audit` para consultar a prévia
 de pacotes locais, sem tomá-la como prova de que uma etapa foi concluída.
+
+## DarfinOS Labs e o novo preset i3
+
+A TUI agora apresenta **39 etapas**, cinco presets (minimal, desktop, i3,
+gaming e full) e a tecla **L** para abrir o catálogo de 12 projetos
+independentes. O catálogo lê links, modos e riscos diretamente do Bash sem
+executar nada. Enter mostra os detalhes e o endereço original; Espaço apenas
+marca uma etapa disponível. Use `--labs` ou `--lab-info NOME` sem terminal.
+
+O preset `i3` instala i3 e XLibre com etapas comuns, **sem SonicDE**. Os Labs
+AUR (NsCDE, JuNest, Decman e Metapac) são sempre escolhidos um a um, fora do
+`full`, do atalho A e de seleções amplas `--all`/`--skip`. A etapa exige
+digitar `LABS` e rejeita `-y`; não executa `setup`, `clean` ou perfis
+externos automaticamente. Veja [a referência completa](LABS.md).
