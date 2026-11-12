@@ -172,6 +172,40 @@ def system_status(home: Path | None = None) -> dict:
     }
 
 
+def maintenance_status(home: Path | None = None) -> dict:
+    """Inventário observacional de ferramentas, tray e timers de atualização.
+
+    Indica o que foi detectado, não declara que uma atualização funcionará.
+    Não roda `topgrade` ou `arch-update --check`, nem modifica serviços.
+    """
+    root = home_dir(home)
+    tools = {tool: bool(shutil.which(tool))
+             for tool in ("topgrade", "arch-update", "arch-update-tray")}
+    autostart_dir = root / ".config/autostart"
+    autostart = []
+    if autostart_dir.is_dir() and not autostart_dir.is_symlink():
+        autostart = sorted(
+            entry.name for entry in autostart_dir.glob("*.desktop")
+            if "arch-update" in entry.name.casefold() and not entry.is_symlink()
+        )
+    timers: dict = {"available": False, "arch_update_detected": None}
+    if shutil.which("systemctl"):
+        query = _read_only(["systemctl", "--user", "list-timers", "--all",
+                            "--no-pager", "--no-legend"])
+        if query.get("code") == 0:
+            timers = {"available": True, "arch_update_detected":
+                      "arch-update" in query.get("output", "").casefold()}
+        else:
+            timers = {"available": False, "arch_update_detected": None,
+                      "reason": "systemctl --user não acessível nesta sessão"}
+    return {
+        "tools": tools,
+        "arch_update_autostart_entries": autostart,
+        "user_timers": timers,
+        "note": "Detecção local parcial; iniciar bandeja e atualizar exigem teste em sessão gráfica.",
+    }
+
+
 def _allowed(relative: str) -> bool:
     path = PurePosixPath(relative)
     if str(path) != relative or path.is_absolute() or ".." in path.parts:
@@ -368,6 +402,8 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="action", required=True)
     status = sub.add_parser("status", help="Estado do sistema (somente leitura)")
     status.add_argument("--json", action="store_true")
+    maintenance = sub.add_parser("maintenance", help="Verificar Topgrade/Arch-Update sem executar")
+    maintenance.add_argument("--json", action="store_true")
     exp = sub.add_parser("profile-export", help="Exportar perfil para JSON")
     exp.add_argument("name")
     exp.add_argument("path", type=Path)
@@ -392,6 +428,14 @@ def main(argv: list[str] | None = None) -> int:
                 print(json.dumps(result, ensure_ascii=False, indent=2))
             else:
                 print("DarfinOS · Diagnóstico local (somente leitura)")
+                for key, value in result.items():
+                    print(f"  {key}: {value}")
+        elif args.action == "maintenance":
+            result = maintenance_status()
+            if args.json:
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+            else:
+                print("DarfinOS · Ferramentas de manutenção (somente leitura)")
                 for key, value in result.items():
                     print(f"  {key}: {value}")
         elif args.action == "profile-export":
