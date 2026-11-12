@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import curses
+import darfinos_control as control
 import hashlib
 import difflib
 import select
@@ -592,6 +593,35 @@ def scroll_screen(win, title: str, content: str) -> None:
         offset = max(0, min(offset, max(0, len(lines) - height)))
 
 
+def control_center_screen(win) -> None:
+    """Resumo local somente leitura. Ferramentas de recuperação são opt-in no CLI."""
+    status = control.system_status()
+    lines = [
+        "DarfinOS · Control Center  /  diagnóstico de estado",
+        "",
+        "Arch compatível: " + ("detectado" if status["arch"] else "não detectado"),
+        "Pacotes via pacman: " + str(status["packages_installed"] or "indisponível"),
+        "Sistema de arquivos /: " + str(status["filesystem"] or "indisponível"),
+        "Espaço livre no HOME (GiB): " + str(status["free_home_gib"]),
+        "Última execução: " + str(status["last_run"] or "nenhum histórico"),
+        "Perfis: " + (", ".join(status["profiles"]) or "nenhum"),
+        "",
+        "Ferramentas encontradas:"
+    ]
+    lines += ["  " + name + ": " + ("sim" if installed else "não")
+              for name, installed in status["tools"].items()]
+    lines += ["", "Controle de perfis e cópias de segurança (terminal):",
+              "  python3 darfinos_control.py profile-export NOME perfil.json",
+              "  python3 darfinos_control.py profile-import perfil.json NOME",
+              "  python3 darfinos_control.py profile-diff BASE DESTINO",
+              "  python3 darfinos_control.py backup ~/darfinos-config.zip",
+              "  python3 darfinos_control.py restore ~/darfinos-config.zip",
+              "",
+              "Restauração é prévia por padrão; --apply e --overwrite exigem decisão explícita.",
+              "Cópias podem conter dados privados: não compartilhe os arquivos ZIP."]
+    scroll_screen(win, "◆ DARFINOS · CONTROL CENTER", "\n".join(lines))
+
+
 def maintenance_screen(win) -> None:
     items = maintenance_items()
     index = 0
@@ -748,7 +778,7 @@ def draw_v3(win, st: State, visible: list[int], cursor: int, top: int,
                 if missing:
                     put(win, h-4, 2, 'Dependências pendentes: ' + ', '.join(missing), colors('yellow'))
         put(win, h-2, 2, '↑↓ navegar · Espaço marcar · G grupo · A/N todos/nenhum · / busca · F filtro', colors('muted'))
-        put(win, h-1, 2, 'R revisar · T Topgrade · O presets · Z retomar · B apps · P perfis · I detectar · M manutenção · H histórico · U fonte · Q sair', colors('muted'))
+        put(win, h-1, 2, 'R revisar · T Topgrade · O presets · Z retomar · B apps · P perfis · I detectar · M manutenção · C sistema · H histórico · U fonte · Q sair', colors('muted'))
     else:
         put(win, 5, 2, '02  REVISÃO DA INSTALAÇÃO  /  ENTER CONFIRMA', curses.A_BOLD | colors('pink'))
         chosen = [step for step in st.steps if step.name in st.selected]
@@ -878,6 +908,7 @@ def ui_v3(win, st: State, digest: str, allow_updates: bool = True) -> str:
         elif key in (ord('i'), ord('I')): inspect_steps(st)
         elif key in (ord('b'), ord('B')): apps_screen(win, st, CURRENT_SCRIPT)
         elif key in (ord('m'), ord('M')): maintenance_screen(win)
+        elif key in (ord('c'), ord('C')): control_center_screen(win)
         elif key in (ord('t'), ord('T')): launch_topgrade(win, st, allow_updates)
         elif key in (ord('z'), ord('Z')): recovery_screen(win, st, CURRENT_SCRIPT)
         elif key in (ord('h'), ord('H')): history_screen(win)
@@ -1165,8 +1196,12 @@ def main() -> int:
     ap.add_argument('--manifest', action='store_true', help='Imprime manifesto JSON parcial, sem executar o Bash')
     ap.add_argument('--doctor', action='store_true', help='Audita Bash, etapas e dependências sem instalar')
     ap.add_argument('--doctor-json', action='store_true', help='Emite diagnóstico estruturado em JSON')
+    ap.add_argument('--status-json', action='store_true', help='Mostra estado local sem sudo ou alterações')
     ap.add_argument('--plan', action='store_true', help='Mostra as etapas de um preset sem executar')
     args = ap.parse_args()
+    if args.status_json:
+        print(json.dumps(control.system_status(), ensure_ascii=False, indent=2))
+        return 0
     if args.list_presets:
         for name, (description, _) in PRESETS.items():
             print(f'{name:<10} {description}')
