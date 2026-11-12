@@ -259,6 +259,9 @@ python3 darfinos_control.py maintenance --json
 # Comparar pacotes previstos por um preset com a instalação local
 python3 DarfinOSInstallScript-TUI.py --audit --preset gaming
 
+# Comparar o conjunto de etapas dos presets Minimal e Gaming
+python3 DarfinOSInstallScript-TUI.py --compare-presets minimal gaming
+
 # Exportar/importar perfis; importação sempre desativa -y
 python3 darfinos_control.py profile-export gaming gaming.json
 python3 darfinos_control.py profile-import gaming.json gaming-copia
