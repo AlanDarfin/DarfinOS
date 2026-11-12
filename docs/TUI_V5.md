@@ -82,3 +82,9 @@ Pode conter informações privadas: evite compartilhá-lo.
 
 Consulte [VALIDACAO_VM.md](VALIDACAO_VM.md) para a aceitação em VM e
 [LANCAMENTO.md](LANCAMENTO.md) para o pacote de versão.
+
+
+**Mudança de dependência:** os três presets comuns incluem `aur_helper`
+antes de `maintenance`, que depende dele. Se Topgrade/Arch-Update não puderem
+ser instalados, a etapa reporta falha em vez de declarar sucesso. Isso permite
+à TUI marcar corretamente uma instalação incompleta.
