@@ -88,3 +88,12 @@ Consulte [VALIDACAO_VM.md](VALIDACAO_VM.md) para a aceitação em VM e
 antes de `maintenance`, que depende dele. Se Topgrade/Arch-Update não puderem
 ser instalados, a etapa reporta falha em vez de declarar sucesso. Isso permite
 à TUI marcar corretamente uma instalação incompleta.
+
+
+### Plano de migração entre presets
+
+`python3 DarfinOSInstallScript-TUI.py --compare-presets minimal gaming`
+lista as etapas adicionadas, removidas e que exigem revisão especial para passar
+de uma seleção declarativa a outra. **Não** compara os pacotes já instalados
+nem habilita remoções automáticas. Execute `--audit` para consultar a prévia
+de pacotes locais, sem tomá-la como prova de que uma etapa foi concluída.
