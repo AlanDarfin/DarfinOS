@@ -19,7 +19,7 @@ class ParserTests(unittest.TestCase):
     def test_39_steps_and_unique_names(self):
         steps = TUI.parse_script(BASH)
         self.assertEqual(len(steps), 39)
-        self.assertEqual(len({s.name for s in steps}), 34)
+        self.assertEqual(len({s.name for s in steps}), 39)
         self.assertEqual(steps[0].name, 'pacman_conf')
         self.assertEqual(steps[-1].name, 'lab_metapac')
 
@@ -281,4 +281,4 @@ class CliTests(unittest.TestCase):
         proc = subprocess.run(['bash', str(BASH), '--list'], capture_output=True,
                               text=True, timeout=10)
         self.assertEqual(proc.returncode, 0, proc.stderr)
-        self.assertEqual(len([line for line in proc.stdout.splitlines() if line.strip()]), 34)
+        self.assertEqual(len([line for line in proc.stdout.splitlines() if line.strip()]), 39)
