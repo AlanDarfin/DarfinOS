@@ -25,7 +25,7 @@ A TUI é a central de controle do instalador. Para ver o projeto em imagens e co
 - Lista de etapas com marcadores `■` e `□`, foco destacado e inspeção de descrição longa, grupo, detecção e pacotes previstos por origem. As dependências satisfeitas/ausentes não ocupam espaço: o painel só mostra as pendentes.
 - Layout responsivo: inspeção lateral a partir de 100 colunas e resumo abaixo em terminais menores (mínimo 54×16).
 - Painel ao vivo com barra de **etapas encerradas**, totais de `DONE`/`FAIL`/`SKIP`, destaque por estado e alternância entre eventos e logs com **L**.
-- Atalhos existentes preservados: **O** presets, **Z** retomada, **B** aplicativos, **P** perfis, **M** manutenção, **C** estado do sistema, **H** histórico. **T** inicia Topgrade na tela de seleção (após confirmação) e abre terminal integral durante instalação.
+- Atalhos existentes preservados: **O** presets, **Z** retomada, **B** aplicativos, **P** perfis, **M** manutenção, **C** estado do sistema, **V** auditoria dos pacotes, **H** histórico. **T** inicia Topgrade na tela de seleção (após confirmação) e abre terminal integral durante instalação.
 
 ## Integração de atualizações
 
@@ -65,6 +65,8 @@ O `--dry-run` não executa a instalação. Para explorar a interface, navegue e 
 ## Control Center local
 
 - **C** na seleção: mostra o estado local, ferramentas encontradas, perfis e última execução.
+- **V** na seleção: audita pacotes previstos para as etapas marcadas, sem instalar.
+- `--audit --preset gaming` ou `--audit --profile NOME`: mostra a auditoria em JSON sem terminal interativo. O inventário é parcial e não identifica conclusão das etapas.
 - `python3 DarfinOSInstallScript-TUI.py --status-json`: emite os mesmos dados estruturados sem iniciar a TUI.
 - `bash DarfinOSInstallScript.sh --preflight`: checa Arch, pacman, sudo e curl sem solicitar sudo.
 - `darfinos_control.py`: `status`, `profile-export`, `profile-import`,
