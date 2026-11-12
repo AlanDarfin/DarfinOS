@@ -244,8 +244,8 @@ Uso: bash DarfinOSInstallScript.sh [opções]
   --lab-info NOME        Detalhes e URL original de um projeto Labs.
   --preflight            Verifica requisitos básicos sem sudo nem alterações.
   --only a,b,c           Executa apenas as etapas informadas.
-  --skip a,b,c           Executa todas, exceto as etapas listadas (avançado).
-  --all                  Executa todas as etapas, inclusive opções avançadas.
+  --skip a,b,c           Executa etapas convencionais, exceto as listadas; exclui Labs AUR.
+  --all                  Executa as etapas convencionais, inclusive Bedrock; exclui Labs AUR.
   -y, --yes              Usa valores padrão apenas em perguntas elegíveis.
   -h, --help             Exibe esta ajuda.
 É obrigatório escolher --only, --skip ou --all antes de instalar.
@@ -329,7 +329,7 @@ list_labs() {
 }
 lab_info() {
   local name="${1:-}"
-  if [[ -z "$name" || -z "${LABS_URL[$name]:-}" ]]; then
+  if [[ ! "$name" =~ ^[a-z0-9_]+$ || -z "${LABS_URL[$name]:-}" ]]; then
     die "Projeto Labs desconhecido: $name (veja --labs)"
   fi
   printf 'Projeto: %s\nOrigem: %s\nNivel: %s\nModo: %s\nEtapa: %s\n\n%s\n' \
@@ -894,9 +894,10 @@ lab_aur_install() {
   fi
   info "Upstream oficial: ${LABS_URL[$project]}"
   warn "PKGBUILD do AUR é de terceiros. Revise alterações, fontes e dependências no helper."
-  printf 'Digite LABS para abrir a transação de %s, ou Enter para cancelar: ' "$package"
-  IFS= read -r reply || return 1
-  if [[ "$reply" != "LABS" ]]; then
+  # Usa o protocolo de prompts da TUI para que o modal aceite a confirmação.
+  # O choose normaliza para minúsculas e publica PROMPT_CHOOSE no FD de eventos.
+  reply=$(choose "Digite LABS para abrir a transação de $package" "labs/n" "n") || return 1
+  if [[ "$reply" != "labs" ]]; then
     warn "Instalação Labs cancelada; etapa não concluída."
     return 1
   fi
