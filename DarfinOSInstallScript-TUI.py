@@ -1119,6 +1119,22 @@ def preset_selection(name: str, steps: list[Step]) -> set[str]:
     return chosen
 
 
+def compare_presets(steps: list[Step], base: str, target: str) -> dict:
+    """Plano de transição somente declarativo, sem inferir estado real do sistema."""
+    before = preset_selection(base, steps)
+    after = preset_selection(target, steps)
+    ordered = [step.name for step in steps]
+    risks = {'bedrock', 'cleanup', 'firewall', 'repo_cachyos', 'repo_xlibre',
+             'repo_sonicde', 'xlibre', 'sonicde', 'terminal_extras'}
+    to_add = [name for name in ordered if name in after - before]
+    return {'source': base, 'target': target,
+            'add': to_add,
+            'remove': [name for name in ordered if name in before - after],
+            'unchanged': len(before & after),
+            'review_required': [name for name in to_add if name in risks],
+            'note': 'Comparação declarativa entre presets; não detecta instalação real e não executa ações.'}
+
+
 def apply_preset(st: State, name: str) -> None:
     st.selected = preset_selection(name, st.steps)
     st.profile_name = 'preset:' + name
@@ -1228,6 +1244,8 @@ def main() -> int:
     ap.add_argument('--doctor-json', action='store_true', help='Emite diagnóstico estruturado em JSON')
     ap.add_argument('--status-json', action='store_true', help='Mostra estado local sem sudo ou alterações')
     ap.add_argument('--audit', action='store_true', help='Audita pacotes de um perfil/preset sem instalar')
+    ap.add_argument('--compare-presets', nargs=2, metavar=('ORIGEM', 'DESTINO'),
+                    help='Compara dois presets sem modificar o sistema')
     ap.add_argument('--plan', action='store_true', help='Mostra as etapas de um preset sem executar')
     args = ap.parse_args()
     if args.status_json:
@@ -1242,6 +1260,15 @@ def main() -> int:
         if not script.is_file(): ap.error(f'Não encontrado: {script}')
         print(json.dumps(build_manifest(script), ensure_ascii=False, indent=2))
         return 0
+    if args.compare_presets:
+        script = (args.script or LOCAL).expanduser().resolve()
+        if not script.is_file(): ap.error(f'Não encontrado: {script}')
+        try:
+            report = compare_presets(parse_script(script), *args.compare_presets)
+            print(json.dumps(report, ensure_ascii=False, indent=2))
+            return 0
+        except (OSError, ValueError) as exc:
+            ap.error(str(exc))
     if args.audit:
         script = (args.script or LOCAL).expanduser().resolve()
         if not script.is_file(): ap.error(f'Não encontrado: {script}')
