@@ -59,3 +59,12 @@ Somente publicar v0.1.0 após:
 
 **O Control Center faz backup apenas de certos arquivos do HOME**.
 Não cria snapshot, não reverte pacotes e não oferece rollback de pacman/Bedrock/XLibre.
+
+
+## Verificação complementar (não equivale à VM)
+
+Opcionalmente, após mesclar uma versão revisada dos workflows,
+execute manualmente o teste de instalação Base no GitHub Actions em
+`.github/workflows/install-base-manual.yml`. Ele modifica somente o
+contêiner descartável e não testa inicialização gráfica. Registre o link
+exato da execução e o commit SHA antes de considerar o resultado válido.
