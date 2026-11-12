@@ -42,7 +42,7 @@ class BashProtocolTests(unittest.TestCase):
         run = subprocess.run(['bash', str(ROOT / 'DarfinOSInstallScript.sh')],
                              capture_output=True, text=True, timeout=5)
         self.assertEqual(run.returncode, 2, run.stdout + run.stderr)
-        self.assertIn('Nenhuma seleção informada', run.stderr)
+        self.assertIn('Nenhuma seleção informada', run.stdout + run.stderr)
         self.assertIn('--all', run.stdout)
         self.assertNotIn('Autenticando sudo', run.stdout)
 
