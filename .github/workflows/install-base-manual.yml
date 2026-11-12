@@ -1,0 +1,41 @@
+name: DarfinOS · Instalação real da etapa Base (Arch descartável)
+
+# Opt-in: instala pacotes reais apenas dentro de um contêiner Arch efêmero.
+# Nunca executa no host do usuário; não testa XLibre/SonicDE nem uma VM com boot.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  install-base:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: archlinux:latest
+    steps:
+      - name: Preparar pacman e ferramentas dentro do contêiner descartável
+        run: pacman -Syu --noconfirm --needed git sudo curl python
+      - name: Obter código do projeto
+        uses: actions/checkout@v4
+      - name: Criar usuário comum de testes
+        run: |
+          useradd --create-home --shell /bin/bash darfin-smoke
+          printf 'darfin-smoke ALL=(ALL) NOPASSWD: ALL\n' > /etc/sudoers.d/91-darfin-smoke
+          chmod 0440 /etc/sudoers.d/91-darfin-smoke
+          visudo -cf /etc/sudoers.d/91-darfin-smoke
+      - name: Executar somente a etapa base do instalador
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Único passo instalado é `base`, em contêiner novo, com confirmação
+          # explícita da transação do pacman; nenhuma mudança gráfica/Bedrock.
+          repo_dir="$PWD"
+          su -s /bin/bash darfin-smoke -c "cd '$repo_dir' && printf 'y\\n' | bash DarfinOSInstallScript.sh --only base -y"
+      - name: Verificar pacotes instalados de verdade
+        shell: bash
+        run: |
+          set -euo pipefail
+          pacman -Qi git curl fastfetch base-devel pacman-contrib >/dev/null
+          echo "Etapa Base instalada e conferida no contêiner Arch efêmero."
