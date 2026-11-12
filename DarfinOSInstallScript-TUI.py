@@ -596,6 +596,7 @@ def scroll_screen(win, title: str, content: str) -> None:
 def control_center_screen(win) -> None:
     """Resumo local somente leitura. Ferramentas de recuperação são opt-in no CLI."""
     status = control.system_status()
+    maintenance = control.maintenance_status()
     lines = [
         "DarfinOS · Control Center  /  diagnóstico de estado",
         "",
@@ -610,7 +611,14 @@ def control_center_screen(win) -> None:
     ]
     lines += ["  " + name + ": " + ("sim" if installed else "não")
               for name, installed in status["tools"].items()]
-    lines += ["", "Controle de perfis e cópias de segurança (terminal):",
+    lines += ["", "Atualizadores (somente detecção):",
+              "  Topgrade: " + ("disponível" if maintenance["tools"]["topgrade"] else "ausente"),
+              "  Arch-Update: " + ("disponível" if maintenance["tools"]["arch-update"] else "ausente"),
+              "  Applet: " + ("disponível" if maintenance["tools"]["arch-update-tray"] else "ausente"),
+              "  Autostart: " + (", ".join(maintenance["arch_update_autostart_entries"]) or "não detectado"),
+              "  Timer de usuário: " + str(maintenance["user_timers"]["arch_update_detected"]),
+              "  Verificação detalhada: python3 darfinos_control.py maintenance --json",
+              "", "Controle de perfis e cópias de segurança (terminal):",
               "  python3 darfinos_control.py profile-export NOME perfil.json",
               "  python3 darfinos_control.py profile-import perfil.json NOME",
               "  python3 darfinos_control.py profile-diff BASE DESTINO",
