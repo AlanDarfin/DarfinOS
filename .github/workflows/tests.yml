@@ -37,7 +37,7 @@ jobs:
         run: bash -n DarfinOSInstallScript.sh
 
       - name: Verificar compilação Python
-        run: python -m py_compile DarfinOSInstallScript-TUI.py
+        run: python -m py_compile DarfinOSInstallScript-TUI.py darfinos_control.py
 
       - name: Rodar testes (sem rede, sudo ou instalações)
         run: python -m unittest discover -s tests -v
@@ -71,3 +71,14 @@ jobs:
           name: shellcheck-report
           path: shellcheck-report.txt
           if-no-files-found: ignore
+
+  package:
+    name: Verificar empacotamento e SHA256
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Gerar candidato local (sem publicar)
+        run: bash scripts/package_release.sh 0.1.0-rc1
+      - name: Verificar pacote SHA256
+        run: (cd dist && sha256sum -c darfinos-0.1.0-rc1.tar.gz.sha256)
