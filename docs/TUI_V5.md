@@ -69,6 +69,8 @@ O `--dry-run` não executa a instalação. Para explorar a interface, navegue e 
 - `--audit --preset gaming` ou `--audit --profile NOME`: mostra a auditoria em JSON sem terminal interativo. O inventário é parcial e não identifica conclusão das etapas.
 - `python3 DarfinOSInstallScript-TUI.py --status-json`: emite os mesmos dados estruturados sem iniciar a TUI.
 - `bash DarfinOSInstallScript.sh --preflight`: checa Arch, pacman, sudo e curl sem solicitar sudo.
+- `python3 darfinos_control.py maintenance --json`: detecta Topgrade, Arch-Update, autostart e timers sem atualizar pacotes.
+- O Bash exige escolha explícita de etapas (`--only`, `--skip` ou `--all`).
 - `darfinos_control.py`: `status`, `profile-export`, `profile-import`,
   `profile-diff`, `backup` e `restore`.
 
