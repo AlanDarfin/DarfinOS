@@ -151,6 +151,7 @@ usage() {
 DarfinOS · instalador modular de pós-instalação para Arch Linux
 Uso: bash DarfinOSInstallScript.sh [opções]
   --list                 Lista as 34 etapas disponíveis (somente leitura).
+  --preflight            Verifica requisitos básicos sem sudo nem alterações.
   --only a,b,c           Executa apenas as etapas informadas.
   --skip a,b,c           Ignora as etapas informadas.
   -y, --yes              Usa valores padrão apenas em perguntas elegíveis.
@@ -181,6 +182,36 @@ declare -A STEP_DEPS=(
   [apps]="flatpak"
 )
 
+preflight() {
+  local errors=0 tool
+  echo "DarfinOS · Pré-verificação (somente leitura)"
+  if [[ -f /etc/arch-release ]]; then
+    echo "OK: Arch Linux / derivado detectado"
+  else
+    echo "ERRO: /etc/arch-release não encontrado"
+    errors=1
+  fi
+  for tool in pacman sudo curl; do
+    if command -v "$tool" >/dev/null 2>&1; then
+      echo "OK: $tool disponível"
+    else
+      echo "ERRO: $tool ausente"
+      errors=1
+    fi
+  done
+  if [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then
+    echo "AVISO: ambiente gráfico detectado; use TTY para trocar SonicDE/XLibre"
+  fi
+  if [[ "$EUID" -eq 0 ]]; then
+    echo "AVISO: o instalador deve ser executado como usuário comum (não root)"
+  fi
+  if (( errors )); then
+    echo "Pré-verificação encontrou requisitos ausentes."
+    return 1
+  fi
+  echo "Pré-verificação básica OK. Não valida rede, hardware nem mudanças de pacotes."
+}
+
 list_steps() {
   local s
   for s in "${STEPS[@]}"; do
@@ -204,6 +235,7 @@ while [[ $# -gt 0 ]]; do
     --only)    [[ -n "${2:-}" ]] || die "--only exige uma lista"; ONLY="$2"; validate_steps "$ONLY"; shift ;;
     --skip)    [[ -n "${2:-}" ]] || die "--skip exige uma lista"; SKIP="$2"; validate_steps "$SKIP"; shift ;;
     --list)    list_steps; exit 0 ;;
+    --preflight) preflight; exit $? ;;
     -h|--help) usage; exit 0 ;;
     *) die "Opção desconhecida: $1 (use --help)" ;;
   esac
