@@ -2,6 +2,17 @@
 
 O projeto segue desenvolvimento contínuo. Esta lista destaca mudanças verificáveis, sem prometer suporte universal a todas as combinações de Arch/derivados.
 
+## Em preparação — Control Center, segurança e release (novembro de 2026)
+
+- O instalador Bash passa a exigir seleção explícita (`--only`, `--skip` ou `--all`): executar sem opções não instala todas as etapas.
+- `--preflight` verifica condições básicas sem sudo.
+- A etapa `maintenance` depende de `aur_helper`; presets comuns incluem essa dependência. Ausência dos atualizadores essenciais marca a etapa como incompleta.
+- Control Center com estado do sistema, auditoria parcial de pacotes, inspeção de Topgrade/Arch-Update e comparação declarativa de presets.
+- Perfis exportáveis, importáveis com `yes=false` e comparáveis.
+- Backups locais de configurações com SHA256, proteção contra substituição acidental e tentativa de reverter operações interrompidas por erro; **não é rollback de pacotes/sistema**.
+- Testes Bash e Python ampliados, smoke em contêiner Arch, workflow manual de instalação Base e pacote candidato com SHA256.
+- Checklist de VM e documentação de publicação: release estável bloqueada até validar a instalação real e a recuperação.
+
 ## Em preparação — atualização e TUI de novembro de 2026
 
 - Topgrade integrado à TUI: **T** abre o atualizador com confirmação e preserva a interação nativa no terminal.
