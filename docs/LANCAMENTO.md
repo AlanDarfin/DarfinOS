@@ -28,3 +28,8 @@ ser executado manualmente; ele anexa um artifact temporário, **não publica rel
 
 Nunca chamar o ZIP da main de release estável. Evitar URLs para `releases/latest`
 enquanto não houver uma versão verificada. Não há ISO no projeto.
+
+
+O teste manual `install-base-manual.yml` pode comprovar a instalação real
+de pacotes da etapa Base em contêiner Arch, mas não substitui a validação
+em VM do ambiente gráfico e seus procedimentos de recuperação.
