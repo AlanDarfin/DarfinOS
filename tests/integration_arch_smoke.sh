@@ -12,6 +12,7 @@ bash DarfinOSInstallScript.sh --list >/tmp/darfinos-steps.txt
 python DarfinOSInstallScript-TUI.py --doctor-json | python -c 'import json,sys; x=json.load(sys.stdin); assert x["ready"] and x["steps"] == 34, x'
 python DarfinOSInstallScript-TUI.py --manifest | python -c 'import json,sys; x=json.load(sys.stdin); assert x["accuracy"] == "partial_static" and len(x["steps"]) == 34'
 python DarfinOSInstallScript-TUI.py --plan --preset minimal >/dev/null
+python DarfinOSInstallScript-TUI.py --audit --preset minimal | python -c 'import json,sys; x=json.load(sys.stdin); assert x["accuracy"] == "partial_static" and x["selected_steps"] > 0'
 python DarfinOSInstallScript-TUI.py --status-json | python -c 'import json,sys; x=json.load(sys.stdin); assert x["arch"] and x["tools"]["pacman"], x'
 python darfinos_control.py status --json | python -c 'import json,sys; x=json.load(sys.stdin); assert x["arch"] and x["tools"]["pacman"], x'
 echo "Smoke de Arch sem alterações no host: OK"
