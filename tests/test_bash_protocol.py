@@ -38,6 +38,25 @@ def bash_harness(commands, *, stdin=''):
         return result, events.read_text().splitlines()
 
 class BashProtocolTests(unittest.TestCase):
+    def test_installer_requires_explicit_selection_before_sudo(self):
+        run = subprocess.run(['bash', str(ROOT / 'DarfinOSInstallScript.sh')],
+                             capture_output=True, text=True, timeout=5)
+        self.assertEqual(run.returncode, 2, run.stdout + run.stderr)
+        self.assertIn('Nenhuma seleção informada', run.stdout + run.stderr)
+        self.assertIn('--all', run.stdout)
+        self.assertNotIn('Autenticando sudo', run.stdout)
+
+    def test_invalid_or_conflicting_step_selections_fail_early(self):
+        for args in (['--only', ','], ['--only', 'base,'],
+                     ['--only', 'base,,fonts'], ['--only', 'nonexistent'],
+                     ['--only', 'base', '--skip', 'fonts'],
+                     ['--only', 'base', '--all']):
+            with self.subTest(args=args):
+                result = subprocess.run(['bash', str(ROOT / 'DarfinOSInstallScript.sh'), *args],
+                                        capture_output=True, text=True, timeout=5)
+                self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertNotIn('Autenticando sudo', result.stdout)
+
     def test_event_success_failure_skip_and_dependency(self):
         result, events = bash_harness('''
 STEPS=(ok bad dependent disabled)
@@ -58,6 +77,40 @@ printf 'failed=%s skipped=%s\\n' "${FAILED_STEPS[*]}" "${SKIPPED_STEPS[*]}"
                                   'STEP_FAIL:bad:7', 'STEP_SKIP:dependent:dependencia:bad',
                                   'STEP_SKIP:disabled:desmarcada'])
         self.assertIn('failed=bad skipped=dependent', result.stdout)
+
+    def test_maintenance_fails_when_required_updaters_missing(self):
+        # Substitui somente funções de instalação e descoberta, sem invocar sudo.
+        code = function('step_maintenance') + '''
+info() { :; }
+warn() { :; }
+detect_aur_helper() { echo ""; }
+command() {
+  if [[ "$1" == "-v" ]]; then
+    case "$2" in
+      topgrade|arch-update|arch-update-tray|systemctl|paccache) return 1 ;;
+    esac
+  fi
+  builtin command "$@"
+}
+step_maintenance
+'''
+        result, _ = bash_harness(code)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+
+    def test_maintenance_succeeds_with_updaters_present(self):
+        code = function('step_maintenance') + '''
+info() { :; }
+ok() { :; }
+warn() { :; }
+detect_aur_helper() { echo "yay"; }
+topgrade() { :; }
+arch-update() { :; }
+arch-update-tray() { :; }
+sudo() { :; }
+step_maintenance
+'''
+        result, _ = bash_harness(code)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_confirm_and_choose_events(self):
         result, events = bash_harness('''

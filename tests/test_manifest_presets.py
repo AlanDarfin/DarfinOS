@@ -44,6 +44,24 @@ class ManifestPresetTests(unittest.TestCase):
         self.assertIn('gaming', st.selected)
         self.assertFalse(st.missing(), 'Preset gaming deve incluir dependências declaradas')
 
+    def test_preset_transition_plan_requires_review_without_installing(self):
+        report = TUI.compare_presets(self.steps, 'minimal', 'gaming')
+        self.assertEqual(report['source'], 'minimal')
+        self.assertEqual(report['target'], 'gaming')
+        self.assertIn('gaming', report['add'])
+        self.assertIn('xlibre', report['review_required'])
+        self.assertNotIn('bedrock', report['add'])
+        self.assertEqual(report['remove'], [])
+
+    def test_compare_presets_cli_does_not_need_terminal(self):
+        result = subprocess.run([
+            sys.executable, str(ROOT / 'DarfinOSInstallScript-TUI.py'),
+            '--compare-presets', 'minimal', 'gaming'
+        ], capture_output=True, text=True, check=True)
+        report = json.loads(result.stdout)
+        self.assertIn('gaming', report['add'])
+        self.assertTrue(report['review_required'])
+
     def test_unknown_preset_is_rejected(self):
         with self.assertRaises(ValueError):
             TUI.preset_selection('unknown', self.steps)

@@ -151,11 +151,14 @@ usage() {
 DarfinOS · instalador modular de pós-instalação para Arch Linux
 Uso: bash DarfinOSInstallScript.sh [opções]
   --list                 Lista as 34 etapas disponíveis (somente leitura).
+  --preflight            Verifica requisitos básicos sem sudo nem alterações.
   --only a,b,c           Executa apenas as etapas informadas.
-  --skip a,b,c           Ignora as etapas informadas.
+  --skip a,b,c           Executa todas, exceto as etapas listadas (avançado).
+  --all                  Executa todas as etapas, inclusive opções avançadas.
   -y, --yes              Usa valores padrão apenas em perguntas elegíveis.
   -h, --help             Exibe esta ajuda.
-Sem --only/--skip, todas as etapas serão avaliadas, inclusive opções avançadas.
+É obrigatório escolher --only, --skip ou --all antes de instalar.
+Uma chamada sem seleção mostra esta ajuda e não altera o sistema.
 Para uma seleção inicial segura, use: python3 DarfinOSInstallScript-TUI.py --local
 Para validar sem alterar o sistema: python3 DarfinOSInstallScript-TUI.py --doctor
 HELP
@@ -165,6 +168,7 @@ HELP
 # Opções
 # ----------------------------------------------------------
 ASSUME_YES=0
+EXPLICIT_ALL=0
 ONLY=""
 SKIP=""
 LOG_FILE=""
@@ -179,7 +183,38 @@ declare -A STEP_DEPS=(
   [desktop_extras]="sonicde"
   [gaming]="hardware"
   [apps]="flatpak"
+  [maintenance]="aur_helper"
 )
+
+preflight() {
+  local errors=0 tool
+  echo "DarfinOS · Pré-verificação (somente leitura)"
+  if [[ -f /etc/arch-release ]]; then
+    echo "OK: Arch Linux / derivado detectado"
+  else
+    echo "ERRO: /etc/arch-release não encontrado"
+    errors=1
+  fi
+  for tool in pacman sudo curl; do
+    if command -v "$tool" >/dev/null 2>&1; then
+      echo "OK: $tool disponível"
+    else
+      echo "ERRO: $tool ausente"
+      errors=1
+    fi
+  done
+  if [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then
+    echo "AVISO: ambiente gráfico detectado; use TTY para trocar SonicDE/XLibre"
+  fi
+  if [[ "$EUID" -eq 0 ]]; then
+    echo "AVISO: o instalador deve ser executado como usuário comum (não root)"
+  fi
+  if (( errors )); then
+    echo "Pré-verificação encontrou requisitos ausentes."
+    return 1
+  fi
+  echo "Pré-verificação básica OK. Não valida rede, hardware nem mudanças de pacotes."
+}
 
 list_steps() {
   local s
@@ -191,9 +226,11 @@ list_steps() {
 validate_steps() {
   local item
   local -a items
+  [[ -n "$1" && "$1" != ,* && "$1" != *, && "$1" != *,,* ]] || die "Seleção inválida: informe nomes separados por vírgula, sem itens vazios."
   IFS=',' read -ra items <<<"$1"
+  (( ${#items[@]} )) || die "A seleção precisa conter pelo menos uma etapa."
   for item in "${items[@]}"; do
-    [[ -z "$item" ]] && continue
+    [[ -n "$item" ]] || die "Seleção contém etapa vazia."
     [[ " ${STEPS[*]} " == *" $item "* ]] || die "Etapa desconhecida: '$item' (veja --list)"
   done
 }
@@ -203,12 +240,24 @@ while [[ $# -gt 0 ]]; do
     -y|--yes)  ASSUME_YES=1 ;;
     --only)    [[ -n "${2:-}" ]] || die "--only exige uma lista"; ONLY="$2"; validate_steps "$ONLY"; shift ;;
     --skip)    [[ -n "${2:-}" ]] || die "--skip exige uma lista"; SKIP="$2"; validate_steps "$SKIP"; shift ;;
+    --all)     EXPLICIT_ALL=1 ;;
     --list)    list_steps; exit 0 ;;
+    --preflight) preflight; exit $? ;;
     -h|--help) usage; exit 0 ;;
     *) die "Opção desconhecida: $1 (use --help)" ;;
   esac
   shift
 done
+
+# Impede uma instalação completa acidental, antes de sudo e de qualquer alteração.
+if [[ -n "$ONLY" && ( -n "$SKIP" || "$EXPLICIT_ALL" -eq 1 ) ]]; then
+  die "Combine somente uma estratégia: --only, --skip ou --all."
+fi
+if [[ -z "$ONLY" && -z "$SKIP" && "$EXPLICIT_ALL" -ne 1 ]]; then
+  usage
+  warn "Nenhuma seleção informada. Use a TUI ou escolha explicitamente --only, --skip ou --all."
+  exit 2
+fi
 
 # ----------------------------------------------------------
 # Pré-requisitos e log
@@ -1364,6 +1413,7 @@ step_browser() {
 # ==========================================================
 
 step_maintenance() {
+  local incomplete=0
   info "Instalando ferramentas padrão de atualização: Topgrade e Arch-Update com tray..."
   if [[ -z "$(detect_aur_helper)" ]]; then
     warn "Nenhum helper AUR disponível. Instale yay/paru (etapa aur_helper) para obter os atualizadores."
@@ -1381,15 +1431,25 @@ step_maintenance() {
     fi
   fi
 
+  # Não registrar STEP_DONE enquanto faltar algum dos dois atualizadores padrão.
+  if ! command -v topgrade >/dev/null 2>&1; then
+    warn "Topgrade ainda ausente após a etapa de manutenção."
+    incomplete=1
+  fi
+
   if command -v arch-update >/dev/null 2>&1; then
     if command -v arch-update-tray >/dev/null 2>&1; then
       # Gera a entrada XDG Autostart; funcionará no próximo login gráfico.
       arch-update --tray --enable || warn "Não foi possível habilitar a bandeja automaticamente."
     else
       warn "O Arch-Update instalado não inclui arch-update-tray; verifique a variante do pacote."
+      incomplete=1
     fi
     # Um timer --user pode não estar disponível numa instalação executada de TTY.
     arch-update --check --enable || warn "Verificação automática não ativada nesta sessão; use: arch-update --check --enable"
+  else
+    warn "Arch-Update ainda ausente após a etapa de manutenção."
+    incomplete=1
   fi
 
   if command -v systemctl >/dev/null 2>&1; then
@@ -1403,6 +1463,10 @@ step_maintenance() {
     warn "systemctl indisponível; timers de manutenção não configurados."
   fi
   info "Para atualizar manualmente: topgrade (ou a opção T da TUI)."
+  if (( incomplete )); then
+    warn "Manutenção incompleta: revise o log e as ferramentas AUR. Os timers são opcionais."
+    return 1
+  fi
 }
 
 step_firewall() {

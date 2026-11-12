@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import curses
+import darfinos_control as control
 import hashlib
 import difflib
 import select
@@ -592,6 +593,64 @@ def scroll_screen(win, title: str, content: str) -> None:
         offset = max(0, min(offset, max(0, len(lines) - height)))
 
 
+def control_center_screen(win) -> None:
+    """Resumo local somente leitura. Ferramentas de recuperação são opt-in no CLI."""
+    status = control.system_status()
+    maintenance = control.maintenance_status()
+    lines = [
+        "DarfinOS · Control Center  /  diagnóstico de estado",
+        "",
+        "Arch compatível: " + ("detectado" if status["arch"] else "não detectado"),
+        "Pacotes via pacman: " + str(status["packages_installed"] or "indisponível"),
+        "Sistema de arquivos /: " + str(status["filesystem"] or "indisponível"),
+        "Espaço livre no HOME (GiB): " + str(status["free_home_gib"]),
+        "Última execução: " + str(status["last_run"] or "nenhum histórico"),
+        "Perfis: " + (", ".join(status["profiles"]) or "nenhum"),
+        "",
+        "Ferramentas encontradas:"
+    ]
+    lines += ["  " + name + ": " + ("sim" if installed else "não")
+              for name, installed in status["tools"].items()]
+    lines += ["", "Atualizadores (somente detecção):",
+              "  Topgrade: " + ("disponível" if maintenance["tools"]["topgrade"] else "ausente"),
+              "  Arch-Update: " + ("disponível" if maintenance["tools"]["arch-update"] else "ausente"),
+              "  Applet: " + ("disponível" if maintenance["tools"]["arch-update-tray"] else "ausente"),
+              "  Autostart: " + (", ".join(maintenance["arch_update_autostart_entries"]) or "não detectado"),
+              "  Timer de usuário: " + str(maintenance["user_timers"]["arch_update_detected"]),
+              "  Verificação detalhada: python3 darfinos_control.py maintenance --json",
+              "", "Controle de perfis e cópias de segurança (terminal):",
+              "  python3 darfinos_control.py profile-export NOME perfil.json",
+              "  python3 darfinos_control.py profile-import perfil.json NOME",
+              "  python3 darfinos_control.py profile-diff BASE DESTINO",
+              "  python3 darfinos_control.py backup ~/darfinos-config.zip",
+              "  python3 darfinos_control.py restore ~/darfinos-config.zip",
+              "",
+              "Restauração é prévia por padrão; --apply e --overwrite exigem decisão explícita.",
+              "Cópias podem conter dados privados: não compartilhe os arquivos ZIP."]
+    scroll_screen(win, "◆ DARFINOS · CONTROL CENTER", "\n".join(lines))
+
+
+def audit_screen(win, st: State) -> None:
+    report = audit_selected(st, CURRENT_SCRIPT)
+    rows = [
+        "Auditoria local de pacotes / prévia estática parcial",
+        f"{report['selected_steps']} etapas · {report['packages_previewed']} pacotes previstos",
+        "Instalado: " + str(report["counts"]["instalado"]) +
+        " · Não detectado: " + str(report["counts"]["não detectado"]) +
+        " · Indisponível: " + str(report["counts"]["indisponível"]),
+        "",
+    ]
+    for step, packages in report["steps"].items():
+        rows.append("[" + step + "]")
+        if not packages:
+            rows.append("  (sem pacotes literais na prévia; não significa instalado)")
+        for item in packages:
+            rows.append(f"  {item['manager']}: {item['name']} · {item['status']}")
+    rows += ["", "Não é garantia de integridade nem de uma etapa ter sido concluída.",
+             "Pacotes opcionais, condicionais e variáveis podem ficar fora da lista."]
+    scroll_screen(win, "◆ CONTROL CENTER · AUDITORIA", "\n".join(rows))
+
+
 def maintenance_screen(win) -> None:
     items = maintenance_items()
     index = 0
@@ -748,7 +807,7 @@ def draw_v3(win, st: State, visible: list[int], cursor: int, top: int,
                 if missing:
                     put(win, h-4, 2, 'Dependências pendentes: ' + ', '.join(missing), colors('yellow'))
         put(win, h-2, 2, '↑↓ navegar · Espaço marcar · G grupo · A/N todos/nenhum · / busca · F filtro', colors('muted'))
-        put(win, h-1, 2, 'R revisar · T Topgrade · O presets · Z retomar · B apps · P perfis · I detectar · M manutenção · H histórico · U fonte · Q sair', colors('muted'))
+        put(win, h-1, 2, 'R revisar · C sistema · V auditar · O presets · P perfis · M manutenção · T Topgrade · Z retomar · Q sair', colors('muted'))
     else:
         put(win, 5, 2, '02  REVISÃO DA INSTALAÇÃO  /  ENTER CONFIRMA', curses.A_BOLD | colors('pink'))
         chosen = [step for step in st.steps if step.name in st.selected]
@@ -878,6 +937,8 @@ def ui_v3(win, st: State, digest: str, allow_updates: bool = True) -> str:
         elif key in (ord('i'), ord('I')): inspect_steps(st)
         elif key in (ord('b'), ord('B')): apps_screen(win, st, CURRENT_SCRIPT)
         elif key in (ord('m'), ord('M')): maintenance_screen(win)
+        elif key in (ord('c'), ord('C')): control_center_screen(win)
+        elif key in (ord('v'), ord('V')): audit_screen(win, st)
         elif key in (ord('t'), ord('T')): launch_topgrade(win, st, allow_updates)
         elif key in (ord('z'), ord('Z')): recovery_screen(win, st, CURRENT_SCRIPT)
         elif key in (ord('h'), ord('H')): history_screen(win)
@@ -1040,9 +1101,9 @@ def recovery_screen(win, st: State, script: Path):
 
 # Presets versionados: etapas explicitamente listadas, sem comandos arbitrários.
 PRESETS = {
-    'minimal': ('Base enxuta', ('pacman_conf', 'mirrors', 'sysupgrade', 'base', 'fonts', 'hardware', 'cli_tools', 'maintenance')),
-    'desktop': ('SonicDE + XLibre e desktop', ('pacman_conf', 'mirrors', 'repo_xlibre', 'repo_sonicde', 'sysupgrade', 'base', 'fonts', 'hardware', 'xlibre', 'sonicde', 'desktop_extras', 'bluetooth', 'cli_tools', 'shells', 'flatpak', 'apps', 'maintenance')),
-    'gaming': ('Desktop e jogos', ('pacman_conf', 'mirrors', 'repo_xlibre', 'repo_sonicde', 'sysupgrade', 'base', 'fonts', 'hardware', 'xlibre', 'sonicde', 'desktop_extras', 'bluetooth', 'cli_tools', 'flatpak', 'gaming', 'maintenance')),
+    'minimal': ('Base enxuta', ('pacman_conf', 'mirrors', 'sysupgrade', 'base', 'aur_helper', 'fonts', 'hardware', 'cli_tools', 'maintenance')),
+    'desktop': ('SonicDE + XLibre e desktop', ('pacman_conf', 'mirrors', 'repo_xlibre', 'repo_sonicde', 'sysupgrade', 'base', 'aur_helper', 'fonts', 'hardware', 'xlibre', 'sonicde', 'desktop_extras', 'bluetooth', 'cli_tools', 'shells', 'flatpak', 'apps', 'maintenance')),
+    'gaming': ('Desktop e jogos', ('pacman_conf', 'mirrors', 'repo_xlibre', 'repo_sonicde', 'sysupgrade', 'base', 'aur_helper', 'fonts', 'hardware', 'xlibre', 'sonicde', 'desktop_extras', 'bluetooth', 'cli_tools', 'flatpak', 'gaming', 'maintenance')),
     'full': ('Todas as etapas, inclusive Bedrock (RISCO)', tuple()),
 }
 
@@ -1056,6 +1117,22 @@ def preset_selection(name: str, steps: list[Step]) -> set[str]:
     if unknown:
         raise ValueError('Preset incompatível com o Bash: ' + ', '.join(sorted(unknown)))
     return chosen
+
+
+def compare_presets(steps: list[Step], base: str, target: str) -> dict:
+    """Plano de transição somente declarativo, sem inferir estado real do sistema."""
+    before = preset_selection(base, steps)
+    after = preset_selection(target, steps)
+    ordered = [step.name for step in steps]
+    risks = {'bedrock', 'cleanup', 'firewall', 'repo_cachyos', 'repo_xlibre',
+             'repo_sonicde', 'xlibre', 'sonicde', 'terminal_extras'}
+    to_add = [name for name in ordered if name in after - before]
+    return {'source': base, 'target': target,
+            'add': to_add,
+            'remove': [name for name in ordered if name in before - after],
+            'unchanged': len(before & after),
+            'review_required': [name for name in to_add if name in risks],
+            'note': 'Comparação declarativa entre presets; não detecta instalação real e não executa ações.'}
 
 
 def apply_preset(st: State, name: str) -> None:
@@ -1165,8 +1242,15 @@ def main() -> int:
     ap.add_argument('--manifest', action='store_true', help='Imprime manifesto JSON parcial, sem executar o Bash')
     ap.add_argument('--doctor', action='store_true', help='Audita Bash, etapas e dependências sem instalar')
     ap.add_argument('--doctor-json', action='store_true', help='Emite diagnóstico estruturado em JSON')
+    ap.add_argument('--status-json', action='store_true', help='Mostra estado local sem sudo ou alterações')
+    ap.add_argument('--audit', action='store_true', help='Audita pacotes de um perfil/preset sem instalar')
+    ap.add_argument('--compare-presets', nargs=2, metavar=('ORIGEM', 'DESTINO'),
+                    help='Compara dois presets sem modificar o sistema')
     ap.add_argument('--plan', action='store_true', help='Mostra as etapas de um preset sem executar')
     args = ap.parse_args()
+    if args.status_json:
+        print(json.dumps(control.system_status(), ensure_ascii=False, indent=2))
+        return 0
     if args.list_presets:
         for name, (description, _) in PRESETS.items():
             print(f'{name:<10} {description}')
@@ -1176,6 +1260,27 @@ def main() -> int:
         if not script.is_file(): ap.error(f'Não encontrado: {script}')
         print(json.dumps(build_manifest(script), ensure_ascii=False, indent=2))
         return 0
+    if args.compare_presets:
+        script = (args.script or LOCAL).expanduser().resolve()
+        if not script.is_file(): ap.error(f'Não encontrado: {script}')
+        try:
+            report = compare_presets(parse_script(script), *args.compare_presets)
+            print(json.dumps(report, ensure_ascii=False, indent=2))
+            return 0
+        except (OSError, ValueError) as exc:
+            ap.error(str(exc))
+    if args.audit:
+        script = (args.script or LOCAL).expanduser().resolve()
+        if not script.is_file(): ap.error(f'Não encontrado: {script}')
+        try:
+            steps = parse_script(script)
+            st = State(steps, 'Auditoria local', selected=preset_selection(args.preset or 'minimal', steps))
+            if args.profile:
+                load_named(st, args.profile)
+            print(json.dumps(audit_selected(st, script), ensure_ascii=False, indent=2))
+            return 0
+        except (OSError, ValueError) as exc:
+            ap.error(str(exc))
     if args.doctor or args.doctor_json or args.plan:
         script = (args.script or LOCAL).expanduser().resolve()
         if not script.is_file():
@@ -1350,6 +1455,44 @@ def inventory(script: Path, selected: set[str]):
             if client in source:
                 result.append(('apps', 'flatpak', client))
     return list(dict.fromkeys(result))
+
+
+def _audit_inventory() -> dict[str, set[str] | None]:
+    """Retorna None quando a ferramenta falhou; não confunde erro com pacote ausente."""
+    commands = {
+        'pacman': ['pacman', '-Qq'],
+        'flatpak': ['flatpak', 'list', '--app', '--columns=application'],
+    }
+    result: dict[str, set[str] | None] = {}
+    for name, cmd in commands.items():
+        if not shutil.which(cmd[0]):
+            result[name] = None
+            continue
+        try:
+            response = subprocess.run(cmd, capture_output=True, text=True, timeout=8)
+            result[name] = set(response.stdout.splitlines()) if response.returncode == 0 else None
+        except (OSError, subprocess.TimeoutExpired):
+            result[name] = None
+    return result
+
+
+def audit_selected(st: State, script: Path,
+                   installed: dict[str, set[str] | None] | None = None) -> dict:
+    """Compara a prévia literal com pacotes locais; jamais declara etapa concluída."""
+    known = installed if installed is not None else _audit_inventory()
+    grouped: dict[str, list[dict]] = {step.name: [] for step in st.steps
+                                      if step.name in st.selected}
+    counts = {'instalado': 0, 'não detectado': 0, 'indisponível': 0}
+    packages = inventory(script, st.selected)
+    for step, kind, name in packages:
+        candidates = known.get('flatpak' if kind == 'flatpak' else 'pacman')
+        status = ('indisponível' if candidates is None else
+                  'instalado' if name in candidates else 'não detectado')
+        counts[status] += 1
+        grouped.setdefault(step, []).append({'manager': kind, 'name': name, 'status': status})
+    return {'accuracy': 'partial_static', 'selected_steps': len(st.selected),
+            'packages_previewed': len(packages), 'counts': counts, 'steps': grouped,
+            'note': 'Não detectado não significa que a etapa esteja pendente; lista parcial e condicional.'}
 
 
 def package_match_score(query: str, name: str):

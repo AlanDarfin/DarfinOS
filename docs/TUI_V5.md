@@ -25,7 +25,7 @@ A TUI é a central de controle do instalador. Para ver o projeto em imagens e co
 - Lista de etapas com marcadores `■` e `□`, foco destacado e inspeção de descrição longa, grupo, detecção e pacotes previstos por origem. As dependências satisfeitas/ausentes não ocupam espaço: o painel só mostra as pendentes.
 - Layout responsivo: inspeção lateral a partir de 100 colunas e resumo abaixo em terminais menores (mínimo 54×16).
 - Painel ao vivo com barra de **etapas encerradas**, totais de `DONE`/`FAIL`/`SKIP`, destaque por estado e alternância entre eventos e logs com **L**.
-- Atalhos existentes preservados: **O** presets, **Z** retomada, **B** aplicativos, **P** perfis, **M** manutenção, **H** histórico. **T** inicia Topgrade na tela de seleção (após confirmação) e abre terminal integral durante instalação.
+- Atalhos existentes preservados: **O** presets, **Z** retomada, **B** aplicativos, **P** perfis, **M** manutenção, **C** estado do sistema, **V** auditoria dos pacotes, **H** histórico. **T** inicia Topgrade na tela de seleção (após confirmação) e abre terminal integral durante instalação.
 
 ## Integração de atualizações
 
@@ -60,3 +60,40 @@ O `--dry-run` não executa a instalação. Para explorar a interface, navegue e 
 - `--doctor` e `--doctor-json` verificam sintaxe e grafo das etapas sem instalar nada.
 - `--plan --preset gaming` imprime um plano estático, também sem sudo nem instalação.
 - `--empty` mantém a opção de começar com nenhuma etapa marcada.
+
+
+## Control Center local
+
+- **C** na seleção: mostra o estado local, ferramentas encontradas, perfis e última execução.
+- **V** na seleção: audita pacotes previstos para as etapas marcadas, sem instalar.
+- `--audit --preset gaming` ou `--audit --profile NOME`: mostra a auditoria em JSON sem terminal interativo. O inventário é parcial e não identifica conclusão das etapas.
+- `python3 DarfinOSInstallScript-TUI.py --status-json`: emite os mesmos dados estruturados sem iniciar a TUI.
+- `bash DarfinOSInstallScript.sh --preflight`: checa Arch, pacman, sudo e curl sem solicitar sudo.
+- `python3 darfinos_control.py maintenance --json`: detecta Topgrade, Arch-Update, autostart e timers sem atualizar pacotes.
+- O Bash exige escolha explícita de etapas (`--only`, `--skip` ou `--all`).
+- `darfinos_control.py`: `status`, `profile-export`, `profile-import`,
+  `profile-diff`, `backup` e `restore`.
+
+A cópia ZIP inclui apenas arquivos permitidos em `~/.config` (DarfinOS, Fish,
+Starship e Fastfetch). Caminhos e checksums são validados. Um restore é apenas
+prévia até receber `--apply`; arquivos existentes exigem também `--overwrite`.
+O backup **não contém nem restaura configurações em /etc ou pacotes do pacman**.
+Pode conter informações privadas: evite compartilhá-lo.
+
+Consulte [VALIDACAO_VM.md](VALIDACAO_VM.md) para a aceitação em VM e
+[LANCAMENTO.md](LANCAMENTO.md) para o pacote de versão.
+
+
+**Mudança de dependência:** os três presets comuns incluem `aur_helper`
+antes de `maintenance`, que depende dele. Se Topgrade/Arch-Update não puderem
+ser instalados, a etapa reporta falha em vez de declarar sucesso. Isso permite
+à TUI marcar corretamente uma instalação incompleta.
+
+
+### Plano de migração entre presets
+
+`python3 DarfinOSInstallScript-TUI.py --compare-presets minimal gaming`
+lista as etapas adicionadas, removidas e que exigem revisão especial para passar
+de uma seleção declarativa a outra. **Não** compara os pacotes já instalados
+nem habilita remoções automáticas. Execute `--audit` para consultar a prévia
+de pacotes locais, sem tomá-la como prova de que uma etapa foi concluída.

@@ -54,3 +54,10 @@ python3 DarfinOSInstallScript-TUI.py --doctor-json
 ```
 
 O plano não é um dry-run do pacman: apenas exibe as etapas selecionadas. A TUI inicia com o preset `minimal` selecionado por segurança; `full` exige escolha explícita.
+
+
+A etapa `maintenance` depende de `aur_helper`. Os presets `minimal`,
+`desktop` e `gaming` incluem ambas as etapas para que um sistema novo
+possa instalar Topgrade e Arch-Update, sujeitos às perguntas do helper e às
+permissões do AUR. Se os executáveis ainda estiverem ausentes no final, a etapa
+é considerada incompleta. Isso não equivale a uma instalação já testada em VM.

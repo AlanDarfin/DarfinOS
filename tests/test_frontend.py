@@ -48,6 +48,7 @@ class ParserTests(unittest.TestCase):
         lookup = {s.name: s for s in TUI.parse_script(BASH)}
         self.assertIn('flatpak', lookup['apps'].deps)
         self.assertIn('hardware', lookup['gaming'].deps)
+        self.assertIn('aur_helper', lookup['maintenance'].deps)
 
     def test_bad_script_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -82,6 +83,7 @@ class ParserTests(unittest.TestCase):
         for preset in ('minimal', 'desktop', 'gaming', 'full'):
             with self.subTest(preset=preset):
                 self.assertIn('maintenance', TUI.preset_selection(preset, TUI.parse_script(BASH)))
+                self.assertIn('aur_helper', TUI.preset_selection(preset, TUI.parse_script(BASH)))
         packages = TUI.inventory(BASH, {'maintenance'})
         self.assertIn(('maintenance', 'aur', 'topgrade-bin'), packages)
         self.assertIn(('maintenance', 'aur', 'arch-update-bin'), packages)
@@ -89,7 +91,7 @@ class ParserTests(unittest.TestCase):
 
     def test_step_details_and_package_preview(self):
         steps = TUI.parse_script(BASH)
-        st = TUI.State(steps, 'test', selected={'maintenance'})
+        st = TUI.State(steps, 'test', selected={'maintenance', 'aur_helper'})
         TUI.load_package_preview(st, BASH)
         step = st.lookup['maintenance']
         self.assertIn('Topgrade', step.detail)
@@ -97,6 +99,8 @@ class ParserTests(unittest.TestCase):
         details = TUI.inspection_lines(st, step)
         self.assertTrue(any('PACOTES PREVISTOS' in item for item in details))
         self.assertFalse(any('DEPENDÊNCIAS PENDENTES' in item for item in details))
+        st.selected.remove('aur_helper')
+        self.assertIn('maintenance', st.missing())
 
     def test_show_only_missing_dependencies(self):
         st = TUI.State(TUI.parse_script(BASH), 'test', selected={'flatpak', 'apps'})
@@ -105,6 +109,28 @@ class ParserTests(unittest.TestCase):
         st.selected.remove('flatpak')
         self.assertTrue(any('flatpak' in line and 'DEPENDÊNCIAS PENDENTES' in line
                             for line in TUI.inspection_lines(st, st.lookup['apps'])))
+
+    def test_profile_audit_uses_partial_inventory_without_claiming_step_complete(self):
+        state = TUI.State(TUI.parse_script(BASH), 'test', selected={'base'})
+        report = TUI.audit_selected(state, BASH, {'pacman': {'git'}, 'flatpak': None})
+        self.assertEqual(report['accuracy'], 'partial_static')
+        self.assertGreater(report['packages_previewed'], 0)
+        installed = [item for item in report['steps']['base']
+                     if item['name'] == 'git']
+        self.assertEqual(installed[0]['status'], 'instalado')
+        self.assertIn('não detectado', report['counts'])
+        unknown = TUI.audit_selected(state, BASH, {'pacman': None, 'flatpak': None})
+        self.assertEqual(unknown['counts']['indisponível'], unknown['packages_previewed'])
+
+    def test_profile_audit_cli_no_tty_or_pacman_required(self):
+        import subprocess
+        import sys
+        command = [sys.executable, str(ROOT / 'DarfinOSInstallScript-TUI.py'),
+                   '--audit', '--preset', 'minimal']
+        outcome = subprocess.run(command, capture_output=True, text=True, check=True)
+        report = json.loads(outcome.stdout)
+        self.assertEqual(report['accuracy'], 'partial_static')
+        self.assertGreater(report['selected_steps'], 0)
 
     def test_topgrade_disabled_in_dry_run(self):
         st = TUI.State(TUI.parse_script(BASH), 'test')
