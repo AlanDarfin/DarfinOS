@@ -17,6 +17,6 @@ fi
 git archive --format=tar --prefix="darfinos-${version}/" HEAD | gzip -n -9 > "$file"
 [[ -s "$file" ]] || { rm -f "$file"; echo "Pacote vazio" >&2; exit 1; }
 (cd dist && sha256sum "darfinos-${version}.tar.gz" > "darfinos-${version}.tar.gz.sha256")
-tar -tzf "$file" | grep -q "darfinos-${version}/darfinos_control.py"
-tar -tzf "$file" | grep -q "darfinos-${version}/DarfinOSInstallScript.sh"
+tar -tzf "$file" | grep -F "darfinos-${version}/darfinos_control.py"
+tar -tzf "$file" | grep -F "darfinos-${version}/DarfinOSInstallScript.sh"
 printf 'Pacote: %s\nSHA256: %s\n' "$file" "$file.sha256"
