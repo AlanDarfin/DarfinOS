@@ -77,7 +77,7 @@ O DarfinOS oferece uma **etapa opcional** relacionada ao Bedrock. Ela não é ne
 
 ## 🛠 O que o DarfinOS configura
 
-O instalador Bash organiza **34 etapas** em grupos. A seleção pode ser feita pela linha de comando ou pela TUI.
+O instalador Bash organiza **39 etapas** em grupos. A seleção pode ser feita pela linha de comando ou pela TUI.
 
 | Área | Exemplos de etapas | O que faz |
 | --- | --- | --- |
@@ -147,7 +147,7 @@ python3 DarfinOSInstallScript-TUI.py --resume
 O instalador continua independente da interface:
 
 ```bash
-# Consultar as 34 etapas
+# Consultar as 39 etapas
 bash DarfinOSInstallScript.sh --list
 
 # Para uma instalação interativa e seleção segura, use a TUI
@@ -168,6 +168,33 @@ bash DarfinOSInstallScript.sh --only base,cli_tools -y
 ```
 
 O Bash **não executa mais todas as etapas sem argumentos**. Ele exige `--only`, `--skip` ou `--all` explícito; `--skip` é uma seleção ampla e avançada. O modo `-y` **não é aprovação irrestrita** de operações do `pacman`, chaves de assinatura ou outras ferramentas. Evite executar o instalador por `curl | bash` sem revisar o código.
+
+## ⚡ DarfinOS Labs · 12 projetos independentes e i3 WM
+
+**Minha cara, minhas ideias.** O DarfinOS passa a incluir uma seleção de
+projetos independentes e menos convencionais, sem configurar automaticamente
+aqueles que exigem substituir o sistema gráfico, o boot ou repositórios de
+terceiros.
+
+- **i3**: WM X11 oficial do Arch, como etapa `i3` e novo preset `i3` (com XLibre; sem SonicDE).
+- **NsCDE, JuNest, Decman e Metapac**: etapas AUR individuais com confirmação
+  obrigatória `LABS` e sem suporte a `-y`.
+- **Conty, nix-portable, Trinity, yserver, xomposite, Wayback e Booster**:
+  guias com links originais e avisos, **sem instalação automática**.
+
+```bash
+bash DarfinOSInstallScript.sh --labs
+bash DarfinOSInstallScript.sh --lab-info yserver
+python3 DarfinOSInstallScript-TUI.py --labs
+python3 DarfinOSInstallScript-TUI.py --plan --preset i3
+```
+
+Na TUI, pressione **L** para navegar pelo catálogo. Enter revela o link e os
+riscos; Espaço marca somente etapas disponíveis. Os módulos AUR Labs **não**
+entram no `full`, `--all` ou `--skip`, e a tecla `A` não os marca.
+
+**[Catálogo e avisos completos](docs/LABS.md)** ·
+**[Vitrine do site](https://darfinos.vercel.app/labs/)**.
 
 ## 🖥 DarfinOS TUI V5 — Control Center
 
@@ -232,7 +259,7 @@ O painel mostra andamento, estados, tempo decorrido e logs. Há **modais para pe
 
 ### Atualização do sistema
 
-A etapa `maintenance` faz parte dos presets `minimal`, `desktop` e `gaming`. Ela tenta instalar pelo helper AUR os pacotes **`topgrade-bin`** e **`arch-update-bin`**. O segundo já contém o **`arch-update-tray`**: não há um pacote extra de bandeja a instalar. O script configura a inicialização automática do ícone e a verificação periódica de atualizações quando o ambiente permite; se um serviço de usuário não estiver acessível no TTY, mostra um aviso e não interrompe as demais etapas.
+A etapa `maintenance` faz parte dos presets `minimal`, `desktop`, `i3` e `gaming`. Ela tenta instalar pelo helper AUR os pacotes **`topgrade-bin`** e **`arch-update-bin`**. O segundo já contém o **`arch-update-tray`**: não há um pacote extra de bandeja a instalar. O script configura a inicialização automática do ícone e a verificação periódica de atualizações quando o ambiente permite; se um serviço de usuário não estiver acessível no TTY, mostra um aviso e não interrompe as demais etapas.
 
 Pressione **`T` na tela de seleção da TUI** para executar o Topgrade em um terminal real, após confirmação explícita. Essa ação não é a mesma da tecla **`U`**, que apenas atualiza a fonte do instalador. O Topgrade **não é executado automaticamente** durante a instalação nem quando a TUI usa `--dry-run`. Revise suas próprias transações e prompts; ele pode atualizar diferentes gerenciadores detectados no computador.
 
@@ -317,7 +344,7 @@ Na interface, use **`Z`** para acessar o diagnóstico.
 | `minimal` | Base enxuta e ferramentas essenciais | Menor conjunto de etapas |
 | `desktop` | SonicDE, XLibre, integração e aplicativos | Modifica a pilha gráfica |
 | `gaming` | Desktop e ferramentas para jogos | Inclui recursos voltados a jogos |
-| `full` | Todas as **34 etapas** | **Inclui Bedrock e outras operações avançadas** |
+| `full` | Todas as **35 etapas convencionais** | **Inclui Bedrock e outras operações avançadas** |
 
 Um preset **apenas marca etapas**; ele não executa nada por conta própria. Perfis personalizados (`P`) e presets oficiais (`O`) são recursos distintos.
 
@@ -339,7 +366,7 @@ O DarfinOS possui testes automatizados com **`unittest`**, sem dependências Pyt
 
 Os testes cobrem, entre outros pontos:
 
-- Parser das **34 etapas** e resolução de dependências.
+- Parser das **39 etapas** e resolução de dependências.
 - Perfis, presets e exportação do manifesto.
 - Registros de execução, recuperação e proteção contra Bash diferente.
 - Eventos de progresso e confirmações do Bash em cenários isolados.
