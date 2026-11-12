@@ -48,7 +48,13 @@ def valid_name(value: str) -> str:
 
 
 def profile_path(name: str, home: Path | None = None) -> Path:
-    return home_dir(home) / ".config/darfinos-tui/profiles" / (valid_name(name) + ".json")
+    root = home_dir(home)
+    parent = root
+    for segment in (".config", "darfinos-tui", "profiles"):
+        parent = parent / segment
+        if parent.is_symlink():
+            raise ValueError("Diretório de perfis contém link simbólico")
+    return parent / (valid_name(name) + ".json")
 
 
 def load_profile(name: str, home: Path | None = None) -> dict:
@@ -118,6 +124,7 @@ def _read_only(argv: list[str]) -> dict:
         process = subprocess.run(argv, capture_output=True, text=True, timeout=7,
                                  check=False)
         return {"available": True, "code": process.returncode,
+                "lines": len(process.stdout.splitlines()),
                 "output": process.stdout[:8192].strip()}
     except (OSError, subprocess.TimeoutExpired) as exc:
         return {"available": True, "error": type(exc).__name__}
@@ -149,7 +156,7 @@ def system_status(home: Path | None = None) -> dict:
         "root": os.geteuid() == 0 if hasattr(os, "geteuid") else False,
         "tools": {x: bool(shutil.which(x)) for x in
                   ("pacman", "sudo", "curl", "topgrade", "arch-update", "flatpak", "git")},
-        "packages_installed": len(packages.get("output", "").splitlines())
+        "packages_installed": packages.get("lines")
         if packages.get("code") == 0 else None,
         "filesystem": root_fs.get("output") if root_fs.get("code") == 0 else None,
         "free_home_gib": available,
@@ -276,13 +283,15 @@ def restore_backup(source: Path, home: Path | None = None, apply: bool = False,
     for target, _ in files:
         if target.exists() and not overwrite:
             raise FileExistsError(f"Arquivo existente: {target} (use --overwrite)")
-    marker = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    marker = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
+    for target, _ in files:
+        previous = target.with_name(target.name + f".darfinos-pre-restore-{marker}.bak")
+        if previous.exists() or previous.is_symlink():
+            raise FileExistsError(f"Backup preventivo já existe: {previous}")
     for target, data in files:
         target.parent.mkdir(parents=True, exist_ok=True)
         if target.exists():
             previous = target.with_name(target.name + f".darfinos-pre-restore-{marker}.bak")
-            if previous.exists() or previous.is_symlink():
-                raise FileExistsError(f"Backup preventivo já existe: {previous}")
             os.replace(target, previous)
         fd, temp = tempfile.mkstemp(dir=target.parent, prefix=".darfinos-restore-")
         try:
