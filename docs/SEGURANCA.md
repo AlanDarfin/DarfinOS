@@ -53,3 +53,17 @@ XLibre/SonicDE, Bedrock, `/etc` ou operações da TUI.
 
 [Checklist de validação real em VM](VALIDACAO_VM.md) ·
 [Preparação do primeiro release](LANCAMENTO.md)
+
+## Seleção explícita no instalador Bash
+
+Para evitar instalar o conjunto inteiro por acidente, iniciar o Bash sem opções
+mostra instruções e retorna código 2, **antes de chamar `sudo`**. Selecione
+`--only base,cli_tools` ou use a TUI; `--all` inclui Bedrock e outras
+opções arriscadas. `--skip` executa todas as etapas restantes, e deve ser
+tratado como operação avançada.
+
+Durante uma restauração de configurações, todos os arquivos são preparados
+antes de modificar destinos. Falhas de gravação acionam uma tentativa de
+reversão dos arquivos previamente alterados, com mensagens em caso de
+falhas na reversão. Não existe garantia de transação atômica entre todos os
+arquivos ou de proteção contra mudanças simultâneas por outros aplicativos.
