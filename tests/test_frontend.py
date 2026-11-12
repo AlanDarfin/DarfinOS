@@ -48,6 +48,7 @@ class ParserTests(unittest.TestCase):
         lookup = {s.name: s for s in TUI.parse_script(BASH)}
         self.assertIn('flatpak', lookup['apps'].deps)
         self.assertIn('hardware', lookup['gaming'].deps)
+        self.assertIn('aur_helper', lookup['maintenance'].deps)
 
     def test_bad_script_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -82,6 +83,7 @@ class ParserTests(unittest.TestCase):
         for preset in ('minimal', 'desktop', 'gaming', 'full'):
             with self.subTest(preset=preset):
                 self.assertIn('maintenance', TUI.preset_selection(preset, TUI.parse_script(BASH)))
+                self.assertIn('aur_helper', TUI.preset_selection(preset, TUI.parse_script(BASH)))
         packages = TUI.inventory(BASH, {'maintenance'})
         self.assertIn(('maintenance', 'aur', 'topgrade-bin'), packages)
         self.assertIn(('maintenance', 'aur', 'arch-update-bin'), packages)
