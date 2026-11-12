@@ -64,6 +64,57 @@ class ControlTests(unittest.TestCase):
         self.assertEqual(fish.read_text(), "set -gx EDITOR nvim\n")
         self.assertEqual(len(list(fish.parent.glob("config.fish.darfinos-pre-restore-*.bak"))), 1)
 
+    def test_restore_reverts_all_files_when_commit_fails(self):
+        archive = self.home / "transaction.zip"
+        control.create_backup(archive, self.home)
+        fish = self.home / ".config/fish/config.fish"
+        profile = self.profile_dir / "gaming.json"
+        fish.write_text("minha versão\n", encoding="utf-8")
+        profile.write_text('{"selected": ["minha-etapa"]}', encoding="utf-8")
+        prior_fish, prior_profile = fish.read_bytes(), profile.read_bytes()
+        real_replace = control.os.replace
+
+        def fail_during_install(source, destination):
+            # Falha depois que o original foi movido para .bak.
+            if (Path(destination) == fish and
+                    Path(source).name.startswith(".darfinos-restore-")):
+                raise OSError("falha simulada ao instalar arquivo")
+            return real_replace(source, destination)
+
+        with mock.patch.object(control.os, "replace", side_effect=fail_during_install):
+            with self.assertRaises(OSError):
+                control.restore_backup(archive, self.home, apply=True, overwrite=True)
+        self.assertEqual(fish.read_bytes(), prior_fish)
+        self.assertEqual(profile.read_bytes(), prior_profile)
+        self.assertFalse(list(self.home.rglob(".darfinos-restore-*")))
+        self.assertFalse(list(self.home.rglob("*.darfinos-pre-restore-*.bak")))
+
+    def test_rejects_oversized_archive_contents(self):
+        archive = self.home / "large.zip"
+        relative = ".config/fish/config.fish"
+        content = b"x" * (control.MAX_FILE + 1)
+        manifest = {"schema": 1, "files": [
+            {"path": relative, "sha256": hashlib.sha256(content).hexdigest(),
+             "size": len(content)}]}
+        with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as zipped:
+            zipped.writestr("manifest.json", json.dumps(manifest))
+            zipped.writestr("files/" + relative, content)
+        with self.assertRaises(ValueError):
+            control.restore_backup(archive, self.home, apply=True, overwrite=True)
+
+    def test_save_private_json_does_not_overwrite_race_winner(self):
+        target = self.home / "profile.json"
+        original_link = control.os.link
+
+        def concurrent_creation(source, destination):
+            Path(destination).write_text("arquivo concorrente", encoding="utf-8")
+            return original_link(source, destination)
+
+        with mock.patch.object(control.os, "link", side_effect=concurrent_creation):
+            with self.assertRaises(FileExistsError):
+                control.save_private_json(target, {"yes": False})
+        self.assertEqual(target.read_text(), "arquivo concorrente")
+
     def test_archive_escapes_refused(self):
         archive = self.home / "bad.zip"
         relative = "../outside"
