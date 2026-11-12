@@ -9,9 +9,12 @@ python -m py_compile DarfinOSInstallScript-TUI.py darfinos_control.py
 python -m unittest discover -s tests -v
 bash DarfinOSInstallScript.sh --preflight
 bash DarfinOSInstallScript.sh --list >/tmp/darfinos-steps.txt
-python DarfinOSInstallScript-TUI.py --doctor-json | python -c 'import json,sys; x=json.load(sys.stdin); assert x["ready"] and x["steps"] == 34, x'
-python DarfinOSInstallScript-TUI.py --manifest | python -c 'import json,sys; x=json.load(sys.stdin); assert x["accuracy"] == "partial_static" and len(x["steps"]) == 34'
+python DarfinOSInstallScript-TUI.py --doctor-json | python -c 'import json,sys; x=json.load(sys.stdin); assert x["ready"] and x["steps"] == 39, x'
+python DarfinOSInstallScript-TUI.py --manifest | python -c 'import json,sys; x=json.load(sys.stdin); assert x["accuracy"] == "partial_static" and len(x["steps"]) == 39'
 python DarfinOSInstallScript-TUI.py --plan --preset minimal >/dev/null
+python DarfinOSInstallScript-TUI.py --plan --preset i3 >/dev/null
+python DarfinOSInstallScript-TUI.py --labs | python -c 'import json,sys; p=json.load(sys.stdin)["projects"]; assert len(p)==12 and all(x["url"].startswith("https://") for x in p)'
+bash DarfinOSInstallScript.sh --labs | grep -Fq 'https://i3wm.org/'
 python DarfinOSInstallScript-TUI.py --compare-presets minimal gaming | python -c 'import json,sys; x=json.load(sys.stdin); assert "gaming" in x["add"] and "xlibre" in x["review_required"]'
 python DarfinOSInstallScript-TUI.py --audit --preset minimal | python -c 'import json,sys; x=json.load(sys.stdin); assert x["accuracy"] == "partial_static" and x["selected_steps"] > 0'
 python DarfinOSInstallScript-TUI.py --status-json | python -c 'import json,sys; x=json.load(sys.stdin); assert x["arch"] and x["tools"]["pacman"], x'
