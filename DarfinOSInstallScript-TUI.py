@@ -1016,9 +1016,13 @@ def ui_v3(win, st: State, digest: str, allow_updates: bool = True) -> str:
         elif key in (ord('g'), ord('G')) and visible:
             group = st.steps[visible[current]].group
             names = {s.name for s in st.steps if s.group == group}
-            if names <= st.selected: st.selected -= names
+            if group.startswith('DarfinOS Labs'):
+                st.message = 'Labs: selecione projetos individualmente com L ou Espaço.'
+            elif names <= st.selected: st.selected -= names
             else: st.selected |= names
-        elif key in (ord('a'), ord('A')): st.selected = set(st.lookup)
+        elif key in (ord('a'), ord('A')):
+            st.selected = {name for name in st.lookup if not name.startswith('lab_')}
+            st.message = 'Marcadas etapas tradicionais. Labs AUR requer seleção individual.'
         elif key in (ord('n'), ord('N')): st.selected.clear()
         elif key in (ord('f'), ord('F')): st.show_selected = not st.show_selected; current = top = 0
         elif key == ord('/'):
@@ -1303,6 +1307,14 @@ def diagnose_script(script: Path) -> dict:
 
     for name in graph:
         visit(name)
+    # Um link upstream faltante/sem HTTPS é um erro no manifesto, não um detalhe visual.
+    try:
+        projects = labs_catalog(script)
+        for project in projects:
+            if project['step'] and project['step'] not in known:
+                errors.append('Etapa Labs ausente: ' + project['step'])
+    except ValueError as exc:
+        errors.append('Catálogo Labs inválido: ' + str(exc))
     if shutil.which('bash'):
         result = subprocess.run(['bash', '-n', str(script)], capture_output=True, text=True)
         if result.returncode:
@@ -1316,7 +1328,7 @@ def diagnose_script(script: Path) -> dict:
         warnings.append('Este ambiente não parece ser Arch Linux.')
     return {
         'script': str(script), 'script_sha256': sha(script), 'steps': len(steps),
-        'presets': list(PRESETS), 'errors': errors, 'warnings': warnings,
+        'presets': list(PRESETS), 'labs': 12, 'errors': errors, 'warnings': warnings,
         'ready': not errors,
     }
 
