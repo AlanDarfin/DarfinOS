@@ -153,10 +153,12 @@ Uso: bash DarfinOSInstallScript.sh [opções]
   --list                 Lista as 34 etapas disponíveis (somente leitura).
   --preflight            Verifica requisitos básicos sem sudo nem alterações.
   --only a,b,c           Executa apenas as etapas informadas.
-  --skip a,b,c           Ignora as etapas informadas.
+  --skip a,b,c           Executa todas, exceto as etapas listadas (avançado).
+  --all                  Executa todas as etapas, inclusive opções avançadas.
   -y, --yes              Usa valores padrão apenas em perguntas elegíveis.
   -h, --help             Exibe esta ajuda.
-Sem --only/--skip, todas as etapas serão avaliadas, inclusive opções avançadas.
+É obrigatório escolher --only, --skip ou --all antes de instalar.
+Uma chamada sem seleção mostra esta ajuda e não altera o sistema.
 Para uma seleção inicial segura, use: python3 DarfinOSInstallScript-TUI.py --local
 Para validar sem alterar o sistema: python3 DarfinOSInstallScript-TUI.py --doctor
 HELP
@@ -166,6 +168,7 @@ HELP
 # Opções
 # ----------------------------------------------------------
 ASSUME_YES=0
+EXPLICIT_ALL=0
 ONLY=""
 SKIP=""
 LOG_FILE=""
@@ -222,9 +225,11 @@ list_steps() {
 validate_steps() {
   local item
   local -a items
+  [[ -n "$1" && "$1" != ,* && "$1" != *, && "$1" != *,,* ]] || die "Seleção inválida: informe nomes separados por vírgula, sem itens vazios."
   IFS=',' read -ra items <<<"$1"
+  (( ${#items[@]} )) || die "A seleção precisa conter pelo menos uma etapa."
   for item in "${items[@]}"; do
-    [[ -z "$item" ]] && continue
+    [[ -n "$item" ]] || die "Seleção contém etapa vazia."
     [[ " ${STEPS[*]} " == *" $item "* ]] || die "Etapa desconhecida: '$item' (veja --list)"
   done
 }
@@ -234,6 +239,7 @@ while [[ $# -gt 0 ]]; do
     -y|--yes)  ASSUME_YES=1 ;;
     --only)    [[ -n "${2:-}" ]] || die "--only exige uma lista"; ONLY="$2"; validate_steps "$ONLY"; shift ;;
     --skip)    [[ -n "${2:-}" ]] || die "--skip exige uma lista"; SKIP="$2"; validate_steps "$SKIP"; shift ;;
+    --all)     EXPLICIT_ALL=1 ;;
     --list)    list_steps; exit 0 ;;
     --preflight) preflight; exit $? ;;
     -h|--help) usage; exit 0 ;;
@@ -241,6 +247,16 @@ while [[ $# -gt 0 ]]; do
   esac
   shift
 done
+
+# Impede uma instalação completa acidental, antes de sudo e de qualquer alteração.
+if [[ -n "$ONLY" && ( -n "$SKIP" || "$EXPLICIT_ALL" -eq 1 ) ]]; then
+  die "Combine somente uma estratégia: --only, --skip ou --all."
+fi
+if [[ -z "$ONLY" && -z "$SKIP" && "$EXPLICIT_ALL" -ne 1 ]]; then
+  usage
+  warn "Nenhuma seleção informada. Use a TUI ou escolha explicitamente --only, --skip ou --all."
+  exit 2
+fi
 
 # ----------------------------------------------------------
 # Pré-requisitos e log
