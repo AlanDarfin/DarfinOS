@@ -150,8 +150,8 @@ O instalador continua independente da interface:
 # Consultar as 34 etapas
 bash DarfinOSInstallScript.sh --list
 
-# Executar interativamente
-bash DarfinOSInstallScript.sh
+# Para uma instalação interativa e seleção segura, use a TUI
+python3 DarfinOSInstallScript-TUI.py --local
 
 # Executar somente etapas escolhidas
 bash DarfinOSInstallScript.sh --only shells,dev_tools
@@ -159,11 +159,15 @@ bash DarfinOSInstallScript.sh --only shells,dev_tools
 # Excluir etapas da seleção
 bash DarfinOSInstallScript.sh --skip gaming,hamachi
 
-# Automatizar apenas perguntas elegíveis do script
-bash DarfinOSInstallScript.sh -y
+# Para executar todas as etapas, incluindo as avançadas, é obrigatório --all
+# NÃO use --all sem conhecer os riscos de Bedrock e substituição de X.Org
+bash DarfinOSInstallScript.sh --all
+
+# Automatizar apenas perguntas elegíveis de etapas escolhidas
+bash DarfinOSInstallScript.sh --only base,cli_tools -y
 ```
 
-O modo `-y` **não é aprovação irrestrita** de operações do `pacman`, chaves de assinatura ou outras ferramentas. Evite executar o instalador por `curl | bash` sem revisar o código.
+O Bash **não executa mais todas as etapas sem argumentos**. Ele exige `--only`, `--skip` ou `--all` explícito; `--skip` é uma seleção ampla e avançada. O modo `-y` **não é aprovação irrestrita** de operações do `pacman`, chaves de assinatura ou outras ferramentas. Evite executar o instalador por `curl | bash` sem revisar o código.
 
 ## 🖥 DarfinOS TUI V5 — Control Center
 
@@ -248,6 +252,9 @@ bash DarfinOSInstallScript.sh --preflight
 
 # Estado local em JSON (também disponível por --status-json da TUI)
 python3 darfinos_control.py status --json
+
+# Verificar Topgrade, Arch-Update, tray e timers sem iniciar atualizações
+python3 darfinos_control.py maintenance --json
 
 # Comparar pacotes previstos por um preset com a instalação local
 python3 DarfinOSInstallScript-TUI.py --audit --preset gaming
@@ -473,3 +480,11 @@ A instalação real de Topgrade/Arch-Update/SonicDE/XLibre ainda requer
 [uma validação supervisionada em VM](docs/VALIDACAO_VM.md).
 A [política do primeiro lançamento](docs/LANCAMENTO.md) impede rotular
 artefatos como estáveis sem esse teste. `main.zip` é código-fonte em desenvolvimento.
+
+
+### Teste de instalação Base em ambiente isolado
+
+O workflow manual [Instalação real da etapa Base](.github/workflows/install-base-manual.yml)
+executa `--only base` com pacotes reais **somente em um contêiner Arch descartável**.
+É uma validação adicional, não substitui o checklist de VM com reinicialização
+nem comprova SonicDE/XLibre. O workflow deve ser acionado explicitamente.
