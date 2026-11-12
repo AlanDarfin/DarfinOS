@@ -36,7 +36,7 @@ shellcheck -S warning DarfinOSInstallScript.sh
 
 ## O que é testado
 
-- Parser de `STEPS`, `STEP_DESC` e `STEP_DEPS`; ordem e nomes únicos das 32 etapas.
+- Parser de `STEPS`, `STEP_DESC` e `STEP_DEPS`; ordem e nomes únicos das 34 etapas.
 - Dependências, seleção, comando `--only` e proteção contra execução vazia.
 - Prévia estática de pacotes, sem instalação.
 - Perfis salvos e carregados, validação dos nomes.
@@ -47,7 +47,7 @@ shellcheck -S warning DarfinOSInstallScript.sh
 
 ## GitHub Actions
 
-O workflow `.github/workflows/tests.yml` roda em push para `main`, pull requests e manualmente (`workflow_dispatch`). A matriz usa Python 3.10, 3.12 e 3.13.
+O workflow `.github/workflows/tests.yml` roda em push para `main`, pull requests e manualmente (`workflow_dispatch`). A matriz usa Python 3.10, 3.12, 3.13 e 3.14.
 
 O job **validate** bloqueia alterações com falhas de sintaxe ou testes. O job **shellcheck** produz um artifact com os avisos e **não bloqueia**, porque o Bash já tem código legado que pode precisar de revisão gradual. Isso não significa que todos os avisos sejam irrelevantes.
 
@@ -63,3 +63,19 @@ Para alterações futuras: acrescente testes offline sempre que modificar a sele
 Os testes verificam o diagnóstico estático de dependências, a presença das funções do Bash, a busca aproximada de etapas e as novas opções CLI `--doctor`, `--doctor-json` e `--plan`.
 
 A auditoria `--doctor` é somente leitura. O Bash agora retorna erro quando termina com etapas falhas ou bloqueadas, facilitando o acompanhamento automatizado.
+
+
+## Smoke test em ambiente Arch
+
+O workflow `.github/workflows/arch-smoke.yml` usa um contêiner
+`archlinux:latest` descartável. Ele instala Python/Git/sudo/curl **dentro
+do contêiner** e executa `tests/integration_arch_smoke.sh` para:
+validar sintaxe, testes unitários, `--preflight`, `--doctor-json`, manifesto,
+plano e estado de sistema. O script não chama o instalador sem `--list`
+ou `--preflight` e não altera o Arch do usuário.
+
+O job `package` do workflow normal verifica que o pacote candidato
+pode ser gerado e que seu SHA256 confere. Isso não é publicar um release.
+
+**Ainda precisa de VM** para testar instalações efetivas, pacman/AUR,
+serviços gráficos e recuperação. Veja [VALIDACAO_VM.md](VALIDACAO_VM.md).
