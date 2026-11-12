@@ -215,6 +215,7 @@ O painel mostra andamento, estados, tempo decorrido e logs. Há **modais para pe
 | `B` | Prévia de aplicativos |
 | `I` | Consultar pacotes instalados |
 | `M` | Manutenção (somente leitura) |
+| `C` | Painel do Control Center e diagnóstico local |
 | `T` | Executar Topgrade após confirmação (somente na seleção) |
 | `H` | Histórico e diferenças |
 | `U` | Atualizar fonte remota |
@@ -233,6 +234,40 @@ Pressione **`T` na tela de seleção da TUI** para executar o Topgrade em um ter
 A seção de pacotes da TUI é uma **prévia estática parcial**, não uma promessa de tudo que será baixado. Etapas condicionais e instalações escolhidas em perguntas interativas podem apresentar outros itens; acompanhe o log para saber o que de fato ocorreu.
 
 Para detalhes do layout e das limitações, consulte **[docs/TUI_V5.md](docs/TUI_V5.md)**.
+
+## ⚡ Control Center: após a instalação
+
+A tecla **C** da TUI abre um painel de estado do sistema sem privilégios de administrador.
+O módulo opcional `darfinos_control.py` funciona sem `pip`, organiza perfis e oferece
+uma **cópia de segurança limitada a arquivos permitidos do HOME**:
+
+```bash
+# Pré-verificação sem sudo (ainda não testa instalação real)
+bash DarfinOSInstallScript.sh --preflight
+
+# Estado local em JSON (também disponível por --status-json da TUI)
+python3 darfinos_control.py status --json
+
+# Exportar/importar perfis; importação sempre desativa -y
+python3 darfinos_control.py profile-export gaming gaming.json
+python3 darfinos_control.py profile-import gaming.json gaming-copia
+python3 darfinos_control.py profile-diff gaming gaming-copia
+
+# Backup privado; o ZIP pode conter dados pessoais das configurações
+python3 darfinos_control.py backup ~/darfinos-config.zip
+
+# Revisão sem modificar arquivos
+python3 darfinos_control.py restore ~/darfinos-config.zip
+
+# Restauração explícita, mantendo .bak dos arquivos sobrescritos
+python3 darfinos_control.py restore ~/darfinos-config.zip --apply --overwrite
+```
+
+> [!WARNING]
+> Não é uma reversão do sistema. Backups abrangem certos arquivos de configuração
+> do usuário, **não** pacotes, repositórios em `/etc`, snapshots, XLibre ou Bedrock.
+> A restauração pode substituir configurações existentes e deve ser revisada antes.
+> Perfis são seleções de etapas, não uma prova de que os pacotes foram instalados.
 
 ## ♻ Recuperação e retomada — V4.2
 
@@ -425,3 +460,12 @@ E, sinceramente, isso já é motivo suficiente para existir.
 **Arch Linux · SonicDE · XLibre · automação · experimentação**
 
 </div>
+
+
+### Validação e preparação de release
+
+A CI inclui testes estáticos e um *smoke test* somente leitura num contêiner Arch.
+A instalação real de Topgrade/Arch-Update/SonicDE/XLibre ainda requer
+[uma validação supervisionada em VM](docs/VALIDACAO_VM.md).
+A [política do primeiro lançamento](docs/LANCAMENTO.md) impede rotular
+artefatos como estáveis sem esse teste. `main.zip` é código-fonte em desenvolvimento.
