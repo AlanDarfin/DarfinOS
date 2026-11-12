@@ -106,6 +106,28 @@ class ParserTests(unittest.TestCase):
         self.assertTrue(any('flatpak' in line and 'DEPENDÊNCIAS PENDENTES' in line
                             for line in TUI.inspection_lines(st, st.lookup['apps'])))
 
+    def test_profile_audit_uses_partial_inventory_without_claiming_step_complete(self):
+        state = TUI.State(TUI.parse_script(BASH), 'test', selected={'base'})
+        report = TUI.audit_selected(state, BASH, {'pacman': {'git'}, 'flatpak': None})
+        self.assertEqual(report['accuracy'], 'partial_static')
+        self.assertGreater(report['packages_previewed'], 0)
+        installed = [item for item in report['steps']['base']
+                     if item['name'] == 'git']
+        self.assertEqual(installed[0]['status'], 'instalado')
+        self.assertIn('não detectado', report['counts'])
+        unknown = TUI.audit_selected(state, BASH, {'pacman': None, 'flatpak': None})
+        self.assertEqual(unknown['counts']['indisponível'], unknown['packages_previewed'])
+
+    def test_profile_audit_cli_no_tty_or_pacman_required(self):
+        import subprocess
+        import sys
+        command = [sys.executable, str(ROOT / 'DarfinOSInstallScript-TUI.py'),
+                   '--audit', '--preset', 'minimal']
+        outcome = subprocess.run(command, capture_output=True, text=True, check=True)
+        report = json.loads(outcome.stdout)
+        self.assertEqual(report['accuracy'], 'partial_static')
+        self.assertGreater(report['selected_steps'], 0)
+
     def test_topgrade_disabled_in_dry_run(self):
         st = TUI.State(TUI.parse_script(BASH), 'test')
         with mock.patch.object(TUI.shutil, 'which') as which:
