@@ -79,3 +79,5 @@ pode ser gerado e que seu SHA256 confere. Isso não é publicar um release.
 
 **Ainda precisa de VM** para testar instalações efetivas, pacman/AUR,
 serviços gráficos e recuperação. Veja [VALIDACAO_VM.md](VALIDACAO_VM.md).
+
+A opção `--audit` compara pacotes literais previstos por um perfil com o inventário local. A ausência de detecção **não é** prova de falha da etapa ou de ausência de pacotes condicionais.
