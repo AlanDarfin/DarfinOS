@@ -14,7 +14,7 @@ python DarfinOSInstallScript-TUI.py --manifest | python -c 'import json,sys; x=j
 python DarfinOSInstallScript-TUI.py --plan --preset minimal >/dev/null
 python DarfinOSInstallScript-TUI.py --plan --preset i3 >/dev/null
 python DarfinOSInstallScript-TUI.py --labs | python -c 'import json,sys; p=json.load(sys.stdin)["projects"]; assert len(p)==12 and all(x["url"].startswith("https://") for x in p)'
-bash DarfinOSInstallScript.sh --labs | grep -Fq 'https://i3wm.org/'
+bash DarfinOSInstallScript.sh --labs | grep -F 'https://i3wm.org/' >/dev/null
 python DarfinOSInstallScript-TUI.py --compare-presets minimal gaming | python -c 'import json,sys; x=json.load(sys.stdin); assert "gaming" in x["add"] and "xlibre" in x["review_required"]'
 python DarfinOSInstallScript-TUI.py --audit --preset minimal | python -c 'import json,sys; x=json.load(sys.stdin); assert x["accuracy"] == "partial_static" and x["selected_steps"] > 0'
 python DarfinOSInstallScript-TUI.py --status-json | python -c 'import json,sys; x=json.load(sys.stdin); assert x["arch"] and x["tools"]["pacman"], x'
