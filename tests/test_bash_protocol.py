@@ -78,6 +78,40 @@ printf 'failed=%s skipped=%s\\n' "${FAILED_STEPS[*]}" "${SKIPPED_STEPS[*]}"
                                   'STEP_SKIP:disabled:desmarcada'])
         self.assertIn('failed=bad skipped=dependent', result.stdout)
 
+    def test_maintenance_fails_when_required_updaters_missing(self):
+        # Substitui somente funções de instalação e descoberta, sem invocar sudo.
+        code = function('step_maintenance') + '''
+info() { :; }
+warn() { :; }
+detect_aur_helper() { echo ""; }
+command() {
+  if [[ "$1" == "-v" ]]; then
+    case "$2" in
+      topgrade|arch-update|arch-update-tray|systemctl|paccache) return 1 ;;
+    esac
+  fi
+  builtin command "$@"
+}
+step_maintenance
+'''
+        result, _ = bash_harness(code)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+
+    def test_maintenance_succeeds_with_updaters_present(self):
+        code = function('step_maintenance') + '''
+info() { :; }
+ok() { :; }
+warn() { :; }
+detect_aur_helper() { echo "yay"; }
+topgrade() { :; }
+arch-update() { :; }
+arch-update-tray() { :; }
+sudo() { :; }
+step_maintenance
+'''
+        result, _ = bash_harness(code)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_confirm_and_choose_events(self):
         result, events = bash_harness('''
 ASSUME_YES=0
