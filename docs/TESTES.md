@@ -81,3 +81,16 @@ pode ser gerado e que seu SHA256 confere. Isso não é publicar um release.
 serviços gráficos e recuperação. Veja [VALIDACAO_VM.md](VALIDACAO_VM.md).
 
 A opção `--audit` compara pacotes literais previstos por um perfil com o inventário local. A ausência de detecção **não é** prova de falha da etapa ou de ausência de pacotes condicionais.
+
+## Teste de instalação real, isolado e opt-in
+
+O workflow [`install-base-manual.yml`](../.github/workflows/install-base-manual.yml)
+(`workflow_dispatch`) instala pacotes reais da **etapa Base** dentro de um
+contêiner novo Arch Linux, utilizando um usuário comum com sudo restrito ao
+ambiente descartável. Após executar o Bash com `--only base`, ele confere
+pacotes via `pacman -Qi`. Não executa no host, não valida inicialização
+com systemd, nem testes de login com SonicDE/XLibre. **Este workflow é manual**.
+
+O `darfinos_control.py maintenance --json` detecta a existência dos
+atualizadores, entradas de autostart e timers do usuário, mas não executa
+Topgrade, Arch-Update ou uma atualização real.
