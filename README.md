@@ -216,6 +216,7 @@ O painel mostra andamento, estados, tempo decorrido e logs. Há **modais para pe
 | `I` | Consultar pacotes instalados |
 | `M` | Manutenção (somente leitura) |
 | `C` | Painel do Control Center e diagnóstico local |
+| `V` | Auditoria parcial dos pacotes previstos pelo perfil selecionado |
 | `T` | Executar Topgrade após confirmação (somente na seleção) |
 | `H` | Histórico e diferenças |
 | `U` | Atualizar fonte remota |
@@ -247,6 +248,9 @@ bash DarfinOSInstallScript.sh --preflight
 
 # Estado local em JSON (também disponível por --status-json da TUI)
 python3 darfinos_control.py status --json
+
+# Comparar pacotes previstos por um preset com a instalação local
+python3 DarfinOSInstallScript-TUI.py --audit --preset gaming
 
 # Exportar/importar perfis; importação sempre desativa -y
 python3 darfinos_control.py profile-export gaming gaming.json
