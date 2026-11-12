@@ -94,3 +94,6 @@ com systemd, nem testes de login com SonicDE/XLibre. **Este workflow é manual**
 O `darfinos_control.py maintenance --json` detecta a existência dos
 atualizadores, entradas de autostart e timers do usuário, mas não executa
 Topgrade, Arch-Update ou uma atualização real.
+
+A opção `--compare-presets minimal gaming` produz um plano declarativo de
+transição, com indicação das etapas que merecem revisão; não faz alterações.
