@@ -25,7 +25,7 @@ A TUI é a central de controle do instalador. Para ver o projeto em imagens e co
 - Lista de etapas com marcadores `■` e `□`, foco destacado e inspeção de descrição longa, grupo, detecção e pacotes previstos por origem. As dependências satisfeitas/ausentes não ocupam espaço: o painel só mostra as pendentes.
 - Layout responsivo: inspeção lateral a partir de 100 colunas e resumo abaixo em terminais menores (mínimo 54×16).
 - Painel ao vivo com barra de **etapas encerradas**, totais de `DONE`/`FAIL`/`SKIP`, destaque por estado e alternância entre eventos e logs com **L**.
-- Atalhos existentes preservados: **O** presets, **Z** retomada, **B** aplicativos, **P** perfis, **M** manutenção, **H** histórico. **T** inicia Topgrade na tela de seleção (após confirmação) e abre terminal integral durante instalação.
+- Atalhos existentes preservados: **O** presets, **Z** retomada, **B** aplicativos, **P** perfis, **M** manutenção, **C** estado do sistema, **H** histórico. **T** inicia Topgrade na tela de seleção (após confirmação) e abre terminal integral durante instalação.
 
 ## Integração de atualizações
 
@@ -60,3 +60,21 @@ O `--dry-run` não executa a instalação. Para explorar a interface, navegue e 
 - `--doctor` e `--doctor-json` verificam sintaxe e grafo das etapas sem instalar nada.
 - `--plan --preset gaming` imprime um plano estático, também sem sudo nem instalação.
 - `--empty` mantém a opção de começar com nenhuma etapa marcada.
+
+
+## Control Center local
+
+- **C** na seleção: mostra o estado local, ferramentas encontradas, perfis e última execução.
+- `python3 DarfinOSInstallScript-TUI.py --status-json`: emite os mesmos dados estruturados sem iniciar a TUI.
+- `bash DarfinOSInstallScript.sh --preflight`: checa Arch, pacman, sudo e curl sem solicitar sudo.
+- `darfinos_control.py`: `status`, `profile-export`, `profile-import`,
+  `profile-diff`, `backup` e `restore`.
+
+A cópia ZIP inclui apenas arquivos permitidos em `~/.config` (DarfinOS, Fish,
+Starship e Fastfetch). Caminhos e checksums são validados. Um restore é apenas
+prévia até receber `--apply`; arquivos existentes exigem também `--overwrite`.
+O backup **não contém nem restaura configurações em /etc ou pacotes do pacman**.
+Pode conter informações privadas: evite compartilhá-lo.
+
+Consulte [VALIDACAO_VM.md](VALIDACAO_VM.md) para a aceitação em VM e
+[LANCAMENTO.md](LANCAMENTO.md) para o pacote de versão.
