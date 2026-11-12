@@ -150,6 +150,23 @@ class ControlTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             control.create_backup(self.home / "backup.zip", self.home)
 
+    def test_maintenance_health_is_read_only(self):
+        autostart = self.home / ".config/autostart"
+        autostart.mkdir(parents=True)
+        (autostart / "arch-update-tray.desktop").write_text("[Desktop Entry]\n")
+        with (mock.patch.object(control.shutil, "which", side_effect=lambda name:
+                                "/usr/bin/" + name if name in ("systemctl", "topgrade") else None),
+              mock.patch.object(control, "_read_only", return_value={
+                  "code": 0, "output": "arch-update.timer", "available": True}) as runner):
+            report = control.maintenance_status(self.home)
+        self.assertTrue(report["tools"]["topgrade"])
+        self.assertFalse(report["tools"]["arch-update"])
+        self.assertIn("arch-update-tray.desktop", report["arch_update_autostart_entries"])
+        self.assertTrue(report["user_timers"]["arch_update_detected"])
+        runner.assert_called_once_with([
+            "systemctl", "--user", "list-timers", "--all", "--no-pager", "--no-legend"
+        ])
+
     def test_status_is_observational(self):
         with mock.patch.object(control, "_read_only") as cmd:
             cmd.side_effect = lambda argv: {"available": False}
