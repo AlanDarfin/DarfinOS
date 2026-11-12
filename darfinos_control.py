@@ -82,7 +82,12 @@ def save_private_json(path: Path, data: dict, overwrite: bool = False) -> None:
             os.fchmod(stream.fileno(), 0o600)
             json.dump(data, stream, indent=2, ensure_ascii=False)
             stream.write("\n")
-        os.replace(temp, path)
+        if overwrite:
+            os.replace(temp, path)
+        else:
+            # Link atômico no mesmo filesystem: nunca sobrescreve destino criado
+            # entre a verificação inicial e a gravação.
+            os.link(temp, path)
     finally:
         Path(temp).unlink(missing_ok=True)
 
@@ -211,8 +216,8 @@ def create_backup(destination: Path, home: Path | None = None) -> dict:
         files.append((relative, target.read_bytes()))
     if not files:
         raise ValueError("Nenhum arquivo de configuração permitido foi encontrado")
-    if len(files) > MAX_ENTRIES:
-        raise ValueError("Excesso de arquivos para backup")
+    if len(files) > MAX_ENTRIES or sum(len(data) for _, data in files) > MAX_ARCHIVE:
+        raise ValueError("Excesso de arquivos ou tamanho total para backup")
     manifest = {"schema": SCHEMA, "created_at": now(), "files": [
         {"path": relative, "sha256": hashlib.sha256(data).hexdigest(), "size": len(data)}
         for relative, data in files]}
@@ -230,7 +235,8 @@ def create_backup(destination: Path, home: Path | None = None) -> dict:
                     archive.writestr("files/" + relative, data)
         if Path(temp).stat().st_size > MAX_ARCHIVE:
             raise ValueError("Backup ultrapassou limite de tamanho")
-        os.replace(temp, destination)
+        # Evita substituir outro backup criado durante a gravação.
+        os.link(temp, destination)
     finally:
         Path(temp).unlink(missing_ok=True)
     return manifest
@@ -257,6 +263,7 @@ def inspect_backup(source: Path, home: Path | None = None) -> tuple[dict, list[t
         if len(files) > MAX_ENTRIES or set(names) != expected or len(expected) != len(names):
             raise ValueError("Entradas inesperadas no backup")
         restored = []
+        total_size = 0
         for item in files:
             relative = item["path"]
             target = _safe_target(root, relative)
@@ -264,6 +271,9 @@ def inspect_backup(source: Path, home: Path | None = None) -> tuple[dict, list[t
             if (member.file_size > MAX_FILE or member.file_size != item.get("size") or
                     member.compress_size > MAX_ARCHIVE):
                 raise ValueError(f"Tamanho inválido: {relative}")
+            total_size += member.file_size
+            if total_size > MAX_ARCHIVE:
+                raise ValueError("Backup ultrapassa o limite total descompactado")
             data = archive.read(member)
             if hashlib.sha256(data).hexdigest() != item.get("sha256"):
                 raise ValueError(f"SHA256 inválido: {relative}")
@@ -273,36 +283,85 @@ def inspect_backup(source: Path, home: Path | None = None) -> tuple[dict, list[t
 
 def restore_backup(source: Path, home: Path | None = None, apply: bool = False,
                    overwrite: bool = False) -> list[dict]:
-    _, files = inspect_backup(source, home)
-    report = [{"path": str(target), "exists": target.exists(),
-               "identical": target.is_file() and target.read_bytes() == data}
-              for target, data in files]
+    """Restaura arquivos em duas fases, revertendo substituições se ocorrer falha.
+
+    A operação protege apenas os arquivos controlados pelo DarfinOS no HOME.
+    Não é um snapshot transacional do sistema (ou de arquivos modificados
+    simultaneamente por outras aplicações).
+    """
+    root = home_dir(home)
+    _, files = inspect_backup(source, root)
+    report = []
+    for target, data in files:
+        exists = target.exists()
+        if exists and not target.is_file():
+            raise ValueError(f"Destino não é arquivo regular: {target}")
+        identical = (exists and target.stat().st_size == len(data)
+                     and target.read_bytes() == data)
+        report.append({"path": str(target), "exists": exists, "identical": bool(identical)})
     if not apply:
         return report
-    # Validar todos os conflitos antes de alterar o primeiro arquivo.
+
+    # Pré-verificar todos os destinos, evitando modificar metade deles antes
+    # de perceber um conflito ou diretório simbólico.
     for target, _ in files:
+        relative = target.relative_to(root).as_posix()
+        _safe_target(root, relative)
         if target.exists() and not overwrite:
             raise FileExistsError(f"Arquivo existente: {target} (use --overwrite)")
     marker = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
+    backups = {}
     for target, _ in files:
         previous = target.with_name(target.name + f".darfinos-pre-restore-{marker}.bak")
         if previous.exists() or previous.is_symlink():
             raise FileExistsError(f"Backup preventivo já existe: {previous}")
-    for target, data in files:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        if target.exists():
-            previous = target.with_name(target.name + f".darfinos-pre-restore-{marker}.bak")
-            os.replace(target, previous)
-        fd, temp = tempfile.mkstemp(dir=target.parent, prefix=".darfinos-restore-")
-        try:
+        backups[target] = previous
+
+    # Escrever TODOS os arquivos temporários antes de substituir um existente.
+    staged: dict[Path, Path] = {}
+    applied: list[tuple[Path, Path | None]] = []
+    try:
+        for target, data in files:
+            _safe_target(root, target.relative_to(root).as_posix())
+            target.parent.mkdir(parents=True, exist_ok=True)
+            fd, temp = tempfile.mkstemp(dir=target.parent, prefix=".darfinos-restore-")
+            pending = Path(temp)
+            staged[target] = pending
             with os.fdopen(fd, "wb") as stream:
                 os.fchmod(stream.fileno(), 0o600)
                 stream.write(data)
-            os.replace(temp, target)
-        finally:
-            Path(temp).unlink(missing_ok=True)
-    return report
+                stream.flush()
+                os.fsync(stream.fileno())
 
+        for target, _ in files:
+            _safe_target(root, target.relative_to(root).as_posix())
+            previous = backups[target] if target.exists() else None
+            if previous is not None:
+                os.replace(target, previous)
+            # Registrar a mudança antes do próximo replace para proteger
+            # inclusive falhas que ocorram entre o backup e a instalação.
+            applied.append((target, previous))
+            os.replace(staged[target], target)
+    except OSError as exc:
+        # Reversão na ordem inversa. Se não conseguirmos restaurar um destino,
+        # preservar o .bak e informar explicitamente o problema.
+        rollback_errors = []
+        for target, previous in reversed(applied):
+            try:
+                if previous is None:
+                    target.unlink(missing_ok=True)
+                else:
+                    os.replace(previous, target)
+            except OSError as undo:
+                rollback_errors.append(f"{target}: {undo}")
+        if rollback_errors:
+            raise RuntimeError("Falha ao restaurar: " + str(exc) +
+                               "; reversão parcial: " + "; ".join(rollback_errors)) from exc
+        raise
+    finally:
+        for path in staged.values():
+            path.unlink(missing_ok=True)
+    return report
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="DarfinOS Control Center · sem sudo")
