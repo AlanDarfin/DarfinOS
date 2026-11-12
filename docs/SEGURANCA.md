@@ -73,3 +73,16 @@ Os presets padrão incluem agora um AUR helper quando selecionam manutenção.
 Pacotes do AUR são gerenciados por terceiros e podem executar scripts de
 compilação/instalação. **Revise as fontes e confirmações** do helper e não
 use `-y` como substituto para essa revisão.
+
+## DarfinOS Labs
+
+A categoria [Labs](LABS.md) reúne 12 projetos externos. Somente i3 possui
+pacotes do Arch oficial no fluxo padrão; NsCDE, JuNest, Decman e Metapac são
+instalações AUR individuais com confirmação literal **LABS**. Eles recusam
+`-y` e nunca entram em seleções automáticas `--all`, `--skip` ou `full`.
+
+Conty, nix-portable, Trinity, yserver, xomposite, Wayback e Booster são
+**documentais**. Não automatizamos inserção de repositórios de terceiros,
+execução de binários baixados, mudanças de sessão gráfica ou initramfs.
+Decman e Metapac não são executados após instalação: regras declarativas e
+comandos de limpeza podem remover pacotes e arquivos do sistema.
