@@ -57,6 +57,27 @@ class BashProtocolTests(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertNotIn('Autenticando sudo', result.stdout)
 
+    def test_labs_catalog_does_not_ask_for_sudo_or_start_installing(self):
+        for args in (['--labs'], ['--lab-info', 'yserver'], ['--lab-info', 'i3']):
+            with self.subTest(args=args):
+                res = subprocess.run(['bash', str(ROOT / 'DarfinOSInstallScript.sh'), *args],
+                                     capture_output=True, text=True, timeout=5)
+                self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+                self.assertIn('https://', res.stdout)
+                self.assertNotIn('Autenticando sudo', res.stdout)
+
+    def test_labs_install_stays_off_on_full_and_skip(self):
+        codes = function('step_enabled') + '''
+ONLY=""
+SKIP=""
+step_enabled lab_nscde && exit 13
+step_enabled i3 || exit 14
+ONLY="lab_nscde"
+step_enabled lab_nscde || exit 15
+'''
+        result, _ = bash_harness(codes)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_event_success_failure_skip_and_dependency(self):
         result, events = bash_harness('''
 STEPS=(ok bad dependent disabled)
