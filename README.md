@@ -11,7 +11,7 @@
 ![XLibre](https://img.shields.io/badge/DISPLAY-XLibre-FFCB2E?style=for-the-badge&labelColor=171717)
 ![Bash + Python](https://img.shields.io/badge/TOOLS-Bash_%2B_Python-FFCB2E?style=for-the-badge&labelColor=171717)
 
-**[🌐 Site do projeto](https://darfinos.vercel.app/) · [📖 Documentação](docs/) · [🧪 Actions](https://github.com/AlanDarfin/DarfinOS/actions)**
+**[🌐 Site do projeto](https://darfinos.vercel.app/) · [⚡ Control Center](https://darfinos.vercel.app/controle/) · [📖 Documentação](docs/) · [🧪 Actions](https://github.com/AlanDarfin/DarfinOS/actions)**
 
 [Instalação](#-começando) · [TUI V5](#-darfinos-tui-v5--control-center) · [Etapas](#-o-que-o-darfinos-configura) · [Créditos](#-os-projetos-por-trás-do-darfinos) · [Documentação](#-documentação) · [Segurança](#-avisos-importantes) · [Contato](#-contato)
 
@@ -241,6 +241,8 @@ A seção de pacotes da TUI é uma **prévia estática parcial**, não uma prome
 Para detalhes do layout e das limitações, consulte **[docs/TUI_V5.md](docs/TUI_V5.md)**.
 
 ## ⚡ Control Center: após a instalação
+
+A [página do Control Center no site](https://darfinos.vercel.app/controle/) reúne os recursos, comandos de referência e limitações de segurança.
 
 A tecla **C** da TUI abre um painel de estado do sistema sem privilégios de administrador.
 O módulo opcional `darfinos_control.py` funciona sem `pip`, organiza perfis e oferece
