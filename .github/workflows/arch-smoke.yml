@@ -1,0 +1,26 @@
+name: DarfinOS · Smoke real de ambiente Arch
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  arch-smoke:
+    name: Arch Linux · inspeção e testes seguros
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container:
+      image: archlinux:latest
+    steps:
+      - name: Preparar runtime em contêiner descartável
+        run: |
+          pacman -Syu --noconfirm --needed python git sudo curl
+      - name: Obter código do projeto
+        uses: actions/checkout@v4
+      - name: Executar testes e verificações somente leitura
+        run: bash tests/integration_arch_smoke.sh
