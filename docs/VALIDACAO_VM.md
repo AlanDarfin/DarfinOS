@@ -68,3 +68,8 @@ execute manualmente o teste de instalação Base no GitHub Actions em
 `.github/workflows/install-base-manual.yml`. Ele modifica somente o
 contêiner descartável e não testa inicialização gráfica. Registre o link
 exato da execução e o commit SHA antes de considerar o resultado válido.
+
+
+- [ ] Verificar que o preset Minimal seleciona `aur_helper` antes de `maintenance`.
+- [ ] Simular indisponibilidade do AUR: a etapa `maintenance` deve marcar `FAIL`
+  quando Topgrade/Arch-Update não forem instalados, sem relatar sucesso falso.
