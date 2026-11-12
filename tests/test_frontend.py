@@ -16,12 +16,42 @@ SPEC.loader.exec_module(TUI)
 BASH = ROOT / 'DarfinOSInstallScript.sh'
 
 class ParserTests(unittest.TestCase):
-    def test_34_steps_and_unique_names(self):
+    def test_39_steps_and_unique_names(self):
         steps = TUI.parse_script(BASH)
-        self.assertEqual(len(steps), 34)
+        self.assertEqual(len(steps), 39)
         self.assertEqual(len({s.name for s in steps}), 34)
         self.assertEqual(steps[0].name, 'pacman_conf')
-        self.assertEqual(steps[-1].name, 'terminal_extras')
+        self.assertEqual(steps[-1].name, 'lab_metapac')
+
+    def test_i3_and_labs_group_are_distinct(self):
+        steps = TUI.parse_script(BASH)
+        assert next(x for x in steps if x.name == 'i3').group.startswith('Window')
+        assert all(x.group.startswith('DarfinOS Labs') for x in steps if x.name.startswith('lab_'))
+        selection = TUI.preset_selection('full', steps)
+        self.assertIn('i3', selection)
+        self.assertFalse(any(x.startswith('lab_') for x in selection))
+        self.assertIn('i3', TUI.preset_selection('i3', steps))
+        self.assertNotIn('sonicde', TUI.preset_selection('i3', steps))
+
+    def test_labs_catalog_links_and_modes(self):
+        projects = TUI.labs_catalog(BASH)
+        self.assertEqual(len(projects), 12)
+        self.assertEqual(len({x['id'] for x in projects}), 12)
+        by_id = {x['id']: x for x in projects}
+        self.assertEqual(by_id['i3']['step'], 'i3')
+        self.assertEqual(by_id['yserver']['mode'], 'documentacao')
+        self.assertIsNone(by_id['booster']['step'])
+        self.assertEqual(by_id['wayback']['url'], 'https://gitlab.freedesktop.org/wayback/wayback')
+        self.assertTrue(all(x['url'].startswith('https://') for x in projects))
+
+    def test_labs_cli_outputs_json_without_tty(self):
+        import subprocess
+        out = subprocess.run([sys.executable, str(ROOT / 'DarfinOSInstallScript-TUI.py'), '--labs'],
+                             capture_output=True, text=True, check=True)
+        self.assertEqual(len(json.loads(out.stdout)['projects']), 12)
+        result = subprocess.run([sys.executable, str(ROOT / 'DarfinOSInstallScript-TUI.py'),
+                                 '--lab-info', 'nscde'], capture_output=True, text=True, check=True)
+        self.assertEqual(json.loads(result.stdout)['step'], 'lab_nscde')
 
     def test_search_tolerates_typo_and_respects_selected(self):
         st = TUI.State(TUI.parse_script(BASH), 'test', selected={'gaming'})
@@ -32,7 +62,7 @@ class ParserTests(unittest.TestCase):
 
     def test_doctor_is_read_only_and_checks_all_functions(self):
         report = TUI.diagnose_script(BASH)
-        self.assertEqual(report['steps'], 34)
+        self.assertEqual(report['steps'], 39)
         self.assertTrue(report['ready'], report['errors'])
         self.assertEqual(report['errors'], [])
 
