@@ -183,6 +183,7 @@ declare -A STEP_DEPS=(
   [desktop_extras]="sonicde"
   [gaming]="hardware"
   [apps]="flatpak"
+  [maintenance]="aur_helper"
 )
 
 preflight() {
@@ -1412,6 +1413,7 @@ step_browser() {
 # ==========================================================
 
 step_maintenance() {
+  local incomplete=0
   info "Instalando ferramentas padrão de atualização: Topgrade e Arch-Update com tray..."
   if [[ -z "$(detect_aur_helper)" ]]; then
     warn "Nenhum helper AUR disponível. Instale yay/paru (etapa aur_helper) para obter os atualizadores."
@@ -1429,15 +1431,25 @@ step_maintenance() {
     fi
   fi
 
+  # Não registrar STEP_DONE enquanto faltar algum dos dois atualizadores padrão.
+  if ! command -v topgrade >/dev/null 2>&1; then
+    warn "Topgrade ainda ausente após a etapa de manutenção."
+    incomplete=1
+  fi
+
   if command -v arch-update >/dev/null 2>&1; then
     if command -v arch-update-tray >/dev/null 2>&1; then
       # Gera a entrada XDG Autostart; funcionará no próximo login gráfico.
       arch-update --tray --enable || warn "Não foi possível habilitar a bandeja automaticamente."
     else
       warn "O Arch-Update instalado não inclui arch-update-tray; verifique a variante do pacote."
+      incomplete=1
     fi
     # Um timer --user pode não estar disponível numa instalação executada de TTY.
     arch-update --check --enable || warn "Verificação automática não ativada nesta sessão; use: arch-update --check --enable"
+  else
+    warn "Arch-Update ainda ausente após a etapa de manutenção."
+    incomplete=1
   fi
 
   if command -v systemctl >/dev/null 2>&1; then
@@ -1451,6 +1463,10 @@ step_maintenance() {
     warn "systemctl indisponível; timers de manutenção não configurados."
   fi
   info "Para atualizar manualmente: topgrade (ou a opção T da TUI)."
+  if (( incomplete )); then
+    warn "Manutenção incompleta: revise o log e as ferramentas AUR. Os timers são opcionais."
+    return 1
+  fi
 }
 
 step_firewall() {
