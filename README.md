@@ -488,3 +488,11 @@ O workflow manual [Instalação real da etapa Base](.github/workflows/install-ba
 executa `--only base` com pacotes reais **somente em um contêiner Arch descartável**.
 É uma validação adicional, não substitui o checklist de VM com reinicialização
 nem comprova SonicDE/XLibre. O workflow deve ser acionado explicitamente.
+
+
+**Dependência de manutenção:** os presets Minimal, Desktop e Gaming agora
+incluem também a etapa `aur_helper`. Topgrade e Arch-Update são pacotes do AUR
+no fluxo atual, portanto um Arch novo precisa de um helper escolhido pelo usuário.
+A etapa `maintenance` passa a registrar **falha** se Topgrade ou Arch-Update
+(com o applet) estiverem ausentes ao terminar. Problemas ao ativar timers em TTY
+continuam sendo avisos, não prova de instalação incorreta.
