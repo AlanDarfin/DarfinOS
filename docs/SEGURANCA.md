@@ -67,3 +67,9 @@ antes de modificar destinos. Falhas de gravação acionam uma tentativa de
 reversão dos arquivos previamente alterados, com mensagens em caso de
 falhas na reversão. Não existe garantia de transação atômica entre todos os
 arquivos ou de proteção contra mudanças simultâneas por outros aplicativos.
+
+
+Os presets padrão incluem agora um AUR helper quando selecionam manutenção.
+Pacotes do AUR são gerenciados por terceiros e podem executar scripts de
+compilação/instalação. **Revise as fontes e confirmações** do helper e não
+use `-y` como substituto para essa revisão.
