@@ -78,6 +78,38 @@ step_enabled lab_nscde || exit 15
         result, _ = bash_harness(codes)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+    def test_lab_confirmation_is_explicit_and_tui_compatible(self):
+        code = function('lab_aur_install') + """
+ASSUME_YES=0
+declare -A LABS_URL=([nscde]="https://github.com/NsCDE/NsCDE")
+info() { :; }
+warn() { :; }
+ok() { :; }
+detect_aur_helper() { echo yay; }
+LAB_INSTALLED=0
+pacman() { [[ "$LAB_INSTALLED" == 1 ]]; }
+aur_install() { LAB_INSTALLED=1; }
+lab_aur_install nscde nscde
+"""
+        result, events = bash_harness(code, stdin='LABS\\n')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(events, [
+            'PROMPT_CHOOSE:n:labs/n:Digite LABS para abrir a transação de nscde'
+        ])
+        result, events = bash_harness(code, stdin='\\n')
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(len(events), 1)
+
+    def test_labs_refuse_yes_even_when_explicitly_selected(self):
+        code = function('lab_aur_install') + """
+ASSUME_YES=1
+warn() { :; }
+lab_aur_install nscde nscde
+"""
+        result, events = bash_harness(code)
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(events, [])
+
     def test_event_success_failure_skip_and_dependency(self):
         result, events = bash_harness('''
 STEPS=(ok bad dependent disabled)
