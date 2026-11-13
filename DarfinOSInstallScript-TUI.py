@@ -1036,7 +1036,7 @@ def styles_screen(win, st: State, allow_changes: bool) -> None:
                 count = sum(old != new for old, new in plan.values())
                 if count and (prompt(win, f"Digite APLICAR para atualizar {count} arquivos do i3 Notebook:") or "").lower() == "aplicar":
                     report = control.style_apply(profile, plan, list(plan))
-                    scroll_screen(win, "PERSONALIZAÇÃO", report + "\nEntre novamente na sessão i3.")
+                    scroll_screen(win, "PERSONALIZAÇÃO", report + "\nEntre novamente na sessão i3. Super+F2: Tela · Super+Shift+P: Fundo.")
                 return
             selected = []
             for rel, (old, new) in plan.items():

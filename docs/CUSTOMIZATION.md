@@ -42,15 +42,28 @@ python3 darfinos_control.py style i3-notebook --apply --all-files
 | --- | --- |
 | Super+D / Super+Tab | Launch apps and switch windows in Rofi. dmenu is the app-launch fallback. |
 | Super+F1 | Open the shortcut list, also available as the **Atalhos do i3** tab in Rofi. |
+| Super+F2 | Inspect each output’s current resolution and refresh rate. If the built-in panel advertises 1280×720, test it and confirm within 15 seconds to keep it. |
+| Super+Shift+P | Choose a wallpaper that is reapplied at login. Also available through **Fundo** on the bar. |
 | Super+B | Writing mode. Hold Super or receive an urgent window hint to reveal the hidden bar. |
-| Super+Grave / Super+R | Pocket terminal and arrow-key resizing (Esc to exit). |
+| Super+Shift+Enter or Super+Grave / Super+R | Pocket terminal and arrow-key resizing (Esc to exit). |
 | Brightness and audio keys | Adjust brightness, volume and mute using your existing PipeWire or PulseAudio setup. |
 | Super+L / Print | Lock the screen or capture an area. xss-lock handles locking before suspend. |
 | Super+N / Super+Shift+N / Super+Ctrl+N | Redisplay the last notification, toggle Do Not Disturb, and dismiss visible pop-ups. |
 
-The bar shows battery, network, volume and time. Dunst shows up to three
-floating notifications in the top-right corner, with Rofi's graphite palette
-and accent color. The profile does not stop a notification daemon already
+The bar sits at the top with **Apps**, **Janelas** (Windows), **Atalhos** (Shortcuts),
+and **Fundo** (Wallpaper) buttons, plus battery, network, volume and time. The
+first workspace is **1**. Use **Super+Enter** to open a regular terminal. Focus
+follows the pointer and keyboard focus changes do not warp it between monitors.
+
+The profile reuses the SonicDE cursor theme and size if that theme is installed,
+or tries an installed Bibata variant. It does not edit SonicDE settings. The
+720p choice only changes the built-in panel and neither creates a mode nor
+forces a refresh rate. With no image selected, the background is graphite.
+When upgrading, run the Notebook Labs step again for the new dependencies,
+then reapply the Workshop profile.
+
+Dunst shows up to three notifications in the top-right corner below the bar,
+with Rofi's graphite palette and accent color. The profile does not stop a notification daemon already
 running on the same D-Bus session. If needed, sign out of the other desktop
 before testing in i3. Run `dunstify "DarfinOS" "Notifications ready"` in the i3
 session to see the theme. Picom is neither installed nor started by this profile.

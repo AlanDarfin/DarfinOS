@@ -80,5 +80,6 @@ step_lab_i3_notebook
         self.assertEqual(len(events), 1)
         packages = set(events[0].split(":", 2)[2].split())
         self.assertTrue({"i3-wm", "rofi", "dunst", "i3status-rust", "brightnessctl",
-                         "xss-lock", "flameshot", "xterm", "chezmoi", "libnotify"} <= packages)
+                         "xss-lock", "flameshot", "xterm", "chezmoi", "libnotify", "feh",
+                         "zenity", "xorg-xrandr", "xorg-xrdb", "xorg-xsetroot", "xsettingsd"} <= packages)
         self.assertFalse({"wireplumber", "pipewire", "picom", "sonicde"} & packages)

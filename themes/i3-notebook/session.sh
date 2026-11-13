@@ -4,6 +4,9 @@ set -eu
 profile_dir="$HOME/.config/darfinos/i3-notebook"
 
 case "${1:-}" in
+    desktop-start|display|wallpaper)
+        exec python3 "$profile_dir/desktop.py" "$@"
+        ;;
     start)
         # Don't take the D-Bus name from a notification daemon already in use.
         if command -v dunst >/dev/null; then
@@ -34,9 +37,11 @@ case "${1:-}" in
         printf '%s\n' \
             'Super+D · Aplicativos' \
             'Super+Tab · Trocar de janela' \
+            'Super+Shift+P · Escolher papel de parede' \
+            'Super+F2 · Ver resolução e modo 720p' \
             'Super+Enter · Terminal' \
-            'Super+Grave · Terminal de bolso' \
-            'Super+1/2/3 · Terminal / Web / Escrita' \
+            'Super+Shift+Enter / Super+Grave · Terminal de bolso' \
+            'Super+1/2/3 · Áreas 1 / Web / Escrita' \
             'Super+setas · Focar outra janela' \
             'Super+Shift+setas · Mover janela' \
             'Super+R · Redimensionar com as setas (Esc para sair)' \
@@ -68,7 +73,7 @@ case "${1:-}" in
         ;;
     status)
         if command -v i3status-rs >/dev/null && [ -r "$profile_dir/status.toml" ]; then
-            exec i3status-rs "$profile_dir/status.toml"
+            SHELL=/bin/sh exec i3status-rs "$profile_dir/status.toml"
         fi
         exec i3status
         ;;

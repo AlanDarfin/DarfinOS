@@ -2,7 +2,7 @@
 [global]
     follow = keyboard
     origin = top-right
-    offset = (12, 12)
+    offset = (12, 44)
     width = (245, 340)
     height = (0, 140)
     notification_limit = 3

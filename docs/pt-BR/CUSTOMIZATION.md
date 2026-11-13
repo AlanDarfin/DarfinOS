@@ -43,14 +43,29 @@ python3 darfinos_control.py style i3-notebook --apply --all-files
 | --- | --- |
 | Super+D / Super+Tab | Apps e janelas no Rofi. dmenu fica de reserva para apps. |
 | Super+F1 | Lista de atalhos, disponível também como aba **Atalhos do i3** no Rofi. |
+| Super+F2 | Mostra a resolução e os Hz atuais por saída. Se a tela interna oferecer 1280×720, dá para testar o modo. Sem confirmar em 15 s, volta ao anterior. |
+| Super+Shift+P | Escolhe uma imagem de papel de parede e reaplica ao entrar no i3. Também disponível em **Fundo**, na barra. |
 | Super+B | Modo Escrita. A barra some e volta enquanto você segura Super ou se houver uma janela urgente. |
-| Super+Grave / Super+R | Terminal de bolso e redimensionamento com as setas (Esc para sair). |
+| Super+Shift+Enter ou Super+Grave / Super+R | Terminal de bolso e redimensionamento com as setas (Esc para sair). |
 | Teclas de brilho e áudio | Brilho, volume e mute. O perfil usa o PipeWire ou PulseAudio já configurado. |
 | Super+L / Print | Bloquear tela ou capturar uma área. A sessão também usa xss-lock antes de suspender. |
 | Super+N / Super+Shift+N / Super+Ctrl+N | Recuperar a última notificação, ativar ou desativar o Não Perturbe e dispensar os pop-ups. |
 
-A barra mostra bateria, rede, volume e hora. O Dunst exibe até três notificações
-no canto superior direito, com fundo grafite e a cor de destaque do Rofi.
+A barra fica no topo, com **Apps**, **Janelas**, **Atalhos** e **Fundo** clicáveis,
+além de bateria, rede, volume e hora. A primeira área de trabalho é **1**. Para
+abrir um terminal normal, use **Super+Enter**. As janelas recebem foco ao passar
+o mouse, e trocar de monitor pelo teclado não teletransporta o ponteiro.
+
+O perfil reaproveita o tema e o tamanho do cursor configurados no SonicDE, quando
+o tema está instalado. Se não achar o tema escolhido, tenta uma variante Bibata
+já instalada. A sessão i3 não altera os arquivos do SonicDE. A opção de 720p
+só mexe na tela interna, não inventa modos nem força taxa de atualização. Sem
+uma imagem selecionada, o fundo é grafite. Se estiver atualizando a versão
+anterior do perfil, rode o Labs novamente para instalar as novas dependências
+antes de reaplicar pela Oficina.
+
+O Dunst exibe até três notificações no canto superior direito, abaixo da barra,
+com fundo grafite e a cor de destaque do Rofi.
 Se outro daemon de notificações já estiver ativo no mesmo barramento D-Bus, o
 perfil não o encerra. Nesse caso, saia do outro ambiente e entre na sessão i3
 para testar. Dentro do i3, rode `dunstify "DarfinOS" "Notificações prontas"` para
