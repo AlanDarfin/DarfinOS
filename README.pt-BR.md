@@ -14,7 +14,7 @@
 ![XLibre](https://img.shields.io/badge/DISPLAY-XLibre-FFCB2E?style=for-the-badge&labelColor=171717)
 ![Bash + Python](https://img.shields.io/badge/TOOLS-Bash_%2B_Python-FFCB2E?style=for-the-badge&labelColor=171717)
 
-**[🌐 Site do projeto](https://darfinos.vercel.app/) · [⚡ Control Center](https://darfinos.vercel.app/controle/) · [📖 Documentação](docs/) · [🧪 Actions](https://github.com/AlanDarfin/DarfinOS/actions)**
+**[🌐 Site em português](https://darfinos.vercel.app/pt-br/) · [⚡ Control Center](https://darfinos.vercel.app/pt-br/controle/) · [📖 Documentação](docs/pt-BR/README.md) · [⬇️ Downloads](https://darfinos.vercel.app/pt-br/downloads/) · [🧪 Actions](https://github.com/AlanDarfin/DarfinOS/actions)**
 
 [Instalação](#-começando) · [TUI V5](#-darfinos-tui-v5--control-center) · [Etapas](#-o-que-o-darfinos-configura) · [Créditos](#-os-projetos-por-trás-do-darfinos) · [Documentação](#-documentação) · [Segurança](#-avisos-importantes) · [Contato](#-contato)
 
@@ -45,7 +45,7 @@ O resultado é deliberadamente pessoal, um tanto underground e sem muita preocup
 O site do projeto reúne **capturas de tela, explicações visuais e links rápidos** para conhecer o ambiente e as ferramentas que inspiram sua identidade. O README concentra as instruções práticas; a galeria visual fica no site.
 
 > [!TIP]
-> **Quer ver antes de instalar?** Explore a [página do projeto](https://darfinos.vercel.app/) e os [arquivos publicados](https://github.com/AlanDarfin/DarfinOS/releases). O DarfinOS é um projeto de **personalização e pós-instalação do Arch**, não uma ISO independente.
+> **Quer ver antes de instalar?** Explore a [página do projeto](https://darfinos.vercel.app/) e o [ZIP da main](https://github.com/AlanDarfin/DarfinOS/archive/refs/heads/main.zip) ou os [candidatos publicados](https://github.com/AlanDarfin/DarfinOS/releases). O DarfinOS é um projeto de **personalização e pós-instalação do Arch**, não uma ISO independente.
 
 ## 🧩 Os projetos por trás do DarfinOS
 
@@ -550,3 +550,14 @@ no fluxo atual, portanto um Arch novo precisa de um helper escolhido pelo usuár
 A etapa `maintenance` passa a registrar **falha** se Topgrade ou Arch-Update
 (com o applet) estiverem ausentes ao terminar. Problemas ao ativar timers em TTY
 continuam sendo avisos, não prova de instalação incorreta.
+
+
+## 🌐 Idiomas e downloads
+
+O idioma padrão dos READMEs e da documentação do GitHub agora é o **inglês**; esta versão em português brasileiro continua completa e acessível pelo seletor no topo. O GitHub não oferece redirecionamento automático de README pela língua do navegador, diferentemente do [site bilíngue](https://darfinos.vercel.app/pt-br/).
+
+- [ZIP atual do código da main](https://github.com/AlanDarfin/DarfinOS/archive/refs/heads/main.zip): código-fonte de desenvolvimento, sempre acessível e **não uma release estável**.
+- [Candidatos de desenvolvimento no GitHub](https://github.com/AlanDarfin/DarfinOS/releases): pré-lançamentos versionados com pacote e SHA-256. O GitHub Actions só publica após os testes Python/Bash e o smoke no Arch passarem no mesmo commit.
+- [Página de downloads em português](https://darfinos.vercel.app/pt-br/downloads/): lista as opções reais e os limites da versão.
+
+Ainda falta validação gráfica e de recuperação em VM para um lançamento estável. Não existe ISO do DarfinOS.
