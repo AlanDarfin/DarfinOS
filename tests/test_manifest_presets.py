@@ -21,7 +21,7 @@ class ManifestPresetTests(unittest.TestCase):
 
     def test_manifest_has_all_steps_and_sha(self):
         manifest = TUI.build_manifest(BASH)
-        self.assertEqual(len(manifest['steps']), 39)
+        self.assertEqual(len(manifest['steps']), 41)
         self.assertEqual(manifest['script_sha256'], TUI.sha(BASH))
         self.assertEqual(manifest['accuracy'], 'partial_static')
 
@@ -31,7 +31,7 @@ class ManifestPresetTests(unittest.TestCase):
         self.assertIn({'manager': 'pacman', 'name': 'git'}, base['packages'])
 
     def test_preset_names_and_risk(self):
-        self.assertEqual(set(TUI.PRESETS), {'minimal', 'desktop', 'i3', 'gaming', 'full'})
+        self.assertEqual(set(TUI.PRESETS), {'minimal', 'desktop', 'i3', 'retro', 'gaming', 'full'})
         self.assertNotIn('bedrock', TUI.preset_selection('minimal', self.steps))
         self.assertNotIn('bedrock', TUI.preset_selection('desktop', self.steps))
         self.assertNotIn('bedrock', TUI.preset_selection('gaming', self.steps))
@@ -74,10 +74,16 @@ class ManifestPresetTests(unittest.TestCase):
         self.assertIn('xlibre', i3)
         self.assertNotIn('sonicde', i3)
 
+    def test_retro_preset_is_explicit_and_full_excludes_lab(self):
+        plan = TUI.preset_selection('retro', self.steps)
+        self.assertIn('xfce', plan)
+        self.assertIn('lab_chicago95', plan)
+        self.assertNotIn('lab_chicago95', TUI.preset_selection('full', self.steps))
+
     def test_manifest_cli_no_tty_required(self):
         result = subprocess.run([sys.executable, str(ROOT / 'DarfinOSInstallScript-TUI.py'), '--manifest'],
                                 capture_output=True, text=True, check=True)
-        self.assertEqual(len(json.loads(result.stdout)['steps']), 39)
+        self.assertEqual(len(json.loads(result.stdout)['steps']), 41)
 
     def test_list_presets_cli_no_tty_required(self):
         result = subprocess.run([sys.executable, str(ROOT / 'DarfinOSInstallScript-TUI.py'), '--list-presets'],
