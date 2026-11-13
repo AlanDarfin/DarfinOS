@@ -143,6 +143,9 @@ lab_aur_install nscde nscde
                 target = home / directory
                 target.mkdir(parents=True)
                 (target / 'index.theme').write_text('[Icon Theme]\\n')
+            css = home / '.themes/Chicago95/gtk-3.0/gtk.css'
+            css.parent.mkdir(parents=True)
+            css.write_text('/* Chicago95 */')
             result = subprocess.run(cmd, env=env, capture_output=True, text=True, check=True)
             rows = {parts[0]: parts[1:] for line in result.stdout.splitlines()[1:]
                     if len(parts := line.split("\t", 2)) == 3}
