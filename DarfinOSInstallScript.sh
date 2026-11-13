@@ -346,7 +346,7 @@ module_probe() {
     lab_decman) required=(decman) ;;
     lab_metapac) required=(metapac) ;;
     lab_chicago95)
-      if [[ -f "$HOME/.themes/Chicago95/index.theme" && -f "$HOME/.icons/Chicago95/index.theme" ]]; then
+      if [[ -f "$HOME/.themes/Chicago95/index.theme" && -f "$HOME/.themes/Chicago95/gtk-3.0/gtk.css" && -f "$HOME/.icons/Chicago95/index.theme" ]]; then
         MODULE_STATUS=installed
         MODULE_REASON="Arquivos GTK e ícones Chicago95 encontrados no HOME; aplicação do tema é manual."
       elif [[ -e "$HOME/.themes/Chicago95" || -L "$HOME/.themes/Chicago95" ||
@@ -1143,11 +1143,11 @@ step_lab_chicago95() {
     rm -rf -- "$staged_theme" "$staged_icons"
     return 1
   fi
-  if ! mv -- "$staged_theme" "$theme"; then
+  if ! mv -nT -- "$staged_theme" "$theme" || [[ -e "$staged_theme" ]]; then
     rm -rf -- "$staged_theme" "$staged_icons"
     return 1
   fi
-  if ! mv -- "$staged_icons" "$icon_theme"; then
+  if ! mv -nT -- "$staged_icons" "$icon_theme" || [[ -e "$staged_icons" ]]; then
     warn "Chicago95 parcial: tema copiado, ícones pendentes. Revise manualmente."
     rm -rf -- "$staged_icons"
     return 1
