@@ -368,6 +368,8 @@ readonly CHAOTIC_PKG_URL="https://cdn-mirror.chaotic.cx/chaotic-aur"
 
 readonly TRINITY_FINGERPRINT="D6D6FAA25E9A3E4ECD9FBDBEC93AF1698685AD8B"
 readonly TRINITY_SERVER='https://mirror.ppa.trinitydesktop.org/trinity/archlinux/$arch'
+readonly BIBATA_VERSION="v2.0.7"
+readonly BIBATA_SHA256="a68cae60c4dc706350e194ebc91c5fe48bc7bc9d59e119555834a2a7ee5078ef"
 readonly CHICAGO95_REV="5da19b8b1e2a886ebf6628403023d5fac3acc3ee"
 readonly XOMPOSITE_REV="44e2dc8e1f843509871b956d9ad4ae4ffc0cfcc2"
 readonly CONTY_SHA256="9bb53bdf1bf72b9358a34e5bfe19bebf81fe27ef3ac5f3cd0b15152a59e1be34"
@@ -484,6 +486,11 @@ module_any_package() {
   done
   return 1
 }
+notebook_cursor_ready() {
+  local theme="${1:-${XDG_DATA_HOME:-$HOME/.local/share}/icons/Bibata-Modern-Ice}"
+  [[ -f "$theme/index.theme" && -f "$theme/cursors/left_ptr" ]]
+}
+
 junest_environment_ready() {
   local root="${JUNEST_HOME:-$HOME/.junest}"
   [[ -x "$root/usr/bin/pacman" && -r "$root/etc/junest/info" ]]
@@ -619,7 +626,7 @@ module_probe() {
     lab_etckeeper) required=(etckeeper git) ;;
     lab_rustic) required=(rustic) ;;
     lab_kvantum) required=(kvantum) ;;
-    lab_i3_notebook) required=(i3-wm i3status i3lock dmenu xorg-xinit chezmoi rofi dunst i3status-rust brightnessctl xss-lock flameshot xterm ttf-dejavu libpulse libnotify feh zenity xorg-xrandr xorg-xrdb xorg-xsetroot xsettingsd polybar xdotool ttf-jetbrains-mono powerline-fonts otf-font-awesome librsvg xdg-utils gtk3) ;;
+    lab_i3_notebook) required=(i3-wm i3status i3lock dmenu xorg-xinit chezmoi rofi dunst i3status-rust brightnessctl xss-lock flameshot xterm ttf-dejavu libpulse libnotify feh zenity xorg-xrandr xorg-xrdb xorg-xsetroot xsettingsd polybar xdotool ttf-jetbrains-mono powerline-fonts otf-font-awesome librsvg xdg-utils gtk3 curl tar xz) ;;
     lab_pkgsrc)
       if [[ -x "$HOME/.local/share/darfinos/pkgsrc-prefix/bin/bmake" && -x "$HOME/.local/share/darfinos/pkgsrc-prefix/sbin/pkg_info" && -d "$HOME/.local/share/darfinos/pkgsrc-tree/pkgtools" ]]; then
         MODULE_STATUS=installed; MODULE_REASON="Bootstrap pkgsrc e árvore de pacotes encontrados."
@@ -702,8 +709,13 @@ module_probe() {
     MODULE_STATUS=unknown
     MODULE_REASON="pacman -Qq indisponível; não pular por precaução."
   elif module_packages_ready "${required[@]}"; then
-    MODULE_STATUS=installed
-    MODULE_REASON="Todos os ${#required[@]} pacotes esperados já instalados; etapa somente de pacotes."
+    if [[ "$name" == lab_i3_notebook ]] && ! notebook_cursor_ready; then
+      MODULE_STATUS=partial
+      MODULE_REASON="Pacotes Notebook instalados; cursor Bibata Modern Ice ainda não encontrado."
+    else
+      MODULE_STATUS=installed
+      MODULE_REASON="Todos os ${#required[@]} pacotes esperados já instalados."
+    fi
   elif module_any_package "${required[@]}"; then
     MODULE_STATUS=partial
     MODULE_REASON="Alguns pacotes presentes; etapa ainda não está completa."
@@ -1807,11 +1819,66 @@ step_lab_kvantum() {
   info "No Control Center: perfil sonicde-kvantum para prévia/aplicação do estilo KvDark."
 }
 
+# Official pinned asset; staged publication preserves existing user themes.
+notebook_install_cursor() {
+  local icons="${XDG_DATA_HOME:-$HOME/.local/share}/icons"
+  local dest="$icons/Bibata-Modern-Ice" archive="$TMP_DIR/Bibata-Modern-Ice.tar.xz"
+  local extracted staged entry link target canonical
+  if notebook_cursor_ready "$dest"; then
+    info "Preservando Bibata existente: $dest"
+    return 0
+  fi
+  if [[ -e "$dest" || -L "$dest" ]]; then
+    warn "Bibata incompleto em $dest. Mova-o para um backup antes de tentar novamente."
+    return 1
+  fi
+  curl --proto '=https' --proto-redir '=https' -fsSL --retry 2 --connect-timeout 15 --max-time 1800 \
+    -o "$archive" "https://github.com/ful1e5/Bibata_Cursor/releases/download/$BIBATA_VERSION/Bibata-Modern-Ice.tar.xz" || return 1
+  if ! printf '%s  %s\n' "$BIBATA_SHA256" "$archive" | sha256sum --check --status; then
+    warn "SHA-256 do Bibata não corresponde ao arquivo esperado. Não foi instalado."
+    return 1
+  fi
+  # Reject unexpected archive roots and traversal before extraction.
+  tar -tJf "$archive" > "$TMP_DIR/bibata-members" || return 1
+  while IFS= read -r entry; do
+    case "$entry" in
+      Bibata-Modern-Ice/*) ;;
+      *) warn "Arquivo Bibata com estrutura inesperada."; return 1 ;;
+    esac
+    case "/$entry/" in */../*) warn "Caminho inválido no arquivo Bibata."; return 1 ;; esac
+  done < "$TMP_DIR/bibata-members"
+  extracted=$(mktemp -d "$TMP_DIR/bibata.XXXXXXXX") || return 1
+  if ! tar --no-same-owner -xJf "$archive" -C "$extracted" ||
+     ! notebook_cursor_ready "$extracted/Bibata-Modern-Ice"; then
+    rm -rf -- "$extracted"
+    return 1
+  fi
+  # Cursor aliases are relative links contained in the official theme.
+  while IFS= read -r -d '' link; do
+    target=$(readlink -- "$link") || target=/
+    canonical=$(realpath -e -- "$link") || canonical=
+    if [[ "$target" == /* || "$canonical" != "$extracted/Bibata-Modern-Ice/"* ]]; then
+      warn "Link inválido no tema Bibata."
+      rm -rf -- "$extracted"
+      return 1
+    fi
+  done < <(find "$extracted/Bibata-Modern-Ice" -type l -print0)
+  mkdir -p -- "$icons" || { rm -rf -- "$extracted"; return 1; }
+  staged=$(mktemp -d "$icons/.bibata-stage.XXXXXXXX") || { rm -rf -- "$extracted"; return 1; }
+  if ! cp -a -- "$extracted/Bibata-Modern-Ice/." "$staged/" || ! chmod 755 "$staged" ||
+     ! mv -nT -- "$staged" "$dest" || [[ -e "$staged" ]]; then
+    rm -rf -- "$staged" "$extracted"
+    return 1
+  fi
+  rm -rf -- "$extracted"
+}
+
 step_lab_i3_notebook() {
-  lab_confirm i3_notebook "Instala o i3 e as ferramentas Notebook. Não aplica o perfil nem troca sua sessão." || return 1
+  lab_confirm i3_notebook "Instala i3, ferramentas Notebook e Bibata Modern Ice v2.0.7 (SHA-256 fixo) no HOME: https://github.com/ful1e5/Bibata_Cursor. Não aplica o perfil nem troca sua sessão." || return 1
   install_pkgs i3-wm i3status i3lock dmenu xorg-xinit chezmoi rofi dunst i3status-rust \
     brightnessctl xss-lock flameshot xterm ttf-dejavu libpulse libnotify feh zenity xorg-xrandr xorg-xrdb xorg-xsetroot xsettingsd \
-    polybar xdotool ttf-jetbrains-mono powerline-fonts otf-font-awesome librsvg xdg-utils gtk3 || return 1
+    polybar xdotool ttf-jetbrains-mono powerline-fonts otf-font-awesome librsvg xdg-utils gtk3 curl tar xz || return 1
+  notebook_install_cursor || return 1
   info "Abra a Oficina de Temas (W) e selecione i3-notebook. Entre novamente na sessão i3 para ativar."
   info "O perfil usa o áudio existente (wpctl ou pactl); não troca o servidor de áudio."
 }

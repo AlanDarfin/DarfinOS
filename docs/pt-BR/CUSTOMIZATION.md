@@ -26,6 +26,8 @@ Veja as novas etapas e os links originais no [DarfinOS Labs](LABS.md). Arcan/Pip
 
 ## i3 Notebook (720p)
 
+![i3 Notebook em uma sessão X11 isolada de 1280×720](../assets/i3-notebook-720p.png)
+
 O perfil **i3 Notebook** é separado do i3 Compacto. Instale **i3 Notebook** pelo
 Labs (**L**), abra **W → i3-notebook**, revise a prévia e aplique. Ele guarda a
 configuração anterior do i3 no histórico da Oficina e não sobrescreve suas
@@ -43,8 +45,8 @@ python3 darfinos_control.py style i3-notebook --apply --all-files
 | --- | --- |
 | Super+D / Super+Tab | Apps e janelas no Rofi. dmenu fica de reserva para apps. |
 | Super+F1 | Lista de atalhos, disponível também como aba **Atalhos do i3** no Rofi. |
-| Super+F2 | Mostra a resolução e os Hz atuais por saída. Se a tela interna oferecer 1280×720, dá para testar o modo. Sem confirmar em 15 s, volta ao anterior. |
-| Super+Shift+P | Escolhe uma imagem de papel de parede e reaplica ao entrar no i3. Também disponível em **Fundo**, na barra. |
+| Super+F2 | Mostra a resolução e os Hz atuais por saída. Se a tela interna oferecer 1280×720, dá para testar o modo sem escala. Sem confirmar em 15 s, restaura modo, Hz e transformação anteriores. |
+| Super+Shift+P | Escolhe uma imagem e reaplica ao entrar no i3, ou restaura o fundo DarfinOS. Também disponível em **Fundo**, na barra. |
 | Super+Enter / Super+B / Super+E | Abre o terminal, o navegador padrão ou a pasta pessoal no gerenciador de arquivos padrão. |
 | Super+Shift+B | Mostra ou oculta a barra para liberar espaço na tela. |
 | Super+1–9 / Super+0 | Vai para as áreas 1–10. Com Shift, move a janela atual. |
@@ -65,18 +67,34 @@ As janelas recebem foco ao passar o mouse, sem mover o ponteiro ao trocar de
 monitor pelo teclado. Se a Polybar estiver ausente ou falhar ao iniciar, a barra
 nativa do i3 fica como reserva.
 
+O desktop combina superfícies grafite com blocos de status dourados, bronze e
+areia. A área de trabalho focada recebe um fundo na cor de destaque; janelas
+inativas usam bordas discretas. O launcher centralizado tem busca em uma
+superfície própria e linhas mais espaçosas. O fundo traz diagonais sutis, a
+marca DarfinOS e o lema do sistema.
+
 O visual da barra e do Rofi foi inspirado nos [dotfiles do iamabhas](https://github.com/iamabhas/dotfiles),
 com as cores e os atalhos do DarfinOS. A cor de destaque escolhida na Oficina
 é aplicada na barra, no Rofi, no Dunst e no papel de parede padrão.
 
+A etapa Notebook dos Labs instala o [Bibata Modern Ice](https://github.com/ful1e5/Bibata_Cursor)
+v2.0.7 da release oficial, com SHA-256 fixo, em
+`${XDG_DATA_HOME:-~/.local/share}/icons`. Instalações existentes são preservadas.
 O perfil reaproveita o tema e o tamanho do cursor configurados no SonicDE, quando
-o tema está instalado. Se não achar o tema escolhido, tenta uma variante Bibata
-já instalada. A sessão i3 não altera os arquivos do SonicDE. A opção de 720p
-só mexe na tela interna, não inventa modos nem força taxa de atualização. Sem
-uma imagem selecionada, o perfil usa o papel de parede grafite com o duplo raio
-e o lema do DarfinOS. Se estiver atualizando a versão
-anterior do perfil, rode o Labs novamente para instalar as novas dependências
-antes de reaplicar pela Oficina.
+o tema está instalado. Se não achar o tema escolhido, usa uma variante Bibata
+instalada (24 px por padrão). A sessão i3 não altera os arquivos do SonicDE.
+Recarregar o perfil atualiza o provedor XSETTINGS que ele próprio iniciou,
+preservando provedores de outros ambientes.
+
+A opção de 720p só mexe na tela interna, não inventa modos nem força taxa de
+atualização. Se o painel não oferecer 1280×720, o menu explica a indisponibilidade.
+A escolha confirmada é reaplicada ao entrar com escala 1:1; **Super+F2 → Parar de
+reaplicar 720p ao entrar** desativa essa preferência. Monitores externos mantêm
+suas configurações. Sem imagem selecionada, o perfil usa o fundo grafite com o
+duplo raio e o lema do DarfinOS. **Fundo → Restaurar fundo DarfinOS** remove a
+preferência de imagem personalizada. Se uma imagem salva sumir, o fundo padrão
+é usado temporariamente. Se estiver atualizando o perfil, rode o Labs novamente
+para instalar as novas dependências antes de reaplicar pela Oficina.
 
 O Dunst exibe até três notificações no canto superior direito, abaixo da barra,
 com fundo grafite e a cor de destaque do Rofi.

@@ -4,6 +4,12 @@
 
 O projeto segue desenvolvimento contínuo. Esta lista destaca mudanças verificáveis, sem prometer suporte universal a todas as combinações de Arch/derivados.
 
+## Em preparação · desktop i3 Notebook (novembro de 2026)
+
+- Tema Notebook grafite/dourado refinado com inspiração nos dotfiles do iamabhas: destaque da área focada, bordas coerentes, Rofi, Dunst e fundo com a marca DarfinOS.
+- Labs Notebook instala o cursor Bibata Modern Ice v2.0.7 oficial com checksum fixo e preserva temas existentes; recarregar atualiza o provedor XSETTINGS do próprio perfil.
+- Seletor de fundo permite restaurar o padrão. O 720p confirmado usa escala 1:1, restaura a transformação anterior em recusa/timeout e explica quando a tela interna não oferece o modo.
+
 ## Em preparação — detecção de módulos e Chicago95 (novembro de 2026)
 
 - Checagem `--check-modules` no Bash (TSV) e TUI (JSON) antes de instalar,

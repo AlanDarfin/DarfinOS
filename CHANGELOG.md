@@ -4,6 +4,12 @@
 
 DarfinOS is under continuous development. These notes describe changes implemented in source and reviewed by automated CI; they do not imply complete compatibility with every Arch system, desktop or hardware configuration.
 
+## In development · i3 Notebook desktop (November 2026)
+
+- Refined graphite/gold Notebook theme inspired by iamabhas’s dotfiles, with focused workspace highlighting, consistent window borders, Rofi, Dunst and a branded wallpaper.
+- Notebook Labs installs the official Bibata Modern Ice v2.0.7 cursor with a pinned checksum and preserves existing user themes; cursor reload updates the profile’s own XSETTINGS provider.
+- Wallpaper selection includes restoring the DarfinOS default. Confirmed 720p uses a 1:1 pixel scale, restores the previous transform on rejection/timeout, and explains unsupported internal panels.
+
 ## In development · English website and development releases (November 2026)
 
 - English is the default language for the website, README and core documentation, with full Portuguese routes, documents and a persistent manual language selector.

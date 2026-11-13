@@ -4,8 +4,8 @@ set $profile $HOME/.config/darfinos/i3-notebook
 font pango:JetBrains Mono 10
 default_border pixel 2
 default_floating_border pixel 2
-gaps inner 4
-gaps outer 0
+gaps inner 8
+gaps outer 2
 smart_gaps on
 floating_modifier $mod
 focus_follows_mouse yes
@@ -100,7 +100,13 @@ bindsym $mod+Shift+8 move container to workspace number 8
 bindsym $mod+Shift+9 move container to workspace number 9
 bindsym $mod+Shift+0 move container to workspace number 10
 
-client.focused {{ .accent }} #252930 #f2f2f2 {{ .accent }} {{ .accent }}
+# Match tiled, floating and tabbed windows to the graphite/gold desktop.
+# class                 border      background  text     indicator   child_border
+client.focused          {{ .accent }} #252930 #f2f2f2 {{ .accent }} {{ .accent }}
+client.focused_inactive #454a54 #252930 #c0c4cd #454a54 #454a54
+client.unfocused        #30353d #20242b #9299a5 #30353d #30353d
+client.urgent           #ff7b7b #ff7b7b #171a1f #ff7b7b #ff7b7b
+client.background       #171a1f
 bar {
     id notebook
     position top

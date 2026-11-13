@@ -7,6 +7,7 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -81,6 +82,18 @@ def wallpaper_picker():
         pictures = HOME / "Pictures"
     if not pictures.is_dir():
         pictures = HOME
+    if shutil.which("rofi"):
+        result = run("rofi", "-no-config", "-theme", str(PROFILE / "rofi.rasi"),
+                     "-dmenu", "-no-custom", "-p", "Fundo",
+                     input="Escolher imagem…\nRestaurar fundo DarfinOS\n", capture_output=True)
+        if result.returncode:
+            return
+        if result.stdout.strip() == "Restaurar fundo DarfinOS":
+            apply_background(None)
+            save_settings(wallpaper=None)
+            return
+        if result.stdout.strip() != "Escolher imagem…":
+            return
     result = run("zenity", "--file-selection", "--title=Escolher papel de parede",
                  "--filename=" + str(pictures) + "/",
                  "--file-filter=Imagens | *.png *.jpg *.jpeg *.webp *.bmp *.gif *.PNG *.JPG *.JPEG *.WEBP",
@@ -135,18 +148,36 @@ def apply_cursor():
         run("xrdb", "-nocpp", "-merge", input=f"Xcursor.theme: {theme}\nXcursor.size: {size}\n")
     if shutil.which("xsetroot"):
         run("xsetroot", "-xcf", str(path), str(size))
-    # GTK can read XSETTINGS instead of Xresources. Don't replace another provider.
+    # GTK can read XSETTINGS instead of Xresources. Reload our own provider,
+    # but never replace the provider belonging to another desktop.
     if shutil.which("xsettingsd") and shutil.which("dump_xsettings"):
-        if run("dump_xsettings", capture_output=True).returncode == 0:
+        config = PROFILE / "cursor.xsettings"
+        pid_file = PROFILE / "cursor.xsettings.pid"
+        own_pid = None
+        try:
+            pid = int(pid_file.read_text())
+            argv = Path(f"/proc/{pid}/cmdline").read_bytes().split(b"\0")
+            if (pid > 1 and len(argv) >= 3 and Path(os.fsdecode(argv[0])).name == "xsettingsd"
+                    and argv[1:3] == [b"-c", os.fsencode(config)]):
+                own_pid = pid
+        except (OSError, ValueError):
+            pass
+        if own_pid is None and run("dump_xsettings", capture_output=True).returncode == 0:
             return
         with tempfile.NamedTemporaryFile(mode="w", dir=PROFILE, prefix=".cursor-", delete=False) as temp:
             temp.write(f'Gtk/CursorThemeName "{theme}"\nGtk/CursorThemeSize {size}\n')
         # xsettingsd reads this file at startup; keep it until the session ends or the next run.
-        config = PROFILE / "cursor.xsettings"
         try:
             os.replace(temp.name, config)
-            subprocess.Popen(["xsettingsd", "-c", str(config)], stdin=subprocess.DEVNULL,
-                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if own_pid is not None:
+                try:
+                    os.kill(own_pid, signal.SIGHUP)
+                except ProcessLookupError:
+                    pass  # The next reload can start a new provider.
+            else:
+                process = subprocess.Popen(["xsettingsd", "-c", str(config)], stdin=subprocess.DEVNULL,
+                                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                pid_file.write_text(str(process.pid))
         finally:
             Path(temp.name).unlink(missing_ok=True)
 
@@ -195,10 +226,30 @@ def panel_for_720p(outputs):
     return None
 
 
-def set_mode(output, mode, rate=""):
+def panel_transform(output):
+    """Capture the existing transform before testing 720p with a 1:1 pixel scale."""
+    query = run("xrandr", "--current", "--verbose", capture_output=True)
+    if query.returncode:
+        return None
+    active = False
+    lines = query.stdout.splitlines()
+    for index, line in enumerate(lines):
+        if line and not line[0].isspace():
+            active = line.startswith(output.name + " connected")
+        if active and "Transform:" in line:
+            matrix = " ".join([line.split("Transform:", 1)[1], *lines[index + 1:index + 3]]).split()
+            if len(matrix) != 9 or not all(re.fullmatch(r"-?\d+(?:\.\d+)?", value) for value in matrix):
+                return None
+            return ",".join(matrix)
+    return None
+
+
+def set_mode(output, mode, rate="", *, transform=None):
     cmd = ["xrandr", "--output", output.name, "--mode", mode]
     if rate:
         cmd += ["--rate", rate]
+    if transform is not None:
+        cmd += ["--transform", transform]
     return run(*cmd, capture_output=True).returncode == 0
 
 
@@ -206,8 +257,8 @@ def desktop_start():
     data = read_settings()
     if data.get("mode_720p") is True:
         panel = panel_for_720p(read_outputs())
-        if panel and panel.current != MODE_720P:
-            set_mode(panel, MODE_720P)
+        if panel and (panel.current != MODE_720P or panel.geometry != MODE_720P):
+            set_mode(panel, MODE_720P, transform="none")
     apply_background(data.get("wallpaper"))
     apply_cursor()
 
@@ -221,8 +272,10 @@ def display_picker():
             if output.geometry and output.geometry != output.current:
                 line += f"  ·  área X11 {output.geometry}"
             lines.append(line)
-    summary = "\n".join(lines)
     panel = panel_for_720p(outputs)
+    if not panel:
+        lines.append("720p indisponível: a tela interna ativa precisa oferecer 1280×720 no X11.")
+    summary = "\n".join(lines)
     options = ["Manter como está"]
     if panel:
         options.append("Usar 1280×720 na tela interna")
@@ -241,24 +294,31 @@ def display_picker():
     if choice == "Parar de reaplicar 720p ao entrar":
         save_settings(mode_720p=False)
     elif choice == "Usar 1280×720 na tela interna" and panel:
-        if panel.current == MODE_720P:
+        if panel.current == MODE_720P and panel.geometry == MODE_720P:
             save_settings(mode_720p=True)
-        elif not shutil.which("zenity"):
+            return
+        if not shutil.which("zenity"):
             notify("Instale as dependências atualizadas do i3 Notebook para testar o modo com confirmação.")
-        elif set_mode(panel, MODE_720P):
-            try:
-                keep = run("zenity", "--question", "--title=Confirmar resolução",
-                           "--text=Manter 1280×720? Se não confirmar, o modo anterior volta em 15 segundos.",
-                           "--timeout=15", capture_output=True, timeout=18).returncode == 0
-            except (OSError, subprocess.TimeoutExpired):
-                keep = False
-            if keep:
-                save_settings(mode_720p=True)
-                apply_background(read_settings().get("wallpaper"))
-            elif not set_mode(panel, panel.current, panel.rate):
-                notify("Não consegui restaurar o modo anterior da tela.")
-        else:
+            return
+        transform = panel_transform(panel)
+        if transform is None:
+            notify("Não consegui ler a escala atual. A resolução foi mantida.")
+            return
+        if not set_mode(panel, MODE_720P, transform="none"):
+            set_mode(panel, panel.current, panel.rate, transform=transform)
             notify("O X11 não aceitou o modo 1280×720 nesta tela.")
+            return
+        try:
+            keep = run("zenity", "--question", "--title=Confirmar resolução",
+                       "--text=Manter 1280×720 sem escala? Se não confirmar, o modo anterior volta em 15 segundos.",
+                       "--timeout=15", capture_output=True, timeout=18).returncode == 0
+        except (OSError, subprocess.TimeoutExpired):
+            keep = False
+        if keep:
+            save_settings(mode_720p=True)
+        elif not set_mode(panel, panel.current, panel.rate, transform=transform):
+            notify("Não consegui restaurar o modo anterior da tela.")
+        apply_background(read_settings().get("wallpaper"))
 
 
 def focused_title(node):

@@ -1,7 +1,8 @@
-/* DarfinOS Notebook · square, centered launcher */
+/* DarfinOS Notebook · graphite and gold, centered launcher */
 * {
     font: "JetBrains Mono 11";
-    panel: #252930;
+    panel: #20242b;
+    surface: #2c313a;
     ink: #171a1f;
     text: #f2f2f2;
     muted: #c0c4cd;
@@ -12,17 +13,18 @@
 window {
     location: center;
     width: 40%;
-    border: 2px;
+    border: 1px;
     border-color: @accent;
     background-color: @panel;
 }
 mainbox {
-    padding: 12px;
+    padding: 16px;
     spacing: 7px;
     children: [inputbar, message, listview, mode-switcher];
 }
 inputbar {
-    padding: 2px;
+    padding: 10px;
+    background-color: @surface;
     spacing: 7px;
     children: [prompt, textbox-prompt-separator, entry];
 }
@@ -37,13 +39,13 @@ listview {
     lines: 10;
     fixed-height: false;
     scrollbar: false;
-    spacing: 2px;
+    spacing: 4px;
 }
 element {
-    padding: 3px 4px;
+    padding: 6px 8px;
     spacing: 6px;
 }
-element-icon { size: 16px; }
+element-icon { size: 20px; }
 element-text { text-color: inherit; }
 element normal normal, element alternate normal { text-color: @text; }
 element selected {
@@ -51,5 +53,5 @@ element selected {
     text-color: @ink;
 }
 mode-switcher { spacing: 6px; }
-button { padding: 3px 4px; text-color: @muted; }
+button { padding: 6px 8px; text-color: @muted; }
 button selected { background-color: @accent; text-color: @ink; }
