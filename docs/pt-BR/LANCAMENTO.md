@@ -1,37 +1,25 @@
 [🇺🇸 English (default)](../LANCAMENTO.md) · **🇧🇷 Português (Brasil)**
 
-# Primeiro lançamento do DarfinOS
+# Downloads e pré-lançamentos do DarfinOS
 
-**Estado: preparação de candidato. Nenhuma versão estável é declarada neste arquivo.**
+O DarfinOS **não é uma distribuição ISO**. Antes, a página de releases do GitHub estava vazia porque a automação criava apenas artifacts temporários do Actions, que não são releases publicadas.
 
-## Pacote
+## Onde baixar
 
-```bash
-bash -n DarfinOSInstallScript.sh
-python3 -m unittest discover -s tests -v
-python3 DarfinOSInstallScript-TUI.py --doctor
-bash scripts/package_release.sh 0.1.0-rc1
-sha256sum -c dist/darfinos-0.1.0-rc1.tar.gz.sha256
-```
+- **[ZIP da branch main](https://github.com/AlanDarfin/DarfinOS/archive/refs/heads/main.zip)**: está sempre disponível, mas corresponde ao código em desenvolvimento, **não a uma versão estável**.
+- **[Pré-lançamentos no GitHub](https://github.com/AlanDarfin/DarfinOS/releases)**: arquivos `darfinos-0.1.0-rcN.tar.gz` e seus `sha256`, quando publicados.
+- **[Página bilíngue de downloads](https://darfinos.vercel.app/pt-br/downloads/)**: apresenta imediatamente o ZIP da main e detecta candidatos publicados pela API pública do GitHub. Se não houver candidato, exibe uma mensagem em vez de apontar silenciosamente para uma página vazia.
 
-O script usa `git archive HEAD`, empacota os arquivos rastreados e gera SHA256.
-Em GitHub Actions, o workflow **DarfinOS · Preparar pacote candidato** pode
-ser executado manualmente; ele anexa um artifact temporário, **não publica release**.
+## Nova automação de release
 
-## Publicação estável
+O workflow `.github/workflows/publish-development.yml` é ativado depois que o smoke no contêiner Arch termina com sucesso em um push na `main`. Antes de publicar, ele exige a aprovação **dos testes Python/Bash para o mesmo SHA** e verifica novamente a sintaxe, o Doctor e o pacote/arquivo de checksum.
 
-1. Concluir a lista de aceitação em [VALIDACAO_VM.md](VALIDACAO_VM.md).
-2. Revisar as alterações na branch e mesclar PR após CI verde.
-3. Criar tag semântica sobre um commit **testado** da main.
-4. Gerar o pacote da tag, conferir o SHA256 e publicar ambos no GitHub Releases.
-5. Documentar incompatibilidades, origem de repositórios e instruções de recuperação.
-6. Depois de publicado, apontar o site para a versão real, mantendo o ZIP da main
-   claramente descrito como **código em desenvolvimento**.
+A publicação usa `gh release create` com `--prerelease`, **nunca como versão estável**. O pacote contém arquivos versionados gerados com `git archive HEAD`. A versão de candidato segue `v0.1.0-rcN`. Se o Actions não tiver permissão para criar a release, o usuário poderá consultar o log; o ZIP de código continua disponível.
 
-Nunca chamar o ZIP da main de release estável. Evitar URLs para `releases/latest`
-enquanto não houver uma versão verificada. Não há ISO no projeto.
+O workflow manual `release-candidate.yml` continua produzindo apenas artifact de CI para revisão, com validade limitada, sem publicar release.
 
+## Estabilidade
 
-O teste manual `install-base-manual.yml` pode comprovar a instalação real
-de pacotes da etapa Base em contêiner Arch, mas não substitui a validação
-em VM do ambiente gráfico e seus procedimentos de recuperação.
+Um lançamento estável depende da [validação manual na VM](VALIDACAO_VM.md), incluindo login gráfico, reinicialização, sessões XLibre/SonicDE e recuperação de mudanças críticas. A CI automatizada por si só não substitui essa validação.
+
+[Voltar à documentação em português](README.md) · [Guia de segurança](SEGURANCA.md)
