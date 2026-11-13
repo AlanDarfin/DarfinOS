@@ -74,7 +74,7 @@ await_result pocket_visible yes
 
 dunst_ready() { [[ "$(dunstctl is-paused 2>/dev/null)" == false ]]; }
 await_result dunst_ready
-dunstify --appname DarfinOS "DarfinOS" "Notificações prontas"
+dunstify --app-name DarfinOS "DarfinOS" "Notificações prontas"
 notification_visible() { [[ "$(dunstctl count displayed)" == 1 ]]; }
 await_result notification_visible
 dunstctl close-all

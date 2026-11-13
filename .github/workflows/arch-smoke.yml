@@ -34,7 +34,7 @@ jobs:
     steps:
       - name: Preparar i3 e servidor virtual no contêiner
         run: |
-          pacman -Syu --noconfirm --needed python git dbus i3-wm i3status i3lock xss-lock xterm ttf-dejavu rofi dunst i3status-rust chezmoi xorg-server-xvfb
+          pacman -Syu --noconfirm --needed python git dbus i3-wm i3status i3lock xss-lock xterm ttf-dejavu rofi dunst libnotify i3status-rust chezmoi xorg-server-xvfb
       - uses: actions/checkout@v4
       - name: Validar perfil e notificações sem alterar o host
         run: bash tests/integration_i3_notebook.sh
