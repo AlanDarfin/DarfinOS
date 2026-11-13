@@ -91,12 +91,12 @@ pacman() { [[ "$LAB_INSTALLED" == 1 ]]; }
 aur_install() { LAB_INSTALLED=1; }
 lab_aur_install nscde nscde
 """
-        result, events = bash_harness(code, stdin='LABS\\n')
+        result, events = bash_harness(code, stdin='LABS\n')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(events, [
             'PROMPT_CHOOSE:n:labs/n:Digite LABS para abrir a transação de nscde'
         ])
-        result, events = bash_harness(code, stdin='\\n')
+        result, events = bash_harness(code, stdin='\n')
         self.assertEqual(result.returncode, 1)
         self.assertEqual(len(events), 1)
 
