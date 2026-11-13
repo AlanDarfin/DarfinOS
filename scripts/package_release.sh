@@ -17,6 +17,15 @@ fi
 git archive --format=tar --prefix="darfinos-${version}/" HEAD | gzip -n -9 > "$file"
 [[ -s "$file" ]] || { rm -f "$file"; echo "Pacote vazio" >&2; exit 1; }
 (cd dist && sha256sum "darfinos-${version}.tar.gz" > "darfinos-${version}.tar.gz.sha256")
-tar -tzf "$file" | grep -F "darfinos-${version}/darfinos_control.py"
-tar -tzf "$file" | grep -F "darfinos-${version}/DarfinOSInstallScript.sh"
+# Read the full table of contents once: early-exiting grep + pipefail could
+# otherwise make a perfectly valid package fail with SIGPIPE.
+listing="$(tar -tzf "$file")" || { echo "Pacote inválido: $file" >&2; exit 1; }
+grep -Fxq "darfinos-${version}/darfinos_control.py" <<<"$listing" || {
+  echo "Pacote sem darfinos_control.py" >&2
+  exit 1
+}
+grep -Fxq "darfinos-${version}/DarfinOSInstallScript.sh" <<<"$listing" || {
+  echo "Pacote sem instalador Bash" >&2
+  exit 1
+}
 printf 'Pacote: %s\nSHA256: %s\n' "$file" "$file.sha256"
