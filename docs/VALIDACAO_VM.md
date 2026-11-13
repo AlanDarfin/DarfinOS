@@ -76,7 +76,7 @@ exato da execução e o commit SHA antes de considerar o resultado válido.
 
 ## 5. Validar Labs e i3 em VMs separadas
 
-- [ ] Conferir 12 URLs no catálogo Bash/TUI e confirmar que listar não pede sudo.
+- [ ] Conferir 13 URLs no catálogo Bash/TUI e confirmar que listar não pede sudo.
 - [ ] Verificar que `full`, `--all`, `--skip` e tecla A excluem Labs AUR.
 - [ ] Instalar `i3` no Arch com `--only i3` e verificar sessão alternativa,
   arquivos pessoais intactos e saída para o SonicDE.
@@ -90,3 +90,12 @@ exato da execução e o commit SHA antes de considerar o resultado válido.
   sessão separada, com snapshot funcional e sem afetar a instalação principal.
 - [ ] Booster: documentar configurações, imagens initramfs e procedimento de
   recuperação antes de sequer considerar substituir o boot.
+
+## 6. Validar detecção e Chicago95/Xfce
+
+- [ ] Simular pacotes completos e parciais: só `installed` pode registrar `STEP_ALREADY`.
+- [ ] Testar TUI `I`, `X`, status `ALREADY` e retomada sem reinstalar o que já está completo.
+- [ ] Validar preset `retro` na VM: Xfce instalado e sessão SonicDE preservada.
+- [ ] Confirmar tema/ícones Chicago95 no HOME, preservando painel e configurações antigas.
+- [ ] Repetir Chicago95: não sobrescrever arquivos, nem executar `installer.py` remoto.
+- [ ] Confirmar que `--reinstall` não remove `--needed` e exige confirmação das operações.
