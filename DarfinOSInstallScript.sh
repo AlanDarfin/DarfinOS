@@ -31,7 +31,7 @@ STEPS=(
   # Desktop (SonicDE + XLibre)
   xlibre sonicde desktop_extras bluetooth
   # Window managers independentes
-  i3
+  i3 xfce
   # Shell e desenvolvimento
   cli_tools dev_tools pkg_managers shells git_setup
   # Rede e serviços
@@ -41,7 +41,7 @@ STEPS=(
   # Manutenção
   maintenance firewall cleanup bobagens bedrock terminal_extras
   # DarfinOS Labs (AUR opcional; fora de TODOS os presets, inclusive full)
-  lab_nscde lab_junest lab_decman lab_metapac
+  lab_nscde lab_junest lab_decman lab_metapac lab_chicago95
 )
 
 declare -A STEP_DESC=(
@@ -61,6 +61,7 @@ declare -A STEP_DESC=(
   [desktop_extras]="Extras do desktop (portais, energia, KDE Connect...)"
   [bluetooth]="Bluetooth"
   [i3]="i3 WM: tiling X11, i3status, i3lock e dmenu (sem trocar sua sessão)"
+  [xfce]="Xfce: desktop X11 alternativo, mantém SonicDE e login atuais"
   [cli_tools]="Ferramentas de terminal (fzf, eza, yazi, starship...)"
   [dev_tools]="Desenvolvimento (neovim, gcc, clang, rust, go, node...)"
   [pkg_managers]="pip, pipx, cargo, npm e go: instalação, PATH e config"
@@ -84,6 +85,7 @@ declare -A STEP_DESC=(
   [lab_junest]="Labs · JuNest (AUR, ambientes Arch em usuário)"
   [lab_decman]="Labs · Decman (AUR, configuração declarativa; sem aplicar)"
   [lab_metapac]="Labs · Metapac (AUR, pacotes declarativos; sem aplicar)"
+  [lab_chicago95]="Labs · Chicago95: tema Windows 95 no Xfce, sem sobrescrever preferências"
 )
 
 # Explicações para a TUI: informações gerais, sem prometer instalações condicionais.
@@ -104,6 +106,7 @@ declare -A STEP_INFO=(
   [desktop_extras]="Acrescenta integração, portais e utilitários do desktop."
   [bluetooth]="Instala os componentes Bluetooth e prepara o serviço."
   [i3]="Instala a sessão i3 como alternativa X11. Não substitui SonicDE nem altera gerenciador de login ou configuração pessoal."
+  [xfce]="Instala pacotes Xfce oficiais como sessão alternativa. Não modifica tema, painel nem gerenciador de login."
   [cli_tools]="Adiciona utilitários de produtividade, navegação e busca no terminal."
   [dev_tools]="Instala compiladores, linguagens e ferramentas de programação."
   [pkg_managers]="Prepara gerenciadores de pacotes de linguagens e seus caminhos."
@@ -127,19 +130,21 @@ declare -A STEP_INFO=(
   [lab_junest]="Requer confirmação LABS para instalar junest do AUR. Não executa junest setup nem altera namespaces."
   [lab_decman]="Requer confirmação LABS para instalar decman do AUR. NÃO executa configurações Python ou sincroniza pacotes."
   [lab_metapac]="Requer confirmação LABS para instalar metapac do AUR. NÃO executa sync nem clean."
+  [lab_chicago95]="Baixa apenas arquivos Theme/Icons oficiais para o HOME; não executa installer.py nem ativa o tema."
 )
 
 # ----------------------------------------------------------
 # DarfinOS Labs · catálogo estático auditável, sem execução automática.
-# Os 12 projetos têm link upstream; somente cinco oferecem etapa automática.
+# Os 13 projetos têm link upstream; sete têm etapa opcional (pacman, AUR ou assets).
 # O padrão full NÃO seleciona lab_* nem o catálogo.
 # ----------------------------------------------------------
 LABS=(
-  i3 nscde junest decman metapac conty nix_portable trinity
+  i3 chicago95 nscde junest decman metapac conty nix_portable trinity
   yserver xomposite wayback booster
 )
 declare -A LABS_URL=(
   [i3]="https://i3wm.org/"
+  [chicago95]="https://github.com/grassmunk/Chicago95"
   [nscde]="https://github.com/NsCDE/NsCDE"
   [junest]="https://github.com/fsquillace/junest"
   [decman]="https://github.com/kiviktnm/decman"
@@ -154,6 +159,7 @@ declare -A LABS_URL=(
 )
 declare -A LABS_INFO=(
   [i3]="WM tiling para X11: janela alternativa, sem remover SonicDE."
+  [chicago95]="Tema GTK e ícones Windows 95 para Xfce; aplicações opcionais dependem de configuração manual."
   [nscde]="Desktop retro UNIX com FVWM; pacote AUR e login alternativo."
   [junest]="Ambiente Arch no HOME; namespaces/proot exigem verificacao."
   [decman]="Estado declarativo em Python; aplicar perfis pode remover pacotes."
@@ -168,6 +174,7 @@ declare -A LABS_INFO=(
 )
 declare -A LABS_RISK=(
   [i3]="opcional"
+  [chicago95]="avancado"
   [nscde]="avancado"
   [junest]="avancado"
   [decman]="avancado"
@@ -182,6 +189,7 @@ declare -A LABS_RISK=(
 )
 declare -A LABS_MODE=(
   [i3]="pacman"
+  [chicago95]="assets"
   [nscde]="aur"
   [junest]="aur"
   [decman]="aur"
@@ -196,6 +204,7 @@ declare -A LABS_MODE=(
 )
 declare -A LABS_STEP=(
   [i3]="i3"
+  [chicago95]="lab_chicago95"
   [nscde]="lab_nscde"
   [junest]="lab_junest"
   [decman]="lab_decman"
@@ -240,9 +249,11 @@ usage() {
 DarfinOS · instalador modular de pós-instalação para Arch Linux
 Uso: bash DarfinOSInstallScript.sh [opções]
   --list                 Lista etapas disponíveis (somente leitura).
-  --labs                 Catálogo dos 12 projetos Labs, sem sudo.
+  --labs                 Catálogo dos 13 projetos Labs, sem sudo.
   --lab-info NOME        Detalhes e URL original de um projeto Labs.
   --preflight            Verifica requisitos básicos sem sudo nem alterações.
+  --check-modules        Inspeciona módulos e mostra TSV, sem sudo.
+  --reinstall            Força repetir módulos já detectados como instalados.
   --only a,b,c           Executa apenas as etapas informadas.
   --skip a,b,c           Executa etapas convencionais, exceto as listadas; exclui Labs AUR.
   --all                  Executa as etapas convencionais, inclusive Bedrock; exclui Labs AUR.
@@ -259,6 +270,7 @@ HELP
 # Opções
 # ----------------------------------------------------------
 ASSUME_YES=0
+FORCE_MODULES=0
 EXPLICIT_ALL=0
 ONLY=""
 SKIP=""
@@ -279,7 +291,140 @@ declare -A STEP_DEPS=(
   [lab_junest]="aur_helper"
   [lab_decman]="aur_helper"
   [lab_metapac]="aur_helper"
+  [lab_chicago95]="xfce"
 )
+
+
+# ------------------------------------------------------------------
+# Conservador: somente "installed" permite pular toda a etapa. Estados
+# "partial", "missing" ou "unknown" NUNCA significam conclusão.
+# Sem sudo, escrita, downloads ou execução de ferramentas externas ao Arch.
+# ------------------------------------------------------------------
+declare -A MODULE_PACKAGES=()
+MODULE_PACMAN_AVAILABLE=0
+MODULE_STATUS=unknown
+MODULE_REASON="Configuração condicional não certificada pelo inventário."
+
+modules_refresh() {
+  local pkg catalog
+  MODULE_PACKAGES=()
+  MODULE_PACMAN_AVAILABLE=0
+  command -v pacman >/dev/null 2>&1 || return 0
+  catalog=$(pacman -Qq 2>/dev/null) || return 0
+  MODULE_PACMAN_AVAILABLE=1
+  while IFS= read -r pkg; do
+    [[ "$pkg" =~ ^[a-zA-Z0-9@_.+:-]+$ ]] || continue
+    MODULE_PACKAGES["$pkg"]=1
+  done <<< "$catalog"
+}
+module_packages_ready() {
+  (( MODULE_PACMAN_AVAILABLE )) || return 2
+  local pkg
+  for pkg in "$@"; do
+    [[ -n "${MODULE_PACKAGES[$pkg]:-}" ]] || return 1
+  done
+}
+module_any_package() {
+  (( MODULE_PACMAN_AVAILABLE )) || return 1
+  local pkg
+  for pkg in "$@"; do
+    [[ -n "${MODULE_PACKAGES[$pkg]:-}" ]] && return 0
+  done
+  return 1
+}
+module_probe() {
+  local name="$1"
+  local -a required=()
+  MODULE_STATUS=unknown
+  MODULE_REASON="Etapa configura serviços, repositórios ou escolhas; checagem manual necessária."
+  case "$name" in
+    base) required=(base-devel git curl wget unzip p7zip rsync htop fastfetch man-db man-pages rclone fuse2 pacman-contrib bash-completion pciutils usbutils) ;;
+    i3) required=(i3-wm i3status i3lock dmenu xorg-xinit) ;;
+    xfce) required=(exo garcon thunar thunar-volman tumbler xfce4-appfinder xfce4-panel xfce4-power-manager xfce4-session xfce4-settings xfce4-terminal xfconf xfdesktop xfwm4 xorg-xinit) ;;
+    lab_nscde) required=(nscde) ;;
+    lab_junest) required=(junest) ;;
+    lab_decman) required=(decman) ;;
+    lab_metapac) required=(metapac) ;;
+    lab_chicago95)
+      if [[ -f "$HOME/.themes/Chicago95/index.theme" && -f "$HOME/.themes/Chicago95/gtk-3.0/gtk.css" && -f "$HOME/.icons/Chicago95/index.theme" ]]; then
+        MODULE_STATUS=installed
+        MODULE_REASON="Arquivos GTK e ícones Chicago95 encontrados no HOME; aplicação do tema é manual."
+      elif [[ -e "$HOME/.themes/Chicago95" || -L "$HOME/.themes/Chicago95" ||
+              -e "$HOME/.icons/Chicago95" || -L "$HOME/.icons/Chicago95" ]]; then
+        MODULE_STATUS=partial
+        MODULE_REASON="Chicago95 parcial ou customizado; nunca sobrescrever automaticamente."
+      else
+        MODULE_STATUS=missing
+        MODULE_REASON="Tema e ícones Chicago95 não encontrados no HOME."
+      fi
+      return 0 ;;
+    aur_helper)
+      if command -v paru >/dev/null 2>&1 || command -v yay >/dev/null 2>&1; then
+        MODULE_STATUS=installed
+        MODULE_REASON="yay/paru disponível no PATH."
+      else
+        MODULE_STATUS=missing
+        MODULE_REASON="Nenhum AUR helper encontrado."
+      fi
+      return 0 ;;
+    xlibre)
+      if module_any_package xlibre-server xlibre-xserver xlibre; then
+        MODULE_STATUS=partial
+        MODULE_REASON="Componente XLibre detectado, mas sessão e repositório não verificados."
+      fi
+      return 0 ;;
+    sonicde)
+      if module_any_package sonicde-meta; then
+        MODULE_STATUS=partial
+        MODULE_REASON="Pacote SonicDE presente, mas serviços, login e áudio não verificados."
+      fi
+      return 0 ;;
+    maintenance)
+      if module_any_package topgrade-bin topgrade arch-update-bin arch-update; then
+        MODULE_STATUS=partial
+        MODULE_REASON="Atualizadores detectados; timers, applet e serviços não certificados."
+      fi
+      return 0 ;;
+    docker)
+      if module_any_package docker podman; then
+        MODULE_STATUS=partial
+        MODULE_REASON="Contêineres detectados; serviços e configuração não certificados."
+      fi
+      return 0 ;;
+    syncthing|zerotier|bluetooth|gaming)
+      local candidate="$name"
+      [[ "$name" == bluetooth ]] && candidate=bluez
+      [[ "$name" == gaming ]] && candidate=gamemode
+      if module_any_package "$candidate"; then
+        MODULE_STATUS=partial
+        MODULE_REASON="Pacote detectado; configurações e outras ações não verificadas."
+      fi
+      return 0 ;;
+    *) return 0 ;;
+  esac
+  if (( ! MODULE_PACMAN_AVAILABLE )); then
+    MODULE_STATUS=unknown
+    MODULE_REASON="pacman -Qq indisponível; não pular por precaução."
+  elif module_packages_ready "${required[@]}"; then
+    MODULE_STATUS=installed
+    MODULE_REASON="Todos os ${#required[@]} pacotes esperados já instalados; etapa somente de pacotes."
+  elif module_any_package "${required[@]}"; then
+    MODULE_STATUS=partial
+    MODULE_REASON="Alguns pacotes presentes; etapa ainda não está completa."
+  else
+    MODULE_STATUS=missing
+    MODULE_REASON="Pacotes principais não detectados."
+  fi
+}
+list_module_status() {
+  local step
+  modules_refresh
+  printf 'module\tstatus\treason\n'
+  for step in "${STEPS[@]}"; do
+    module_probe "$step"
+    printf '%s\t%s\t%s\n' "$step" "$MODULE_STATUS" "$MODULE_REASON"
+  done
+}
 
 preflight() {
   local errors=0 tool
@@ -356,6 +501,8 @@ while [[ $# -gt 0 ]]; do
     --only)    [[ -n "${2:-}" ]] || die "--only exige uma lista"; ONLY="$2"; validate_steps "$ONLY"; shift ;;
     --skip)    [[ -n "${2:-}" ]] || die "--skip exige uma lista"; SKIP="$2"; validate_steps "$SKIP"; shift ;;
     --all)     EXPLICIT_ALL=1 ;;
+    --reinstall) FORCE_MODULES=1 ;;
+    --check-modules) list_module_status; exit $? ;;
     --list)    list_steps; exit 0 ;;
     --labs)    list_labs; exit 0 ;;
     --lab-info) [[ -n "${2:-}" ]] || die "--lab-info exige um nome"; lab_info "$2"; exit $? ;;
@@ -674,6 +821,16 @@ run_step() {
     return 0
   fi
 
+  if (( ! ${FORCE_MODULES:-0} )); then
+    modules_refresh
+    module_probe "$name"
+    if [[ "$MODULE_STATUS" == installed ]]; then
+      info "Módulo '$name' já instalado: $MODULE_REASON"
+      darfinos_event "STEP_ALREADY:$name"
+      return 0
+    fi
+  fi
+
   echo
   info "[$name] ${STEP_DESC[$name]:-}"
   darfinos_event "STEP_START:$name"
@@ -913,6 +1070,93 @@ step_lab_nscde() { lab_aur_install nscde nscde; }
 step_lab_junest() { lab_aur_install junest junest; }
 step_lab_decman() { lab_aur_install decman decman; }
 step_lab_metapac() { lab_aur_install metapac metapac; }
+
+
+step_xfce() {
+  info "Xfce opcional: instalar sessão X11 paralela, sem substituir SonicDE."
+  # Grupo xfce4 com nomes explícitos: sem prompt de escolha de grupo.
+  install_pkgs exo garcon thunar thunar-volman tumbler xfce4-appfinder \
+    xfce4-panel xfce4-power-manager xfce4-session xfce4-settings \
+    xfce4-terminal xfconf xfdesktop xfwm4 xorg-xinit
+  ok "Xfce instalado. Selecione a sessão Xfce no gerenciador de login."
+  info "O DarfinOS não altera a sessão padrão nem ~/.config/xfce4."
+}
+
+step_lab_chicago95() {
+  local source theme icon_theme staged_theme staged_icons upstream
+  theme="$HOME/.themes/Chicago95"
+  icon_theme="$HOME/.icons/Chicago95"
+
+  if [[ -e "$theme" || -L "$theme" || -e "$icon_theme" || -L "$icon_theme" ]]; then
+    warn "Chicago95 detectado parcialmente ou customizado: preserve os arquivos e faça a revisão manual."
+    return 1
+  fi
+  if ! command -v git >/dev/null 2>&1; then
+    warn "Chicago95 precisa do git para consultar o repositório original."
+    return 1
+  fi
+  if ! pacman -Qq xfce4-session >/dev/null 2>&1; then
+    warn "Xfce não instalado. Execute o módulo xfce primeiro."
+    return 1
+  fi
+  if (( ASSUME_YES )); then
+    warn "Chicago95 exige confirmação individual e não aceita -y."
+    return 1
+  fi
+  info "Upstream: ${LABS_URL[chicago95]}"
+  info "Serão copiadas apenas as pastas Theme/Chicago95 e Icons/Chicago95 para o HOME."
+  info "Nenhum installer.py remoto será executado; painéis e tema ativos serão mantidos."
+  if ! confirm "Baixar e instalar os arquivos Chicago95 para este usuário (sem sobrescrever)?" n; then
+    warn "Chicago95 cancelado; etapa não concluída."
+    return 1
+  fi
+
+  source="$TMP_DIR/chicago95-upstream"
+  git clone --depth 1 --quiet -- https://github.com/grassmunk/Chicago95.git "$source" || return 1
+  if [[ ! -f "$source/Theme/Chicago95/index.theme" ||
+        ! -f "$source/Icons/Chicago95/index.theme" ]]; then
+    warn "Chicago95: estrutura inesperada do projeto oficial; abortando."
+    return 1
+  fi
+  if find "$source/Theme/Chicago95" "$source/Icons/Chicago95" -type l -print -quit | grep -q .; then
+    warn "Chicago95: upstream contém links simbólicos; cópia não autorizada."
+    return 1
+  fi
+  upstream=$(git -C "$source" rev-parse --short=12 HEAD) || return 1
+  [[ ! -L "$HOME/.themes" && ! -L "$HOME/.icons" ]] || {
+    warn "Diretório de temas/ícones é link simbólico; instale manualmente."
+    return 1
+  }
+  mkdir -p -- "$HOME/.themes" "$HOME/.icons" || return 1
+  staged_theme=$(mktemp -d "$HOME/.themes/.chicago95-stage.XXXXXXXX") || return 1
+  staged_icons=$(mktemp -d "$HOME/.icons/.chicago95-stage.XXXXXXXX") || {
+    rmdir "$staged_theme"
+    return 1
+  }
+  if ! cp -a -- "$source/Theme/Chicago95/." "$staged_theme/" ||
+     ! cp -a -- "$source/Icons/Chicago95/." "$staged_icons/"; then
+    rm -rf -- "$staged_theme" "$staged_icons"
+    return 1
+  fi
+  if [[ -e "$theme" || -L "$theme" || -e "$icon_theme" || -L "$icon_theme" ]]; then
+    warn "Chicago95: destino criado enquanto baixava; não sobrescrevo."
+    rm -rf -- "$staged_theme" "$staged_icons"
+    return 1
+  fi
+  if ! mv -nT -- "$staged_theme" "$theme" || [[ -e "$staged_theme" ]]; then
+    rm -rf -- "$staged_theme" "$staged_icons"
+    return 1
+  fi
+  if ! mv -nT -- "$staged_icons" "$icon_theme" || [[ -e "$staged_icons" ]]; then
+    warn "Chicago95 parcial: tema copiado, ícones pendentes. Revise manualmente."
+    rm -rf -- "$staged_icons"
+    return 1
+  fi
+  ok "Chicago95 upstream $upstream copiado sem modificar configurações existentes."
+  info "Abra Xfce > Aparência > Estilo e Ícones; escolha Chicago95."
+  info "No Gerenciador de Janelas, selecione Chicago95 manualmente."
+  info "Leia: https://github.com/grassmunk/Chicago95/blob/master/INSTALL.md"
+}
 
 step_i3() {
   info "Instalando i3 como window manager alternativo, sem substituir SonicDE."

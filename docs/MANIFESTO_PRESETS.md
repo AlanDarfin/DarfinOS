@@ -19,8 +19,9 @@ O comando `python3 DarfinOSInstallScript-TUI.py --manifest` exporta JSON estáti
 | `minimal` | Ferramentas essenciais | Seleção reduzida |
 | `desktop` | SonicDE e XLibre | Altera componentes gráficos |
 | `i3` | WM i3 + XLibre | Nova sessão X11, sem SonicDE |
+| `retro` | Xfce e Chicago95 | Tema opcional no HOME, sem trocar sessão |
 | `gaming` | Desktop e jogos | Depende do hardware |
-| `full` | Todas as 35 etapas convencionais | Inclui Bedrock e opções avançadas |
+| `full` | Todas as 36 etapas convencionais | Inclui Bedrock e opções avançadas |
 
 > [!IMPORTANT]
 > **Preset não é instalação automática.** Confira as etapas selecionadas antes de executar.
@@ -63,8 +64,13 @@ possa instalar Topgrade e Arch-Update, sujeitos às perguntas do helper e às
 permissões do AUR. Se os executáveis ainda estiverem ausentes no final, a etapa
 é considerada incompleta. Isso não equivale a uma instalação já testada em VM.
 
-O manifesto agora inclui 39 etapas; as cinco etapas novas são `i3` e
+O manifesto agora inclui 41 etapas; as cinco etapas novas são `i3` e
 `lab_nscde`, `lab_junest`, `lab_decman`, `lab_metapac`. Os demais projetos
 do [catálogo Labs](LABS.md) não são etapas automáticas; seus links e riscos
 podem ser consultados com `--labs` ou a tecla L. O `full` contém as 35 etapas
 convencionais e exclui todos os `lab_*`.
+
+O sexto preset, `retro`, adiciona `xfce` e `lab_chicago95` com confirmação
+e cópia de tema/ícones para o HOME. O catálogo Labs soma 13 projetos e o Bash
+41 etapas; o `full` continua excluindo `lab_*`.
+Ver [MODULOS.md](MODULOS.md) para a checagem automática de instalações.

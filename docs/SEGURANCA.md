@@ -76,7 +76,7 @@ use `-y` como substituto para essa revisão.
 
 ## DarfinOS Labs
 
-A categoria [Labs](LABS.md) reúne 12 projetos externos. Somente i3 possui
+A categoria [Labs](LABS.md) reúne 13 projetos externos. Somente i3 possui
 pacotes do Arch oficial no fluxo padrão; NsCDE, JuNest, Decman e Metapac são
 instalações AUR individuais com confirmação literal **LABS**. Eles recusam
 `-y` e nunca entram em seleções automáticas `--all`, `--skip` ou `full`.
@@ -86,3 +86,13 @@ Conty, nix-portable, Trinity, yserver, xomposite, Wayback e Booster são
 execução de binários baixados, mudanças de sessão gráfica ou initramfs.
 Decman e Metapac não são executados após instalação: regras declarativas e
 comandos de limpeza podem remover pacotes e arquivos do sistema.
+
+## Chicago95 e detecção de módulos
+
+O verificador `--check-modules` é somente leitura e não chama sudo.
+Apenas estados `installed` pulam etapas; estados parciais ou desconhecidos
+continuam como pendentes de verificação, sobretudo quando lidam com serviços.
+O Chicago95 baixa arquivos do repositório upstream para o usuário, **sem executar**
+o instalador `installer.py` e **sem sobrescrever** diretórios já existentes.
+A opção `--reinstall` reexecuta etapas, não remove `--needed` do pacman
+nem autoriza o overwrite de temas. Veja [MODULOS.md](MODULOS.md).

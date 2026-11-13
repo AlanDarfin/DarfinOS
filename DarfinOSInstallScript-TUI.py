@@ -145,6 +145,7 @@ class State:
     cursor: int = 0
     search: str = ""
     yes: bool = False
+    force_modules: bool = False
     show_selected: bool = False
     message: str = ""
     statuses: dict[str, str] = field(default_factory=dict)
@@ -222,6 +223,8 @@ def command(path: Path, state: State) -> list[str]:
     result = ["bash", str(path), "--only", ",".join(ordered)]
     if state.yes:
         result.append("-y")
+    if state.force_modules:
+        result.append("--reinstall")
     return result
 
 
@@ -560,19 +563,42 @@ def installed_packages() -> tuple[set[str], set[str]]:
     return native, flat
 
 
+
+def module_checks(script: Path) -> dict[str, dict[str, str]]:
+    """Consulta o verificador Bash sem privilégios. Não infere estado por nome da etapa."""
+    try:
+        result = subprocess.run(['bash', str(script), '--check-modules'],
+                                capture_output=True, text=True, timeout=25)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise ValueError('Falha ao verificar módulos: ' + str(exc)) from exc
+    if result.returncode:
+        raise ValueError('Verificação de módulos falhou: ' + result.stderr.strip()[:250])
+    checks = {}
+    for line in result.stdout.splitlines():
+        if line == 'module\tstatus\treason':
+            continue
+        parts = line.split('\t', 2)
+        if len(parts) != 3 or parts[1] not in ('installed', 'partial', 'missing', 'unknown'):
+            raise ValueError('Resposta inválida do verificador de módulos')
+        checks[parts[0]] = {'status': parts[1], 'reason': parts[2]}
+    known = {step.name for step in parse_script(script)}
+    if set(checks) != known:
+        raise ValueError('Verificação incompleta: lista difere das etapas do Bash')
+    return checks
+
 def inspect_steps(st: State) -> None:
-    """Only mark verified package presence, not installation-step completion."""
-    native, flat = installed_packages()
-    # Step name equals package is only a heuristic; use explicit description for safety.
-    st.statuses = {}
-    for step in st.steps:
-        if step.name in native:
-            st.statuses[step.name] = 'pacman: instalado'
-        elif step.name in flat:
-            st.statuses[step.name] = 'flatpak: instalado'
-        else:
-            st.statuses[step.name] = 'não verificado'
-    st.message = f'Pacman: {len(native)} pacotes; Flatpak: {len(flat)} apps. Etapas não são pacotes.'
+    """Mostra os resultados do mesmo verificador usado para pular módulos."""
+    try:
+        checks = module_checks(CURRENT_SCRIPT)
+    except ValueError as exc:
+        st.statuses = {}
+        st.message = str(exc)
+        return
+    st.statuses = {name: item['status'] + ': ' + item['reason']
+                   for name, item in checks.items()}
+    complete = sum(item['status'] == 'installed' for item in checks.values())
+    partial = sum(item['status'] == 'partial' for item in checks.values())
+    st.message = f'Checagem: {complete} instalados, {partial} parciais; só instalados serão pulados.'
 
 
 def maintenance_items() -> list[tuple[str, str, list[str]]]:
@@ -724,7 +750,7 @@ def progress_meter(completed: int, total: int, width: int) -> str:
 
 def visual_status(flag: str) -> tuple[str, str]:
     return {
-        'DONE': ('✓', 'green'), 'FAIL': ('✗', 'red'),
+        'DONE': ('✓', 'green'), 'ALREADY': ('≡', 'green'), 'FAIL': ('✗', 'red'),
         'SKIP': ('–', 'yellow'), 'RUN': ('◌', 'blue'),
         'PEND': ('·', 'muted'),
     }.get(flag, ('?', 'muted'))
@@ -786,7 +812,7 @@ def draw_v3(win, st: State, visible: list[int], cursor: int, top: int,
     line(win, 1)
     profile = st.profile_name or 'personalizado'
     put(win, 2, 2, f'FONTE  {st.source}  ·  PERFIL  {profile}'[:w-4], colors('muted'))
-    put(win, 3, 2, f'SHA  {digest[:12]}   AUTO -y  {"SIM" if st.yes else "NÃO"}', colors('muted'))
+    put(win, 3, 2, f'SHA {digest[:12]}  -y {"SIM" if st.yes else "NÃO"}  REINSTALAR {"SIM" if st.force_modules else "NÃO"}', colors('muted'))
     bar_width = max(8, w - 39)
     put(win, 3, min(w-2, 38), progress_meter(selected, len(st.steps), bar_width), colors('green'))
     line(win, 4)
@@ -803,7 +829,8 @@ def draw_v3(win, st: State, visible: list[int], cursor: int, top: int,
             if active:
                 put(win, y, 1, ' ' * (pane - 2), attr)
             marker = '■' if checked else '□'
-            label = f'{marker} {step.name:<20} {step.desc}'
+            status_tag = '✓ ' if st.statuses.get(step.name, '').startswith('installed:') else ''
+            label = f'{marker} {status_tag}{step.name:<19} {step.desc}'
             put(win, y, 2, label[:pane-4], attr | (colors('green') if checked else 0))
         if not visible:
             put(win, 7, 3, 'Nenhum resultado para a busca.', colors('yellow'))
@@ -833,20 +860,22 @@ def draw_v3(win, st: State, visible: list[int], cursor: int, top: int,
                 if missing:
                     put(win, h-4, 2, 'Dependências pendentes: ' + ', '.join(missing), colors('yellow'))
         put(win, h-2, 2, '↑↓ navegar · Espaço marcar · G grupo · A/N todos/nenhum · / busca · F filtro', colors('muted'))
-        put(win, h-1, 2, 'R revisar · L Labs · C sistema · V auditar · O presets · M manutenção · P perfis · Q sair', colors('muted'))
+        put(win, h-1, 2, 'R revisar · I checar · X reinstalar · L Labs · C sistema · V auditar · Q sair', colors('muted'))
     else:
         put(win, 5, 2, '02  REVISÃO DA INSTALAÇÃO  /  ENTER CONFIRMA', curses.A_BOLD | colors('pink'))
         chosen = [step for step in st.steps if step.name in st.selected]
         rows = []
         for step in chosen:
             rows.append(f' ■ {step.name:<20} {step.desc}')
+            if step.name in st.statuses:
+                rows.append('    Estado local: ' + st.statuses[step.name])
             packages = st.packages.get(step.name, [])
             rows.append('    Pacotes (prévia parcial): ' + package_summary(packages, 7))
         missing = st.missing()
         if missing:
             rows += ['', 'DEPENDÊNCIAS PENDENTES']
             rows += [f' ! {name}: {", ".join(deps)}' for name, deps in missing.items()]
-        rows += ['', 'D: incluir dependências   Y: alternar -y   B: aplicativos',
+        rows += ['', 'D: incluir dependências   Y: alternar -y   X: forçar reinstalação   B: aplicativos',
                  'ATENÇÃO: o instalador pode executar comandos com sudo.']
         wrapped = []
         for row in rows:
@@ -1000,6 +1029,7 @@ def ui_v3(win, st: State, digest: str, allow_updates: bool = True) -> str:
             elif key in (curses.KEY_UP, ord('k')): scroll = max(0, scroll-1)
             elif key in (ord('d'), ord('D')): st.add_deps()
             elif key in (ord('y'), ord('Y')): st.yes = not st.yes
+            elif key in (ord('x'), ord('X')): st.force_modules = not st.force_modules
             elif key in (ord('b'), ord('B')): apps_screen(win, st, CURRENT_SCRIPT)
             elif key in (10, 13) and st.selected: return 'run'
             continue
@@ -1032,6 +1062,9 @@ def ui_v3(win, st: State, digest: str, allow_updates: bool = True) -> str:
         elif key in (ord('p'), ord('P')): profile_screen(win, st)
         elif key in (ord('o'), ord('O')): preset_screen(win, st)
         elif key in (ord('i'), ord('I')): inspect_steps(st)
+        elif key in (ord('x'), ord('X')):
+            st.force_modules = not st.force_modules
+            st.message = 'Reinstalação: ' + ('FORÇADA' if st.force_modules else 'com detecção automática')
         elif key in (ord('b'), ord('B')): apps_screen(win, st, CURRENT_SCRIPT)
         elif key in (ord('m'), ord('M')): maintenance_screen(win)
         elif key in (ord('l'), ord('L')): labs_screen(win, st, CURRENT_SCRIPT)
@@ -1132,7 +1165,7 @@ def recovery_selection(st: State, script: Path, record: dict) -> tuple[set[str],
     if not original or not original <= set(known):
         raise ValueError('O histórico contém etapas ausentes ou inválidas.')
     # RUN significa interrupção em etapa possivelmente parcialmente aplicada.
-    retry = {name for name in original if previous.get(name) != 'DONE'}
+    retry = {name for name in original if previous.get(name) not in ('DONE', 'ALREADY')}
     if not retry:
         raise ValueError('Todas as etapas registradas já foram concluídas.')
     # Dependências concluídas não precisam ser executadas de novo.
@@ -1140,7 +1173,7 @@ def recovery_selection(st: State, script: Path, record: dict) -> tuple[set[str],
     while queue:
         name = queue.pop()
         for dep in known[name].deps:
-            if dep in known and dep not in retry and previous.get(dep) != 'DONE':
+            if dep in known and dep not in retry and previous.get(dep) not in ('DONE', 'ALREADY'):
                 retry.add(dep)
                 queue.append(dep)
     uncertain = [n for n in retry if previous.get(n) in ('RUN', 'PEND', None)]
@@ -1163,16 +1196,16 @@ def prepare_run(script: Path, names: list[str], log: Path, parent: str | None = 
 def update_run(path: Path, data: dict, event: str | None = None, code: int | None = None):
     if event:
         parts = event.split(':', 2)
-        if len(parts) >= 2 and parts[0] in ('STEP_START','STEP_DONE','STEP_FAIL','STEP_SKIP'):
+        if len(parts) >= 2 and parts[0] in ('STEP_START','STEP_DONE','STEP_ALREADY','STEP_FAIL','STEP_SKIP'):
             name = parts[1]
             if name in data['statuses']:
                 data['statuses'][name] = {'STEP_START':'RUN','STEP_DONE':'DONE',
-                    'STEP_FAIL':'FAIL','STEP_SKIP':'SKIP'}[parts[0]]
+                    'STEP_ALREADY':'ALREADY','STEP_FAIL':'FAIL','STEP_SKIP':'SKIP'}[parts[0]]
                 data['events'].append({'time':datetime.now(timezone.utc).isoformat(), 'event':event})
     if code is not None:
         data['exit_code'] = code
         data['finished_at'] = datetime.now(timezone.utc).isoformat()
-        data['state'] = 'DONE' if code == 0 and all(v == 'DONE' for v in data['statuses'].values()) else 'INCOMPLETE'
+        data['state'] = 'DONE' if code == 0 and all(v in ('DONE','ALREADY') for v in data['statuses'].values()) else 'INCOMPLETE'
     atomic_json(path, data)
 
 def recovery_screen(win, st: State, script: Path):
@@ -1187,7 +1220,7 @@ def recovery_screen(win, st: State, script: Path):
         return
     details = [f'Registro: {path.name}', f'Origem: {record.get("started_at", "?")}',
                f'Estado: {record.get("state", "?")}', f'SHA256: {record["script_sha256"][:20]}', '',
-               'Concluídas anteriormente: ' + ', '.join(n for n,v in record['statuses'].items() if v=='DONE'),
+               'Concluídas anteriormente: ' + ', '.join(n for n,v in record['statuses'].items() if v in ('DONE','ALREADY')),
                '', 'Serão selecionadas para nova tentativa:', *('  - '+n+' ['+record['statuses'].get(n,'?')+']' for n in sorted(selection)),
                '', warning, '', 'A retomada NÃO desfaz mudanças anteriores.']
     scroll_screen(win, 'DIAGNÓSTICO DA ÚLTIMA INSTALAÇÃO', '\n'.join(details))
@@ -1202,6 +1235,7 @@ PRESETS = {
     'minimal': ('Base enxuta', ('pacman_conf', 'mirrors', 'sysupgrade', 'base', 'aur_helper', 'fonts', 'hardware', 'cli_tools', 'maintenance')),
     'desktop': ('SonicDE + XLibre e desktop', ('pacman_conf', 'mirrors', 'repo_xlibre', 'repo_sonicde', 'sysupgrade', 'base', 'aur_helper', 'fonts', 'hardware', 'xlibre', 'sonicde', 'desktop_extras', 'bluetooth', 'cli_tools', 'shells', 'flatpak', 'apps', 'maintenance')),
     'i3': ('i3 + XLibre, sem SonicDE', ('pacman_conf', 'mirrors', 'repo_xlibre', 'sysupgrade', 'base', 'aur_helper', 'fonts', 'hardware', 'xlibre', 'i3', 'cli_tools', 'maintenance')),
+    'retro': ('Xfce + Chicago95, tema opcional no HOME', ('base', 'xfce', 'lab_chicago95')),
     'gaming': ('Desktop e jogos', ('pacman_conf', 'mirrors', 'repo_xlibre', 'repo_sonicde', 'sysupgrade', 'base', 'aur_helper', 'fonts', 'hardware', 'xlibre', 'sonicde', 'desktop_extras', 'bluetooth', 'cli_tools', 'flatpak', 'gaming', 'maintenance')),
     'full': ('Etapas convencionais, inclusive Bedrock; Labs AUR fora', tuple()),
 }
@@ -1223,7 +1257,7 @@ def compare_presets(steps: list[Step], base: str, target: str) -> dict:
     before = preset_selection(base, steps)
     after = preset_selection(target, steps)
     ordered = [step.name for step in steps]
-    risks = {'bedrock', 'cleanup', 'firewall', 'repo_cachyos', 'repo_xlibre',
+    risks = {'bedrock', 'cleanup', 'firewall', 'lab_chicago95', 'xfce', 'repo_cachyos', 'repo_xlibre',
              'repo_sonicde', 'xlibre', 'sonicde', 'terminal_extras'}
     to_add = [name for name in ordered if name in after - before]
     return {'source': base, 'target': target,
@@ -1244,10 +1278,10 @@ def preset_screen(win, st: State) -> None:
     lines = ['PRESETS OFICIAIS · nenhum executa comandos ao selecionar', '']
     for index, (name, (description, _)) in enumerate(PRESETS.items(), 1):
         lines.append(f'{index}. {name:<10} {description}')
-    lines.extend(['', 'Full inclui Bedrock, mas NÃO inclui pacotes AUR Labs.',
+    lines.extend(['', 'Full inclui Bedrock, mas NÃO inclui módulos Labs (Chicago95 incluso).',
                   'Todos os presets exigem revisão antes de executar.'])
     scroll_screen(win, 'PRESETS', '\n'.join(lines))
-    value = prompt(win, 'Preset (minimal/desktop/gaming/full):')
+    value = prompt(win, 'Preset (minimal/desktop/i3/retro/gaming/full):')
     if value:
         try:
             apply_preset(st, value.strip().lower())
@@ -1353,10 +1387,23 @@ def main() -> int:
     ap.add_argument('--doctor-json', action='store_true', help='Emite diagnóstico estruturado em JSON')
     ap.add_argument('--status-json', action='store_true', help='Mostra estado local sem sudo ou alterações')
     ap.add_argument('--audit', action='store_true', help='Audita pacotes de um perfil/preset sem instalar')
+    ap.add_argument('--check-modules', action='store_true', help='Consulta módulos verificáveis; JSON sem sudo')
     ap.add_argument('--compare-presets', nargs=2, metavar=('ORIGEM', 'DESTINO'),
                     help='Compara dois presets sem modificar o sistema')
     ap.add_argument('--plan', action='store_true', help='Mostra as etapas de um preset sem executar')
     args = ap.parse_args()
+    if args.check_modules:
+        script = (args.script or LOCAL).expanduser().resolve()
+        if not script.is_file(): ap.error(f'Não encontrado: {script}')
+        try:
+            checks = module_checks(script)
+            print(json.dumps({'schema': 1, 'modules': checks,
+                              'complete': sum(x['status'] == 'installed' for x in checks.values()),
+                              'note': 'Apenas installed permite pular; partial e unknown exigem revisão.'},
+                             ensure_ascii=False, indent=2))
+            return 0
+        except ValueError as exc:
+            ap.error(str(exc))
     if args.status_json:
         print(json.dumps(control.system_status(), ensure_ascii=False, indent=2))
         return 0
@@ -1471,6 +1518,7 @@ def main() -> int:
                    selected=set() if args.empty else preset_selection('minimal', steps),
                    profile_name='manual' if args.empty else 'preset:minimal')
         load_package_preview(st, script)
+        inspect_steps(st)
         if args.preset:
             try: apply_preset(st, args.preset)
             except ValueError as exc: ap.error(str(exc))
@@ -1751,7 +1799,7 @@ def _install_draw(win, names, status, current, tail, elapsed, log_mode, count, w
         put(win, 0, 1, 'Terminal pequeno. Amplie para 48x15.', colors('yellow'))
         win.refresh()
         return
-    done = sum(status.get(n) == 'DONE' for n in names)
+    done = sum(status.get(n) in ('DONE','ALREADY') for n in names)
     fail = sum(status.get(n) == 'FAIL' for n in names)
     skip = sum(status.get(n) == 'SKIP' for n in names)
     total = len(names)
@@ -1830,7 +1878,7 @@ def stream_install_v4(cmd: list[str], step_names: list[str], logfile: Path, jour
                                 name=parts[1]
                                 if name in statuses:
                                     statuses[name]={'STEP_START':'RUN','STEP_DONE':'DONE',
-                                      'STEP_FAIL':'FAIL','STEP_SKIP':'SKIP'}.get(typ,statuses[name])
+                                      'STEP_FAIL':'FAIL','STEP_SKIP':'SKIP','STEP_ALREADY':'ALREADY'}.get(typ,statuses[name])
                                     if typ=='STEP_START':current=name
                             elif typ=='PKG' and len(parts)==3:
                                 packages.update((parts[1],p) for p in parts[2].split())

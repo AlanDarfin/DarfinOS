@@ -100,8 +100,8 @@ de pacotes locais, sem tomá-la como prova de que uma etapa foi concluída.
 
 ## DarfinOS Labs e o novo preset i3
 
-A TUI agora apresenta **39 etapas**, cinco presets (minimal, desktop, i3,
-gaming e full) e a tecla **L** para abrir o catálogo de 12 projetos
+A TUI agora apresenta **41 etapas**, seis presets (minimal, desktop, i3, retro,
+gaming e full) e a tecla **L** para abrir o catálogo de 13 projetos
 independentes. O catálogo lê links, modos e riscos diretamente do Bash sem
 executar nada. Enter mostra os detalhes e o endereço original; Espaço apenas
 marca uma etapa disponível. Use `--labs` ou `--lab-info NOME` sem terminal.
@@ -111,3 +111,15 @@ AUR (NsCDE, JuNest, Decman e Metapac) são sempre escolhidos um a um, fora do
 `full`, do atalho A e de seleções amplas `--all`/`--skip`. A etapa exige
 digitar `LABS` e rejeita `-y`; não executa `setup`, `clean` ou perfis
 externos automaticamente. Veja [a referência completa](LABS.md).
+
+## Checagem de módulos e reexecução
+
+A tecla **I** usa o mesmo verificador do Bash para classificar cada módulo
+como `installed`, `partial`, `missing` ou `unknown`. Somente o primeiro
+estado pula uma etapa automaticamente. A tecla **X** reexecuta os módulos
+mesmo quando o estado é `installed`; o journal registra `STEP_ALREADY`
+como `ALREADY`, sem tratar como falha nem oferecer a etapa na retomada.
+
+A TUI e o Bash expõem `--check-modules` (JSON e TSV, respectivamente), sem sudo.
+O preset `retro` combina Xfce e Chicago95, sem alterar automaticamente o tema.
+Detalhes: [MODULOS.md](MODULOS.md).

@@ -2,16 +2,28 @@
 
 O projeto segue desenvolvimento contínuo. Esta lista destaca mudanças verificáveis, sem prometer suporte universal a todas as combinações de Arch/derivados.
 
+## Em preparação — detecção de módulos e Chicago95 (novembro de 2026)
+
+- Checagem `--check-modules` no Bash (TSV) e TUI (JSON) antes de instalar,
+  distinguindo módulos completos, parciais, ausentes e desconhecidos.
+- Omitir apenas módulos comprovadamente completos; evento `STEP_ALREADY`
+  e estado `ALREADY` no histórico e retomada.
+- `--reinstall` no Bash e tecla X na TUI para reexecutar etapas, preservando
+  confirmações e políticas de não sobrescrita.
+- Etapa Xfce com pacotes oficiais, Chicago95 opcional com cópia segura dos
+  temas/ícones do upstream e novo preset `retro`.
+- 41 etapas, seis presets e 13 projetos Labs no catálogo.
+
 ## Em preparação — DarfinOS Labs e i3 (novembro de 2026)
 
-- Catálogo de 12 projetos externos, upstream e níveis de risco via `--labs`,
+- Catálogo de 13 projetos externos, upstream e níveis de risco via `--labs`,
   `--lab-info` e tecla L da TUI.
 - Integração do i3 nos repositórios oficiais e novo preset com XLibre.
 - Etapas opcionais AUR para NsCDE, JuNest, Decman e Metapac, com confirmação
   especial e sem automatizar execução de seus gerenciadores.
 - Guias somente leitura para Conty, nix-portable, Trinity, yserver, xomposite,
   Wayback e Booster. Nenhuma alteração automática de boot ou desktop por esses guias.
-- 39 etapas no manifesto e documentação de experimentos/VM.
+- 41 etapas no manifesto e documentação de experimentos/VM.
 
 ## Em preparação — Control Center, segurança e release (novembro de 2026)
 
@@ -45,7 +57,7 @@ O projeto segue desenvolvimento contínuo. Esta lista destaca mudanças verific�
 - Filtro de etapas da TUI reconhece aproximações e pequenos erros de digitação.
 
 ### Manutenção
-- Documentação sincronizada com as **39 etapas** do instalador.
+- Documentação sincronizada com as **41 etapas** do instalador.
 - Guia de segurança e cobertura adicional de testes.
 - Consolidação prevista das verificações de CI.
 
