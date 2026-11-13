@@ -16,7 +16,7 @@ x_pid= i3_pid= status_pid=
 cleanup() {
   local status=$?
   if (( status )); then
-    tail -80 "$tmp/i3.log" "$tmp/xvfb.log" "$tmp/polybar.log" >&2 || :
+    tail -n 80 "$tmp/i3.log" "$tmp/xvfb.log" "$tmp/polybar.log" >&2 || :
   fi
   [[ -z "$status_pid" ]] || kill "$status_pid" 2>/dev/null || :
   [[ -z "$i3_pid" ]] || kill "$i3_pid" 2>/dev/null || :
@@ -65,6 +65,10 @@ await_result cursor_loaded
 # Default wallpaper is applied at login, before any user image is selected.
 wallpaper_loaded() { xprop -root _XROOTPMAP_ID | grep -q 'pixmap id #'; }
 await_result wallpaper_loaded
+if [[ -n "${DARFINOS_PREVIEW_DIR:-}" ]]; then
+  mkdir -p "$DARFINOS_PREVIEW_DIR"
+  magick import -window root "$DARFINOS_PREVIEW_DIR/desktop-720p.png"
+fi
 
 # Check the actual Polybar payload, including loaded i3, fonts and launchers.
 status_ready() {
@@ -89,6 +93,9 @@ status_pid=
 xdotool mousemove 35 14 click 1
 rofi_visible() { xdotool search --onlyvisible --class rofi >/dev/null 2>&1; }
 await_result rofi_visible
+if [[ -n "${DARFINOS_PREVIEW_DIR:-}" ]]; then
+  magick import -window root "$DARFINOS_PREVIEW_DIR/rofi-720p.png"
+fi
 xdotool key Escape
 
 # Toggle via the configured keybinding, and verify that a hidden bar can return.
@@ -111,13 +118,19 @@ WALLPAPER
 python "$profile/desktop.py" desktop-start
 xprop -root _XROOTPMAP_ID | grep -q 'pixmap id #'
 
-i3-msg reload >/dev/null
-bar_reloaded() {
+bar_has_height() {
   local window
   window=$(xdotool search --onlyvisible --name '^darfinos-notebook-bar$') || return 1
-  [[ "$window" != "$bar_window" && "$window" != *$'\n'* ]]
+  [[ "$window" != *$'\n'* ]] && xwininfo -id "$window" 2>/dev/null | grep -Eq "Height:[[:space:]]+$1$"
 }
-await_result bar_reloaded
+# X11 can reuse a window ID on restart. Change a visible setting to prove the
+# config was actually read again, and ensure a second dock was not created.
+sed -i 's/^height = 28px$/height = 32px/' "$profile/polybar.ini"
+i3-msg reload >/dev/null
+await_result bar_has_height 32
+sed -i 's/^height = 32px$/height = 28px/' "$profile/polybar.ini"
+i3-msg reload >/dev/null
+await_result bar_has_height 28
 
 pocket_visible() {
   i3-msg -t get_tree | python -c '
