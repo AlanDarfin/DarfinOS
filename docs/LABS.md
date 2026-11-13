@@ -1,107 +1,45 @@
-# ⚡ DarfinOS Labs · catálogo de projetos independentes
+# DarfinOS Labs · experimental independent projects
 
-**Seu Arch, minhas regras.** A ideia do Labs é experimentar ferramentas que
-seguem caminhos menos convencionais no ecossistema Linux, sem instalar tudo
-automaticamente nem confundir demonstração com funcionamento validado.
+**🇺🇸 English (default) · [🇧🇷 Português (Brasil)](pt-BR/LABS.md)**
 
-O catálogo traz **13 projetos**, com link para a origem, classificação de risco,
-descrição e indicação exata do que o DarfinOS pode instalar. Nenhum é desenvolvido
-ou mantido pelo DarfinOS.
+**Your Arch, my rules.** DarfinOS Labs is a catalog of **13 independently developed Linux projects** that explore unusual window managers, desktop environments, portability, declarative package management, and graphics/boot internals.
 
-## Modos de integração
+The catalog records upstream links, a risk tier and whether installation is supported. DarfinOS is not affiliated with these authors.
 
-- **Pacman oficial:** i3 e Xfce podem ser instalados pelos repositórios do Arch.
-- **Assets com confirmação:** Chicago95 copia apenas os diretórios de temas/ícones upstream para o HOME, sem executar installer.py ou aplicar a aparência automaticamente.
-- **AUR, confirmação especial:** NsCDE, JuNest, Decman e Metapac podem ser
-  instalados apenas quando selecionados individualmente. As etapas exigem digitar
-  `LABS` e recusam `-y`. O usuário deve revisar o PKGBUILD e suas perguntas.
-- **Somente guia:** Conty, nix-portable, Trinity, yserver, xomposite, Wayback
-  e Booster têm descrição e link original, mas não são instalados pelo Bash.
-  São opções que demandam download manual, repositórios de terceiros, compilação
-  ou intervenção em ambiente gráfico/boot.
+## Integration levels
 
-`--all` e `--skip` **não executam etapas `lab_*`**. O preset `full` também as
-exclui deliberadamente. Na TUI, `A` seleciona somente etapas convencionais:
-acessar `L` e usar Espaço é o caminho para escolher Labs individualmente.
-
-## Como explorar sem instalar
+- **Official Arch packages:** i3 and Xfce can be installed as alternative sessions without deleting SonicDE.
+- **AUR with explicit confirmation:** NsCDE, JuNest, Decman and Metapac. Review the PKGBUILD before agreeing; unattended `-y` is rejected.
+- **Optional upstream assets:** Chicago95 copies selected GTK and icon files into the user's HOME after confirmation. It does not run the upstream Python installer or modify active panel settings.
+- **Documentation only:** Conty, nix-portable, Trinity, yserver, xomposite, Wayback, Booster. These tools may need manual downloads, special permissions, source builds, or changes to the desktop and boot chain; no automatic stage is provided.
 
 ```bash
 bash DarfinOSInstallScript.sh --labs
-bash DarfinOSInstallScript.sh --lab-info yserver
+bash DarfinOSInstallScript.sh --lab-info chicago95
 python3 DarfinOSInstallScript-TUI.py --labs
-python3 DarfinOSInstallScript-TUI.py --lab-info i3
-python3 DarfinOSInstallScript-TUI.py --plan --preset i3
-```
-
-Na TUI, a tecla **L** abre o catálogo navegável. Enter apresenta descrição,
-risco, modo e URL; Espaço marca somente as etapas instaláveis, sem executá-las.
-
-## Catálogo original
-
-| Projeto | Para quê? | Integração | Projeto original |
-| --- | --- | --- | --- |
-| **i3** | WM mosaico X11 | Pacman oficial, etapa `i3` | [i3](https://i3wm.org/) |
-| **Chicago95** | Tema retrô Windows 95 para Xfce | Etapas `xfce` + `lab_chicago95`, preset `retro` | [Chicago95](https://github.com/grassmunk/Chicago95) |
-| **NsCDE** | Desktop UNIX retrô sobre FVWM | AUR assistido | [NsCDE](https://github.com/NsCDE/NsCDE) |
-| **JuNest** | Ambiente Arch no espaço de usuário | AUR assistido; sem `setup` | [JuNest](https://github.com/fsquillace/junest) |
-| **Decman** | Configuração declarativa Python | AUR assistido, sem aplicar configs | [Decman](https://github.com/kiviktnm/decman) |
-| **Metapac** | Gerenciar pacotes declarativamente | AUR assistido, sem `sync`/`clean` | [Metapac](https://github.com/ripytide/metapac) |
-| **Conty** | Contêiner portátil para aplicativos e jogos | Guia manual, sem download automático | [Conty](https://github.com/Kron4ek/Conty) |
-| **nix-portable** | Nix sem instalação tradicional | Guia manual | [nix-portable](https://github.com/DavHau/nix-portable) |
-| **Trinity Desktop** | Continuar a experiência KDE 3 | Guia manual; repositório/chave de terceiros | [Trinity](https://www.trinitydesktop.org/) |
-| **yserver** | Servidor X11 novo em Rust | Laboratório gráfico em VM | [yserver](https://github.com/joske/yserver) |
-| **xomposite** | Compositor X11 Rust para XLibre | Laboratório gráfico; atenção ao KWin | [xomposite](https://github.com/demostenex/xlibre-compositor-poc) |
-| **Wayback** | Desktop X11 usando componentes Wayland | Laboratório gráfico; GitLab oficial | [Wayback](https://gitlab.freedesktop.org/wayback/wayback) |
-| **Booster** | Gerador alternativo de initramfs | Guia manual; sem tocar no bootloader | [Booster](https://github.com/anatol/booster) |
-
-## i3 sem perder seu desktop
-
-```bash
-# Apenas verificar o plano, não instala nada:
-python3 DarfinOSInstallScript-TUI.py --plan --preset i3
-
-# Alternativa: instalar somente o WM e utilitários a partir do Arch oficial:
-bash DarfinOSInstallScript.sh --only i3
-```
-
-A etapa instala `i3-wm`, `i3status`, `i3lock`, `dmenu` e `xorg-xinit`,
-sem modificar `~/.config/i3`, `~/.xinitrc` ou o gerenciador de login.
-O preset `i3` inclui XLibre e seu repositório; **não inclui SonicDE**.
-Só use a instalação do servidor gráfico a partir de um TTY e com plano de recuperação.
-
-`xorg-xinit` fornece `startx`, mas iniciar i3 via TTY exige que você
-configure a sessão em `~/.xinitrc`; não há mudança automática do login manager.
-
-## Cuidados específicos
-
-- **AUR:** a origem do PKGBUILD pode mudar. Revise fontes e scripts; instalar
-  o pacote não significa validar sua execução.
-- **Decman/Metapac:** não execute sincronização, hooks ou remoção declarativa
-  sem comparar o estado atual e manter um snapshot. O DarfinOS só instala os executáveis.
-- **JuNest/Conty/nix-portable:** avalie namespaces, FUSE, proot, permissões e
-  acesso ao HOME. Um contêiner não é garantia automática de isolamento total.
-- **Trinity:** o projeto utiliza repositório e chave de confiança próprios,
-  que o Labs não configura silenciosamente.
-- **yserver, xomposite e Wayback:** faça testes em VM ou sessão isolada.
-  Não combine xomposite com o compositor já ativo do SonicDE.
-- **Booster:** nunca mude gerador initramfs, parâmetros de boot ou bootloader
-  sem snapshot verificável e um meio de iniciar o sistema para recuperar.
-
-Mais informações: [guia de segurança](SEGURANCA.md),
-[matriz de VM](VALIDACAO_VM.md) e [site Labs](https://darfinos.vercel.app/labs/).
-
-## Preset Retro: Xfce + Chicago95
-
-```bash
 python3 DarfinOSInstallScript-TUI.py --plan --preset retro
-bash DarfinOSInstallScript.sh --only xfce,lab_chicago95
 ```
 
-O Xfce é instalado como sessão alternativa e não substitui SonicDE. O Chicago95
-usa um `git clone` da [fonte original](https://github.com/grassmunk/Chicago95),
-verifica as pastas `Theme/Chicago95` e `Icons/Chicago95` e as copia para o HOME.
-Ele não executa `installer.py`, não modifica o painel e recusa sobrescrever
-arquivos já existentes. O tema deve ser habilitado manualmente em Xfce.
-Confira a [instalação original](https://github.com/grassmunk/Chicago95/blob/master/INSTALL.md)
-e o [verificador de módulos](MODULOS.md).
+In the TUI, press **L** to browse, Enter to inspect and Space to select supported stages. Labs modules are never silently included by `--all`, `--skip` or the `full` preset.
+
+## Original projects
+
+| Project | Purpose | Integration | Upstream |
+| --- | --- | --- | --- |
+| i3 | Keyboard-focused X11 tiling WM | Official Arch package, preset `i3` | [i3](https://i3wm.org/) |
+| Chicago95 | Windows 95-inspired theme for Xfce | Confirmed theme/icon copy, preset `retro` | [Chicago95](https://github.com/grassmunk/Chicago95) |
+| NsCDE | Classic UNIX workstation-like desktop | Opt-in AUR | [NsCDE](https://github.com/NsCDE/NsCDE) |
+| JuNest | User-space Arch environment | Opt-in AUR; no automatic setup | [JuNest](https://github.com/fsquillace/junest) |
+| Decman | Declarative system configuration | Opt-in AUR, no automatic Python configuration | [Decman](https://github.com/kiviktnm/decman) |
+| Metapac | Declarative package inventory | Opt-in AUR, no automatic sync/clean | [Metapac](https://github.com/ripytide/metapac) |
+| Conty | Portable compressed Linux container | Manual guide | [Conty](https://github.com/Kron4ek/Conty) |
+| nix-portable | Portable Nix setup | Manual guide | [nix-portable](https://github.com/DavHau/nix-portable) |
+| Trinity | Classic KDE 3 continuation | Manual external repo, VM only | [Trinity](https://www.trinitydesktop.org/) |
+| yserver | Experimental Rust X11 server | VM research only | [yserver](https://github.com/joske/yserver) |
+| xomposite | Experimental XLibre/Rust compositor | Separate session research only | [xomposite](https://github.com/demostenex/xlibre-compositor-poc) |
+| Wayback | X11 desktop via Wayland infrastructure | Experimental guide | [Wayback](https://gitlab.freedesktop.org/wayback/wayback) |
+| Booster | Alternative initramfs generator | Manual boot research only | [Booster](https://github.com/anatol/booster) |
+
+Do not run competing compositors alongside KWin, apply destructive Decman/Metapac synchronization without a reviewed plan, or replace boot components without tested recovery. Containers and portable binaries are not automatically secure sandboxes.
+
+[Documentation index](README.md) · [Module checks](MODULOS.md) · [Labs on the website](https://darfinos.vercel.app/labs/)
