@@ -1,8 +1,11 @@
 """Offline checks for the i3 Notebook shell entry points and package selection."""
+import hashlib
+import io
 import os
 from pathlib import Path
 import shlex
 import subprocess
+import tarfile
 import tempfile
 import unittest
 
@@ -111,6 +114,7 @@ esac
     def test_installer_only_installs_packages_after_confirmation(self):
         setup = """
 info() { :; }
+notebook_install_cursor() { [[ "$approved" == 1 ]]; }
 install_pkgs() { darfinos_event "PKG:pacman:$*"; }
 lab_confirm() { [[ "$1" == i3_notebook && "$approved" == 1 ]]; }
 approved=0
@@ -126,5 +130,103 @@ step_lab_i3_notebook
                          "xss-lock", "flameshot", "xterm", "chezmoi", "libnotify", "feh",
                          "zenity", "xorg-xrandr", "xorg-xrdb", "xorg-xsetroot", "xsettingsd", "polybar",
                          "ttf-jetbrains-mono", "xdotool", "powerline-fonts", "otf-font-awesome", "librsvg",
-                         "xdg-utils", "gtk3"} <= packages)
+                         "xdg-utils", "gtk3", "curl", "tar", "xz"} <= packages)
         self.assertFalse({"wireplumber", "pipewire", "picom", "sonicde"} & packages)
+
+
+class NotebookCursorInstallerTests(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory(prefix="DarfinOS cursor ")
+        self.addCleanup(tmp.cleanup)
+        self.root = Path(tmp.name)
+        self.archive = self.root / "fixture.tar.xz"
+        self.dest = self.root / "data/icons/Bibata-Modern-Ice"
+        self.make_archive()
+
+    def make_archive(self, escape=False, wrong_root=False):
+        with tarfile.open(self.archive, "w:xz") as archive:
+            prefix = "unexpected" if wrong_root else "Bibata-Modern-Ice"
+            for name, content in (("index.theme", b"[Icon Theme]\nName=Bibata Modern Ice\n"),
+                                  ("cursors/left_ptr", b"fixture cursor")):
+                member = tarfile.TarInfo(f"{prefix}/{name}")
+                member.size = len(content)
+                member.mode = 0o644
+                archive.addfile(member, io.BytesIO(content))
+            alias = tarfile.TarInfo(f"{prefix}/cursors/arrow")
+            alias.type = tarfile.SYMTYPE
+            alias.linkname = "/etc/passwd" if escape else "left_ptr"
+            archive.addfile(alias)
+
+    def run_installer(self, code, checksum=None):
+        checksum = checksum or hashlib.sha256(self.archive.read_bytes()).hexdigest()
+        setup = f"""
+XDG_DATA_HOME={shlex.quote(str(self.root / 'data'))}
+TMP_DIR={shlex.quote(str(self.root / 'tmp'))}
+fixture={shlex.quote(str(self.archive))}
+BIBATA_VERSION=v2.0.7
+BIBATA_SHA256={checksum}
+mkdir -p "$TMP_DIR"
+info() {{ :; }}
+warn() {{ :; }}
+curl() {{
+  printf '%s\\n' "$*" >> "$TMP_DIR/downloads"
+  while [[ "$1" != -o ]]; do shift; done
+  cp -- "$fixture" "$2"
+}}
+"""
+        return bash_harness(function("notebook_cursor_ready") + "\n" +
+                            function("notebook_install_cursor") + setup + code)
+
+    def test_installs_checked_archive_in_xdg_path_and_preserves_existing(self):
+        result, _ = self.run_installer(r'''
+notebook_install_cursor
+notebook_cursor_ready || exit 61
+[[ "$(cat "$XDG_DATA_HOME/icons/Bibata-Modern-Ice/cursors/left_ptr")" == 'fixture cursor' ]] || exit 62
+[[ "$(readlink "$XDG_DATA_HOME/icons/Bibata-Modern-Ice/cursors/arrow")" == left_ptr ]] || exit 63
+printf 'user cursor' > "$XDG_DATA_HOME/icons/Bibata-Modern-Ice/cursors/left_ptr"
+notebook_install_cursor
+[[ "$(cat "$XDG_DATA_HOME/icons/Bibata-Modern-Ice/cursors/left_ptr")" == 'user cursor' ]] || exit 64
+[[ "$(wc -l < "$TMP_DIR/downloads")" == 1 ]] || exit 65
+grep -Fq 'https://github.com/ful1e5/Bibata_Cursor/releases/download/v2.0.7/Bibata-Modern-Ice.tar.xz' "$TMP_DIR/downloads"
+''')
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(list((self.root / "data/icons").glob(".bibata-stage.*")), [])
+
+    def test_incomplete_existing_theme_is_preserved_without_download(self):
+        self.dest.mkdir(parents=True)
+        marker = self.dest / "my-custom-file"
+        marker.write_text("keep me")
+        result, _ = self.run_installer(r'''
+notebook_cursor_ready && exit 61
+notebook_install_cursor && exit 62
+[[ ! -e "$TMP_DIR/downloads" ]]
+''')
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(marker.read_text(), "keep me")
+
+    def test_bad_checksum_never_publishes_theme(self):
+        result, _ = self.run_installer("notebook_install_cursor && exit 61\ntrue", checksum="0" * 64)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertFalse(self.dest.exists())
+
+    def test_unexpected_root_or_escaping_alias_never_publishes_theme(self):
+        for fixture in ("escape", "wrong_root"):
+            with self.subTest(fixture=fixture):
+                self.make_archive(**{fixture: True})
+                result, _ = self.run_installer("notebook_install_cursor && exit 61\ntrue")
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertFalse(self.dest.exists())
+
+    def test_module_probe_reports_missing_cursor_as_partial_and_ready_as_installed(self):
+        code = r'''
+MODULE_PACMAN_AVAILABLE=1
+module_packages_ready() { return 0; }
+module_probe lab_i3_notebook
+[[ "$MODULE_STATUS" == partial ]] || exit 61
+mkdir -p "$XDG_DATA_HOME/icons/Bibata-Modern-Ice/cursors"
+touch "$XDG_DATA_HOME/icons/Bibata-Modern-Ice/index.theme" "$XDG_DATA_HOME/icons/Bibata-Modern-Ice/cursors/left_ptr"
+module_probe lab_i3_notebook
+[[ "$MODULE_STATUS" == installed ]]
+'''
+        result, _ = self.run_installer(function("module_probe") + code)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

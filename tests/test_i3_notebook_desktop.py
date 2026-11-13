@@ -15,6 +15,8 @@ desktop = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = desktop
 spec.loader.exec_module(desktop)
 
+TRANSFORM = "0.750000,0.000000,0.000000,0.000000,0.750000,0.000000,0.000000,0.000000,1.000000"
+
 QUERY = """Screen 0: minimum 8 x 8, current 1920 x 1080, maximum 32767 x 32767
 eDP-1 connected primary 1440x810+0+0 (normal left inverted right x axis y axis)
    1920x1080     59.97*+  60.00
@@ -65,17 +67,21 @@ class DesktopTests(unittest.TestCase):
         menu = result(stdout="Usar 1280×720 na tela interna\n")
         with patch.object(desktop, "read_outputs", return_value=desktop.parse_outputs(QUERY)), \
              patch.object(desktop.shutil, "which", return_value=True), \
+             patch.object(desktop, "panel_transform", return_value=TRANSFORM), \
+             patch.object(desktop, "apply_background"), \
              patch.object(desktop, "run", side_effect=[menu, result(), result(1), result()]) as command:
             desktop.display_picker()
-            self.assertEqual(command.call_args_list[1].args, ("xrandr", "--output", "eDP-1", "--mode", "1280x720"))
+            self.assertEqual(command.call_args_list[1].args, ("xrandr", "--output", "eDP-1", "--mode", "1280x720", "--transform", "none"))
             self.assertEqual(command.call_args.args,
-                             ("xrandr", "--output", "eDP-1", "--mode", "1920x1080", "--rate", "59.97"))
+                             ("xrandr", "--output", "eDP-1", "--mode", "1920x1080", "--rate", "59.97", "--transform", TRANSFORM))
         self.assertFalse(self.settings.exists())
 
     def test_accepted_720p_preserves_wallpaper_setting(self):
         desktop.save_settings(wallpaper="/some image.png")
         with patch.object(desktop, "read_outputs", return_value=desktop.parse_outputs(QUERY)), \
              patch.object(desktop.shutil, "which", return_value=True), \
+             patch.object(desktop, "panel_transform", return_value=TRANSFORM), \
+             patch.object(desktop, "apply_background"), \
              patch.object(desktop, "run", side_effect=[result(stdout="Usar 1280×720 na tela interna\n"),
                                                        result(), result(), result()]):
             desktop.display_picker()
@@ -85,7 +91,7 @@ class DesktopTests(unittest.TestCase):
         image = self.home / "Alan's imagem.png"
         image.touch()
         with patch.object(desktop.shutil, "which", return_value=True), \
-             patch.object(desktop, "run", side_effect=[result(stdout=f"{image}\n"), result(), result()]) as command, \
+             patch.object(desktop, "run", side_effect=[result(stdout="Escolher imagem…\n"), result(stdout=f"{image}\n"), result(), result()]) as command, \
              patch.object(desktop, "apply_cursor"):
             desktop.wallpaper_picker()
             self.assertEqual(desktop.read_settings()["wallpaper"], str(image))
@@ -124,3 +130,116 @@ class DesktopTests(unittest.TestCase):
                          "Xcursor.theme: Bibata-Modern-Ice\nXcursor.size: 32\n")
         self.assertEqual(command.call_args.args, ("xsetroot", "-xcf", str(pointer), "32"))
         self.assertIn("cursorSize=32", config.read_text())
+
+
+    def test_transform_snapshot_uses_only_selected_panel(self):
+        verbose = """eDP-1 connected primary 1440x810+0+0
+        Transform:  0.750000 0.000000 0.000000
+                    0.000000 0.750000 0.000000
+                    0.000000 0.000000 1.000000
+                   filter: bilinear
+HDMI-1 connected 1920x1080+1440+0
+        Transform:  1.000000 0.000000 0.000000
+                    0.000000 1.000000 0.000000
+                    0.000000 0.000000 1.000000
+"""
+        with patch.object(desktop, "run", return_value=result(stdout=verbose)):
+            panel = desktop.parse_outputs(QUERY)[0]
+            self.assertEqual(desktop.panel_transform(panel), TRANSFORM)
+        with patch.object(desktop, "run", return_value=result(stdout="eDP-1 connected\nTransform: bad")):
+            self.assertIsNone(desktop.panel_transform(panel))
+
+    def test_720p_confirmation_timeout_restores_transform_and_refresh(self):
+        with patch.object(desktop, "read_outputs", return_value=desktop.parse_outputs(QUERY)), \
+             patch.object(desktop.shutil, "which", return_value=True), \
+             patch.object(desktop, "panel_transform", return_value=TRANSFORM), \
+             patch.object(desktop, "apply_background"), \
+             patch.object(desktop, "run", side_effect=[result(stdout="Usar 1280×720 na tela interna\n"),
+                       result(), subprocess.TimeoutExpired("zenity", 18), result()]) as command:
+            desktop.display_picker()
+            self.assertEqual(command.call_args.args[-4:], ("--rate", "59.97", "--transform", TRANSFORM))
+        self.assertFalse(self.settings.exists())
+
+    def test_unreadable_transform_prevents_resolution_change(self):
+        with patch.object(desktop, "read_outputs", return_value=desktop.parse_outputs(QUERY)), \
+             patch.object(desktop.shutil, "which", return_value=True), \
+             patch.object(desktop, "panel_transform", return_value=None), \
+             patch.object(desktop, "notify") as notice, \
+             patch.object(desktop, "run", return_value=result(stdout="Usar 1280×720 na tela interna\n")) as command:
+            desktop.display_picker()
+            self.assertEqual(command.call_count, 1)
+            self.assertIn("escala atual", notice.call_args.args[0])
+
+    def test_720p_unavailable_is_explained_and_external_screen_is_untouched(self):
+        hdmi = desktop.parse_outputs(QUERY)[1]
+        with patch.object(desktop, "read_outputs", return_value=[hdmi]), \
+             patch.object(desktop.shutil, "which", return_value=True), \
+             patch.object(desktop, "run", return_value=result(1)) as command:
+            desktop.display_picker()
+            self.assertIn("720p indisponível", command.call_args.args[-1])
+            self.assertNotIn("Usar 1280×720", command.call_args.kwargs["input"])
+            self.assertEqual(command.call_count, 1)
+
+    def test_login_reapplies_confirmed_720p_without_scale_only_on_internal_panel(self):
+        desktop.save_settings(mode_720p=True, wallpaper="/saved.png")
+        with patch.object(desktop, "read_outputs", return_value=desktop.parse_outputs(QUERY)), \
+             patch.object(desktop, "set_mode", return_value=True) as mode, \
+             patch.object(desktop, "apply_cursor"), patch.object(desktop, "apply_background") as background:
+            desktop.desktop_start()
+            self.assertEqual(mode.call_args.args[0].name, "eDP-1")
+            self.assertEqual(mode.call_args.args[1], "1280x720")
+            self.assertEqual(mode.call_args.kwargs, {"transform": "none"})
+            background.assert_called_once_with("/saved.png")
+        desktop.save_settings(mode_720p=False)
+        with patch.object(desktop, "set_mode") as mode, \
+             patch.object(desktop, "apply_cursor"), patch.object(desktop, "apply_background"):
+            desktop.desktop_start()
+            mode.assert_not_called()
+
+    def test_wallpaper_menu_restores_default_without_losing_display_preference(self):
+        desktop.save_settings(wallpaper="/saved.png", mode_720p=True)
+        with patch.object(desktop.shutil, "which", return_value=True), \
+             patch.object(desktop, "run", return_value=result(stdout="Restaurar fundo DarfinOS\n")), \
+             patch.object(desktop, "apply_background") as background:
+            desktop.wallpaper_picker()
+            background.assert_called_once_with(None)
+        self.assertEqual(desktop.read_settings(), {"wallpaper": None, "mode_720p": True})
+
+    def test_wallpaper_cancel_preserves_preference_and_background(self):
+        desktop.save_settings(wallpaper="/saved.png")
+        for responses in ([result(1)], [result(stdout="Escolher imagem…\n"), result(1)]):
+            with self.subTest(responses=len(responses)), \
+                 patch.object(desktop.shutil, "which", return_value=True), \
+                 patch.object(desktop, "run", side_effect=responses), \
+                 patch.object(desktop, "load_background") as load:
+                desktop.wallpaper_picker()
+                load.assert_not_called()
+                self.assertEqual(desktop.read_settings()["wallpaper"], "/saved.png")
+
+    def test_cursor_reload_updates_our_xsettings_provider_without_replacing_others(self):
+        pointer = self.home / "pointer"
+        pointer.touch()
+        config = self.profile / "cursor.xsettings"
+        (self.profile / "cursor.xsettings.pid").write_text("12345")
+        argv = b"xsettingsd\0-c\0" + os.fsencode(config) + b"\0"
+        with patch.object(desktop, "cursor_preference", return_value=("Bibata-Modern-Ice", 32, pointer)), \
+             patch.object(desktop.shutil, "which", return_value=True), \
+             patch.object(Path, "read_bytes", return_value=argv), \
+             patch.object(desktop, "run", return_value=result()) as command, \
+             patch.object(desktop.os, "kill") as kill, patch.object(desktop.subprocess, "Popen") as start:
+            desktop.apply_cursor()
+            kill.assert_called_once_with(12345, desktop.signal.SIGHUP)
+            start.assert_not_called()
+            self.assertIn('Gtk/CursorThemeSize 32', config.read_text())
+            self.assertNotIn("dump_xsettings", [call.args[0] for call in command.call_args_list])
+        # A reused PID belongs to another process: do not signal it or replace XSETTINGS.
+        config.write_text("external-settings")
+        with patch.object(desktop, "cursor_preference", return_value=("Bibata-Modern-Ice", 24, pointer)), \
+             patch.object(desktop.shutil, "which", return_value=True), \
+             patch.object(Path, "read_bytes", return_value=b"other-process\0"), \
+             patch.object(desktop, "run", return_value=result()), \
+             patch.object(desktop.os, "kill") as kill, patch.object(desktop.subprocess, "Popen") as start:
+            desktop.apply_cursor()
+            kill.assert_not_called()
+            start.assert_not_called()
+            self.assertEqual(config.read_text(), "external-settings")

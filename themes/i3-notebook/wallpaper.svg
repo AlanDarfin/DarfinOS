@@ -1,8 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
-  <rect width="1920" height="1080" fill="#252930"/>
-  <g fill="none" stroke="{{ .accent }}" stroke-width="3.5" stroke-linejoin="round" transform="translate(931 465)">
+  <defs>
+    <radialGradient id="graphite" cx="50%" cy="45%" r="75%">
+      <stop offset="0" stop-color="#2c313a"/>
+      <stop offset="1" stop-color="#171a1f"/>
+    </radialGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#graphite)"/>
+  <g fill="none" stroke="{{ .accent }}" stroke-width="1" opacity=".07">
+    <path d="M0 900 900 0M360 1080 1440 0M900 1080 1920 60M1440 1080 1920 600"/>
+    <path d="M0 900h1920"/>
+  </g>
+  <g fill="none" stroke="{{ .accent }}" stroke-width="3.5" stroke-linejoin="round" transform="translate(931 431)">
     <path d="M26 1 4 27h14l-4 15 23-27H24z"/>
     <path d="M47 1 25 27h14l-4 15 23-27H45z" opacity=".5"/>
   </g>
-  <text x="960" y="559" text-anchor="middle" fill="{{ .accent }}" font-family="JetBrains Mono, DejaVu Sans Mono, monospace" font-size="40">seu arch, minhas regras</text>
+  <text x="960" y="551" text-anchor="middle" fill="#f2f2f2" font-family="JetBrains Mono, DejaVu Sans Mono, monospace" font-size="48" letter-spacing="6">DarfinOS</text>
+  <path d="M924 580h72" stroke="{{ .accent }}" stroke-width="2"/>
+  <text x="960" y="620" text-anchor="middle" fill="#a8adb7" font-family="JetBrains Mono, DejaVu Sans Mono, monospace" font-size="19" letter-spacing="2">seu arch, minhas regras</text>
 </svg>

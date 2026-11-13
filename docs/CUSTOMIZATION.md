@@ -26,6 +26,8 @@ For new Labs stages and original links, see [DarfinOS Labs](LABS.md). Arcan/Pipe
 
 ## i3 Notebook (720p)
 
+![i3 Notebook in an isolated 1280×720 X11 session](assets/i3-notebook-720p.png)
+
 **i3 Notebook** is separate from Compact i3. Install **i3 Notebook** in Labs
 (**L**), then open **W → i3-notebook**, review the preview and apply it. The
 Workshop keeps your previous i3 configuration in its undo history and leaves
@@ -42,8 +44,8 @@ python3 darfinos_control.py style i3-notebook --apply --all-files
 | --- | --- |
 | Super+D / Super+Tab | Launch apps and switch windows in Rofi. dmenu is the app-launch fallback. |
 | Super+F1 | Open the shortcut list, also available as the **Atalhos do i3** tab in Rofi. |
-| Super+F2 | Inspect each output’s current resolution and refresh rate. If the built-in panel advertises 1280×720, test it and confirm within 15 seconds to keep it. |
-| Super+Shift+P | Choose a wallpaper that is reapplied at login. Also available through **Fundo** on the bar. |
+| Super+F2 | Inspect each output’s current resolution and refresh rate. If the built-in panel advertises 1280×720, test it at a 1:1 pixel scale and confirm within 15 seconds to keep it. Rejecting or timing out restores the previous mode, refresh rate and transform. |
+| Super+Shift+P | Choose a wallpaper that is reapplied at login, or restore the DarfinOS default. Also available through **Fundo** on the bar. |
 | Super+Enter / Super+B / Super+E | Open the terminal, the default browser, or your home folder in the default file manager. |
 | Super+Shift+B | Show or hide the bar to free up screen space. |
 | Super+1–9 / Super+0 | Switch to workspaces 1–10. Add Shift to move the current window. |
@@ -64,15 +66,31 @@ and time appear on the right as available. The first workspace is **1**.
 it between monitors. If Polybar is unavailable or fails to start, the profile
 falls back to native i3bar.
 
+The desktop pairs graphite surfaces with gold, bronze and sand status blocks.
+The focused workspace has a solid accent background; inactive windows use subdued
+borders. The centered launcher uses a separate search surface and roomier rows,
+while the wallpaper adds a quiet diagonal pattern and DarfinOS wordmark.
+
 The bar and Rofi design draw on [iamabhas’s dotfiles](https://github.com/iamabhas/dotfiles)
 with DarfinOS colors and shortcuts. The Workshop accent applies to the bar,
 Rofi, Dunst and the default wallpaper.
 
+The Notebook Labs step installs [Bibata Modern Ice](https://github.com/ful1e5/Bibata_Cursor)
+v2.0.7 from the official release with a pinned SHA-256 into
+`${XDG_DATA_HOME:-~/.local/share}/icons`. Existing installations are preserved.
 The profile reuses the SonicDE cursor theme and size if that theme is installed,
-or tries an installed Bibata variant. It does not edit SonicDE settings. The
-720p choice only changes the built-in panel and neither creates a mode nor
-forces a refresh rate. With no image selected, the profile uses a graphite wallpaper with the
-DarfinOS double lightning mark and motto.
+or uses an installed Bibata variant (24 px by default). It does not edit SonicDE
+settings. Reloading the profile updates its own XSETTINGS cursor provider while
+leaving providers started by other desktops alone.
+
+The 720p choice only changes the built-in panel and neither creates a mode nor
+forces a refresh rate. If the panel does not advertise 1280×720, the menu explains
+why the option is unavailable. A confirmed choice is reapplied at login with a
+1:1 pixel scale; **Super+F2 → Parar de reaplicar 720p ao entrar** disables that
+preference. External monitors keep their settings. With no image selected, the
+profile uses a graphite wallpaper with the DarfinOS double lightning mark and
+motto. **Fundo → Restaurar fundo DarfinOS** clears the custom image preference.
+If a saved image is missing, the default wallpaper is used temporarily.
 When upgrading, run the Notebook Labs step again for the new dependencies,
 then reapply the Workshop profile.
 
