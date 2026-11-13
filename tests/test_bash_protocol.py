@@ -115,7 +115,7 @@ lab_aur_install nscde nscde
                                  '--check-modules'], capture_output=True, text=True, check=True)
         rows = result.stdout.splitlines()
         self.assertEqual(rows[0], 'module\tstatus\treason')
-        self.assertEqual(len(rows), 49)
+        self.assertEqual(len(rows), 64)
         self.assertTrue(any(x.startswith('lab_chicago95\t') for x in rows))
         self.assertNotIn('Autenticando sudo', result.stdout)
 

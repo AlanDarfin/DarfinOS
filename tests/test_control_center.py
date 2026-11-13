@@ -156,15 +156,18 @@ class ControlTests(unittest.TestCase):
         (autostart / "arch-update-tray.desktop").write_text("[Desktop Entry]\n")
         with (mock.patch.object(control.shutil, "which", side_effect=lambda name:
                                 "/usr/bin/" + name if name in ("systemctl", "topgrade") else None),
-              mock.patch.object(control, "_read_only", return_value={
-                  "code": 0, "output": "arch-update.timer", "available": True}) as runner):
+              mock.patch.object(control, "_read_only", side_effect=lambda argv: {
+                  "code": 0, "output": "arch-update.timer" if argv[0] == "systemctl" else "/etc/pacman.conf.pacnew",
+                  "available": True}) as runner):
             report = control.maintenance_status(self.home)
         self.assertTrue(report["tools"]["topgrade"])
         self.assertFalse(report["tools"]["arch-update"])
         self.assertIn("arch-update-tray.desktop", report["arch_update_autostart_entries"])
         self.assertTrue(report["user_timers"]["arch_update_detected"])
-        runner.assert_called_once_with([
-            "systemctl", "--user", "list-timers", "--all", "--no-pager", "--no-legend"
+        self.assertEqual(report["config_review"]["pending"], ["/etc/pacman.conf.pacnew"])
+        self.assertEqual(runner.call_args_list, [
+            mock.call(["systemctl", "--user", "list-timers", "--all", "--no-pager", "--no-legend"]),
+            mock.call(["pacdiff", "--output"]),
         ])
 
     def test_status_is_observational(self):

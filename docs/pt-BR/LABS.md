@@ -2,7 +2,7 @@
 
 # DarfinOS Labs · projetos independentes e experimentais
 
-**Seu Arch, minhas regras.** Os 13 projetos independentes agora têm uma etapa no instalador. Na TUI, pressione **L** para abrir o Labs, **Enter** para ler os detalhes e **Espaço** para selecionar. No Bash, passe o nome da etapa para `--only`.
+**Seu Arch, minhas regras.** Os 28 projetos independentes agora têm uma etapa no instalador. Na TUI, pressione **L** para abrir o Labs, **Enter** para ler os detalhes e **Espaço** para selecionar. No Bash, passe o nome da etapa para `--only`.
 
 ```bash
 bash DarfinOSInstallScript.sh --labs
@@ -10,7 +10,7 @@ bash DarfinOSInstallScript.sh --lab-info trinity
 bash DarfinOSInstallScript.sh --only lab_trinity
 ```
 
-As etapas `lab_*` são interativas, recusam `-y` e ficam fora de `--all`, `--skip` e do preset `full`. O preset Retro inclui Chicago95, e o i3 também existe como etapa convencional. O instalador pula etapas que consegue verificar como completas. Para o AUR, pode preparar yay ou paru quando necessário e pede que você revise o PKGBUILD.
+As etapas `lab_*` são interativas, recusam `-y` e ficam fora de `--all`, `--skip` e do preset `full`. O preset Workstation inclui Window Maker. O Retro inclui Chicago95, e o i3 também existe como etapa convencional. O instalador pula etapas que consegue verificar como completas. Para o AUR, pode preparar yay ou paru quando necessário e pede que você revise o PKGBUILD.
 
 | Projeto | Etapa | O que instala |
 | --- | --- | --- |
@@ -28,6 +28,26 @@ As etapas `lab_*` são interativas, recusam `-y` e ficam fora de `--all`, `--ski
 | [Wayback](https://gitlab.freedesktop.org/wayback/wayback) | `lab_wayback` | `wayback-x11` pelo AUR, sem substituir o servidor gráfico padrão. |
 | [Booster](https://github.com/anatol/booster) | `lab_booster` | Pacote oficial cujo hook gera imagens initramfs alternativas. O DarfinOS não troca a entrada de boot. |
 
+### Expansão underground e automação
+
+| Projeto | Etapa | Integração |
+| --- | --- | --- |
+| [Window Maker](https://www.windowmaker.org/) | `lab_windowmaker` | Sessão X11 inspirada no NeXTSTEP; não troca o login. |
+| [Notion WM](https://notionwm.net/) | `lab_notion` | WM X11 com mosaico estático e abas; pacote notion-git. |
+| [Enlightenment E16](https://www.enlightenment.org/e16) | `lab_e16` | Window manager X11 retrô; sessão alternativa. |
+| [Xpra](https://xpra-org.github.io/xpra/) | `lab_xpra` | Encaminha janelas X11; não inicia serviços nem abre portas. |
+| [OpenGamepadUI](https://github.com/ShadowBlip/OpenGamepadUI) | `lab_opengamepadui` | Launcher e overlay para controle pelo AUR; não troca a sessão ativa. |
+| [wmutils](https://github.com/wmutils/core) | `lab_wmutils` | Utilitários para mover e organizar janelas X11 por script. |
+| [pkgsrc](https://www.netbsd.org/docs/pkgsrc/pkgsrc.html) | `lab_pkgsrc` | Bootstrap sem sudo no HOME com prefixo separado e sem alterar PATH. |
+| [Arcan + Pipeworld](https://github.com/letoram/pipeworld) | `lab_pipeworld` | Instala Arcan pelo AUR e prepara um lançador Pipeworld no HOME; uso experimental. |
+| [chezmoi](https://www.chezmoi.io/) | `lab_chezmoi` | Motor dos perfis de personalização com prévia e aplicação seletiva. |
+| [Matugen](https://github.com/InioX/matugen) | `lab_matugen` | Extrai paletas de wallpapers para a Oficina de Temas. |
+| [autorandr](https://github.com/phillipberndt/autorandr) | `lab_autorandr` | Perfis de monitores X11; aplica somente modos disponíveis. |
+| [Xfconf + KConfig](https://docs.xfce.org/xfce/xfconf/xfconf-query) | `lab_desktop_config` | Ajustes pontuais de tema no Xfce e estilo Qt no SonicDE. |
+| [etckeeper](https://etckeeper.branchable.com/) | `lab_etckeeper` | Histórico local de /etc; inicialização separada, sem envio remoto. |
+| [rustic](https://rustic.cli.rs/) | `lab_rustic` | Backups criptografados em destino escolhido; sem repositório automático. |
+| [Kvantum](https://github.com/tsujan/Kvantum) | `lab_kvantum` | Temas Qt SVG para SonicDE com opção de suporte Qt5. |
+
 ### Depois de instalar
 
 - **Trinity:** o instalador confere a impressão digital completa publicada e faz backup antes de gravar uma nova seção `[trinity]`. O gerenciador de login é mantido. Escolha Trinity na tela de login X11. [Instruções originais para Arch](https://wiki.trinitydesktop.org/Arch_Trinity_Repository_Installation_Instructions).
@@ -35,4 +55,4 @@ As etapas `lab_*` são interativas, recusam `-y` e ficam fora de `--all`, `--ski
 - **Gráficos e boot:** teste `starty` em um TTY livre depois de conferir Vulkan e acesso aos dispositivos. Teste Wayback em uma sessão separada. Na VM, experimente Booster com uma entrada de boot alternativa, mantendo a original. [Guia do yserver](https://github.com/joske/yserver/blob/master/docs/setup.md) · [Booster na ArchWiki](https://wiki.archlinux.org/title/Booster).
 - **Portáteis e declarativos:** a instalação não altera os namespaces do sistema, não aplica seu inventário de pacotes e não garante isolamento total. Você escolhe o que executar e sincronizar.
 
-[Índice da documentação](README.md) · [Checagem de módulos](MODULOS.md) · [Labs no site](https://darfinos.vercel.app/pt-br/labs/)
+[Perfis de personalização](CUSTOMIZATION.md) · [Índice da documentação](README.md) · [Checagem de módulos](MODULOS.md) · [Labs no site](https://darfinos.vercel.app/pt-br/labs/)

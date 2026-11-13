@@ -30,7 +30,7 @@
 
 ## 4. Test Labs boundaries
 
-- [ ] Verify all 13 original project links in the Bash/TUI catalog.
+- [ ] Verify all 28 original project links in the Bash/TUI catalog.
 - [ ] Verify `--all`, `--skip` and `full` do not silently select Labs modules.
 - [ ] Review NsCDE, JuNest, Decman and Metapac AUR PKGBUILDs before any individual installation.
 - [ ] Confirm the special AUR confirmation and rejection of unattended `-y`.

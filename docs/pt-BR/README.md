@@ -2,7 +2,7 @@
 
 **[🇺🇸 English (default)](../README.md) · 🇧🇷 Português (Brasil)**
 
-O DarfinOS é um projeto de personalização e pós-instalação do Arch Linux com **48 etapas**, **seis presets** e um catálogo de **13 projetos Labs**. Não é uma distribuição com ISO própria.
+O DarfinOS é um projeto de personalização e pós-instalação do Arch Linux com **63 etapas**, **sete presets** e um catálogo de **28 projetos Labs**. Não é uma distribuição com ISO própria.
 
 Leia o [README completo em português](../../README.pt-BR.md) e os guias:
 
@@ -34,3 +34,5 @@ Os diagnósticos são somente leitura. A TUI não inicia instalações ao abrir.
 [Página de downloads em português](https://darfinos.vercel.app/pt-br/downloads/).
 
 **Atenção:** candidatos de desenvolvimento não são releases estáveis; ainda faltam testes gráficos e de recuperação em VM.
+
+[Oficina de Temas e pós-instalação](CUSTOMIZATION.md)

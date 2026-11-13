@@ -35,7 +35,7 @@ GitHub Markdown cannot detect a reader's browser locale or automatically render 
 
 ## What you can customize
 
-DarfinOS currently describes **48 modular stages**, **six presets**, and **13 independent projects in Labs**.
+DarfinOS currently describes **63 modular stages**, **seven presets**, and **28 independent projects in Labs**.
 
 | Area | Modules and examples |
 | --- | --- |
@@ -45,7 +45,7 @@ DarfinOS currently describes **48 modular stages**, **six presets**, and **13 in
 | Network and services | ZeroTier, Hamachi, Syncthing, Docker/Podman |
 | Applications and games | Flatpak, selected desktop apps, browser, Steam, Wine, GameMode and MangoHud |
 | Maintenance | Topgrade, Arch-Update/tray, service timers, firewall, cleanup and optional advanced steps |
-| DarfinOS Labs | 13 projects with optional installer stages and original project links |
+| DarfinOS Labs | 28 projects with optional installer stages and original project links |
 
 Features are conditional. A module is not guaranteed to install every named program on all hardware or configurations.
 
@@ -120,6 +120,7 @@ See [module verification details](docs/MODULOS.md) and the [TUI guide](docs/TUI_
 | `desktop` | SonicDE and XLibre desktop |
 | `i3` | Alternative i3 + XLibre session without SonicDE |
 | `retro` | Xfce plus optional Chicago95 themes, icons, cursors and fonts |
+| `workstation` | Window Maker X11 and chezmoi for the optional Workstation 1995 style |
 | `gaming` | Desktop and gaming utilities |
 | `full` | All conventional stages, including potentially destructive ones, excluding opt-in Labs stages |
 
@@ -127,11 +128,13 @@ Use `python3 DarfinOSInstallScript-TUI.py --list-presets` to list them or `--com
 
 ### DarfinOS Labs
 
-Labs catalogs 13 independent projects. Bash `--labs` and TUI `--labs` only list them. The **L** key opens the catalog in the terminal UI. All 13 projects can be installed. The advanced Labs stages require confirmation and reject `-y`. Trinity installs the signed repository and `tde-meta` without switching your login manager.
+Labs catalogs 28 independent projects. Bash `--labs` and TUI `--labs` only list them. The **L** key opens the catalog in the terminal UI. All 28 projects can be installed. The advanced Labs stages require confirmation and reject `-y`. Trinity installs the signed repository and `tde-meta` without switching your login manager.
 
 Full descriptions, integration limits and **original upstream links**: [DarfinOS Labs](docs/LABS.md) and the [Labs website](https://darfinos.vercel.app/labs/).
 
 ### Profiles, backups and maintenance
+
+Press **W** in the TUI for the Theme Workshop, including the SonicDE + Kvantum style. [Preview, apply and undo profiles](docs/CUSTOMIZATION.md).
 
 The Control Center can export/import/diff JSON profiles, inspect local maintenance infrastructure and back up an allowlisted set of configuration files inside HOME. This **is not a full-system snapshot**. It cannot restore pacman packages, `/etc`, display-manager settings or boot state.
 

@@ -80,7 +80,7 @@ O DarfinOS oferece uma **etapa opcional** relacionada ao Bedrock. Ela não é ne
 
 ## 🛠 O que o DarfinOS configura
 
-O instalador Bash organiza **48 etapas** em grupos. A seleção pode ser feita pela linha de comando ou pela TUI.
+O instalador Bash organiza **63 etapas** em grupos. A seleção pode ser feita pela linha de comando ou pela TUI.
 
 | Área | Exemplos de etapas | O que faz |
 | --- | --- | --- |
@@ -150,7 +150,7 @@ python3 DarfinOSInstallScript-TUI.py --resume
 O instalador continua independente da interface:
 
 ```bash
-# Consultar as 48 etapas
+# Consultar as 63 etapas
 bash DarfinOSInstallScript.sh --list
 
 # Para uma instalação interativa e seleção segura, use a TUI
@@ -190,9 +190,11 @@ O parâmetro `--reinstall` não remove `--needed` do pacman e não autoriza
 sobrescrever arquivos de tema. Saiba como interpretar os estados:
 **[docs/MODULOS.md](docs/MODULOS.md)**.
 
-## ⚡ DarfinOS Labs · 13 projetos independentes
+Na TUI, **W** abre a [Oficina de Temas](docs/pt-BR/CUSTOMIZATION.md) com o perfil SonicDE + Kvantum e prévia das mudanças.
 
-Os 13 projetos têm etapas de instalação no Bash e na TUI. O Trinity configura
+## ⚡ DarfinOS Labs · 28 projetos independentes
+
+Os 28 projetos têm etapas de instalação no Bash e na TUI. O Trinity configura
 o repositório assinado e instala `tde-meta`. O JuNest monta o ambiente Arch no
 HOME, e o Retro instala Xfce e os temas, ícones, cursores e fontes do Chicago95.
 Instalar um experimento não troca sua sessão gráfica nem sua entrada de boot.
@@ -379,7 +381,7 @@ O DarfinOS possui testes automatizados com **`unittest`**, sem dependências Pyt
 
 Os testes cobrem, entre outros pontos:
 
-- Parser das **48 etapas** e resolução de dependências.
+- Parser das **63 etapas** e resolução de dependências.
 - Perfis, presets e exportação do manifesto.
 - Registros de execução, recuperação e proteção contra Bash diferente.
 - Eventos de progresso e confirmações do Bash em cenários isolados.
