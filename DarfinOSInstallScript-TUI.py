@@ -1235,6 +1235,7 @@ PRESETS = {
     'minimal': ('Base enxuta', ('pacman_conf', 'mirrors', 'sysupgrade', 'base', 'aur_helper', 'fonts', 'hardware', 'cli_tools', 'maintenance')),
     'desktop': ('SonicDE + XLibre e desktop', ('pacman_conf', 'mirrors', 'repo_xlibre', 'repo_sonicde', 'sysupgrade', 'base', 'aur_helper', 'fonts', 'hardware', 'xlibre', 'sonicde', 'desktop_extras', 'bluetooth', 'cli_tools', 'shells', 'flatpak', 'apps', 'maintenance')),
     'i3': ('i3 + XLibre, sem SonicDE', ('pacman_conf', 'mirrors', 'repo_xlibre', 'sysupgrade', 'base', 'aur_helper', 'fonts', 'hardware', 'xlibre', 'i3', 'cli_tools', 'maintenance')),
+    'retro': ('Xfce + Chicago95, tema opcional no HOME', ('base', 'xfce', 'lab_chicago95')),
     'gaming': ('Desktop e jogos', ('pacman_conf', 'mirrors', 'repo_xlibre', 'repo_sonicde', 'sysupgrade', 'base', 'aur_helper', 'fonts', 'hardware', 'xlibre', 'sonicde', 'desktop_extras', 'bluetooth', 'cli_tools', 'flatpak', 'gaming', 'maintenance')),
     'full': ('Etapas convencionais, inclusive Bedrock; Labs AUR fora', tuple()),
 }
@@ -1256,7 +1257,7 @@ def compare_presets(steps: list[Step], base: str, target: str) -> dict:
     before = preset_selection(base, steps)
     after = preset_selection(target, steps)
     ordered = [step.name for step in steps]
-    risks = {'bedrock', 'cleanup', 'firewall', 'repo_cachyos', 'repo_xlibre',
+    risks = {'bedrock', 'cleanup', 'firewall', 'lab_chicago95', 'xfce', 'repo_cachyos', 'repo_xlibre',
              'repo_sonicde', 'xlibre', 'sonicde', 'terminal_extras'}
     to_add = [name for name in ordered if name in after - before]
     return {'source': base, 'target': target,
@@ -1277,10 +1278,10 @@ def preset_screen(win, st: State) -> None:
     lines = ['PRESETS OFICIAIS · nenhum executa comandos ao selecionar', '']
     for index, (name, (description, _)) in enumerate(PRESETS.items(), 1):
         lines.append(f'{index}. {name:<10} {description}')
-    lines.extend(['', 'Full inclui Bedrock, mas NÃO inclui pacotes AUR Labs.',
+    lines.extend(['', 'Full inclui Bedrock, mas NÃO inclui módulos Labs (Chicago95 incluso).',
                   'Todos os presets exigem revisão antes de executar.'])
     scroll_screen(win, 'PRESETS', '\n'.join(lines))
-    value = prompt(win, 'Preset (minimal/desktop/gaming/full):')
+    value = prompt(win, 'Preset (minimal/desktop/i3/retro/gaming/full):')
     if value:
         try:
             apply_preset(st, value.strip().lower())
