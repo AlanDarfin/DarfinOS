@@ -45,7 +45,8 @@ class I3NotebookTests(unittest.TestCase):
                 choices = subprocess.run(shlex.split(command_line), capture_output=True, check=True,
                                          env=dict(os.environ, HOME=str(self.home), PATH=str(self.bin)), timeout=5)
                 self.assertIn(b"\x00no-custom\x1ftrue\n", choices.stdout)
-                self.assertIn(b"Super+Shift+N", choices.stdout)
+                for shortcut in (b"Super+Enter", b"Super+B ", b"Super+E ", b"Super+Shift+B", b"Super+Shift+N"):
+                    self.assertIn(shortcut, choices.stdout)
 
     def test_dmenu_fallback_hides_rofi_control_record(self):
         self.stub("dmenu_run", 'echo fallback')
@@ -55,6 +56,32 @@ class I3NotebookTests(unittest.TestCase):
         choices = (self.home / "menu").read_bytes()
         self.assertNotIn(b"\x00", choices)
         self.assertIn(b"Super+Shift+N", choices)
+
+    def test_browser_launches_desktop_default_without_url_or_extra_args(self):
+        self.stub("xdg-settings", '[ "$*" = "get default-web-browser" ] && echo custom-browser.desktop')
+        self.stub("xdg-mime", 'echo wrong-browser.desktop')
+        self.stub("gtk-launch", 'printf "<%s>\\n" "$@"')
+        self.assertEqual(self.run_entry("browser").stdout.splitlines(), [b"<-->", b"<custom-browser.desktop>"])
+
+    def test_browser_falls_back_to_https_association(self):
+        self.stub("xdg-settings", 'exit 4')
+        self.stub("xdg-mime", '[ "$*" = "query default x-scheme-handler/https" ] && echo https.desktop')
+        self.stub("gtk-launch", 'printf "<%s>\\n" "$@"')
+        self.assertEqual(self.run_entry("browser").stdout.splitlines(), [b"<-->", b"<https.desktop>"])
+
+    def test_file_manager_passes_home_as_one_arg(self):
+        self.stub("xdg-mime", '[ "$*" = "query default inode/directory" ] && echo custom-files.desktop')
+        self.stub("gtk-launch", 'printf "<%s>\\n" "$@"')
+        self.assertEqual(self.run_entry("files").stdout.decode().splitlines(),
+                         ["<-->", "<custom-files.desktop>", f"<{self.home}>"])
+
+    def test_missing_or_invalid_browser_shows_notice_instead_of_running_it(self):
+        self.stub("xdg-settings", 'printf "%s\\n" --invalid.desktop')
+        self.stub("gtk-launch", 'echo unexpected; exit 0')
+        self.stub("notify-send", 'printf "%s\\n" "$@"')
+        output = self.run_entry("browser").stdout.decode()
+        self.assertIn("Defina um navegador padrão", output)
+        self.assertNotIn("unexpected", output)
 
     def test_volume_uses_existing_audio_stack(self):
         self.stub("wpctl", 'printf "%s\\n" "$*"')
@@ -98,5 +125,6 @@ step_lab_i3_notebook
         self.assertTrue({"i3-wm", "rofi", "dunst", "i3status-rust", "brightnessctl",
                          "xss-lock", "flameshot", "xterm", "chezmoi", "libnotify", "feh",
                          "zenity", "xorg-xrandr", "xorg-xrdb", "xorg-xsetroot", "xsettingsd", "polybar",
-                         "ttf-jetbrains-mono", "xdotool", "powerline-fonts", "otf-font-awesome", "librsvg"} <= packages)
+                         "ttf-jetbrains-mono", "xdotool", "powerline-fonts", "otf-font-awesome", "librsvg",
+                         "xdg-utils", "gtk3"} <= packages)
         self.assertFalse({"wireplumber", "pipewire", "picom", "sonicde"} & packages)

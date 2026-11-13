@@ -7,7 +7,9 @@ fi
 cd "$(dirname "$0")/.."
 tmp=$(mktemp -d)
 export HOME="$tmp/home" XDG_RUNTIME_DIR="$tmp/run"
-export XDG_CONFIG_HOME="$HOME/.config"
+export XDG_CONFIG_HOME="$HOME/.config" XDG_DATA_HOME="$HOME/.local/share"
+export XDG_CURRENT_DESKTOP=i3 TERMINAL=xterm
+unset BROWSER
 mkdir -m 700 "$HOME" "$XDG_RUNTIME_DIR"
 mkdir -p "$XDG_CONFIG_HOME" "$HOME/.icons/Bibata-NotebookTest/cursors"
 cp /usr/share/icons/Adwaita/cursors/left_ptr "$HOME/.icons/Bibata-NotebookTest/cursors/left_ptr"
@@ -97,11 +99,64 @@ if [[ -n "${DARFINOS_PREVIEW_DIR:-}" ]]; then
   magick import -window root "$DARFINOS_PREVIEW_DIR/rofi-720p.png"
 fi
 xdotool key Escape
+rofi_closed() { ! rofi_visible; }
+await_result rofi_closed
+
+# Exercise the real XDG/GTK launch path with two disposable desktop entries.
+mkdir -p "$XDG_DATA_HOME/applications"
+cat > "$XDG_CONFIG_HOME/mimeapps.list" <<'MIME'
+[Default Applications]
+x-scheme-handler/http=darfinos-test-browser.desktop;
+x-scheme-handler/https=darfinos-test-browser.desktop;
+inode/directory=darfinos-test-files.desktop;
+MIME
+cat > "$XDG_DATA_HOME/applications/darfinos-test-browser.desktop" <<'BROWSER_APP'
+[Desktop Entry]
+Type=Application
+Name=DarfinOS Test Browser
+Exec=touch browser-started
+Path=/
+NoDisplay=true
+MimeType=x-scheme-handler/http;x-scheme-handler/https;
+BROWSER_APP
+cat > "$XDG_DATA_HOME/applications/darfinos-test-files.desktop" <<'FILES_APP'
+[Desktop Entry]
+Type=Application
+Name=DarfinOS Test File Manager
+Exec=touch files-started
+Path=/
+NoDisplay=true
+MimeType=inode/directory;
+FILES_APP
+sed -i "s|^Path=/$|Path=$HOME|" "$XDG_DATA_HOME"/applications/*.desktop
+xdotool key super+b
+await_result test -f "$HOME/browser-started"
+xdotool key super+e
+await_result test -f "$HOME/files-started"
+bar_mapped
+
+terminal_visible() { xdotool search --onlyvisible --class '^XTerm$' >/dev/null 2>&1; }
+xdotool key super+Return
+await_result terminal_visible
+xdotool key super+shift+0
+xdotool key super+0
+workspace_focused() {
+  i3-msg -t get_workspaces | python -c 'import json, sys; assert any(w["focused"] and w["num"] == int(sys.argv[1]) for w in json.load(sys.stdin))' "$1" 2>/dev/null
+}
+await_result workspace_focused 10
+await_result terminal_visible
+xdotool key super+ctrl+Tab
+await_result workspace_focused 1
+xdotool key super+ctrl+Tab
+await_result workspace_focused 10
+xdotool key super+shift+q
+xdotool key super+1
+await_result workspace_focused 1
 
 # Toggle via the configured keybinding, and verify that a hidden bar can return.
-xdotool key super+b
+xdotool key super+shift+b
 await_result bar_hidden
-xdotool key super+b
+xdotool key super+shift+b
 await_result bar_mapped
 [[ "$(xdotool getwindowpid "$(xdotool search --onlyvisible --name '^darfinos-notebook-bar$')")" == "$bar_pid" ]]
 
@@ -163,4 +218,4 @@ dunstctl close-all
 dunstctl set-paused true
 [[ "$(dunstctl is-paused)" == true ]]
 dunstctl set-paused false
-echo 'i3 Notebook: X11 720p, Polybar geometry and toggling, cursor, wallpaper, Rofi click, scratchpad and Dunst verified.'
+echo 'i3 Notebook: X11 720p, Polybar geometry and toggling, cursor, wallpaper, Rofi click, XDG launchers, workspace keys, scratchpad and Dunst verified.'

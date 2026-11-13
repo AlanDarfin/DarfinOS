@@ -14,7 +14,10 @@ mouse_warping none
 exec_always --no-startup-id sh "$profile/session.sh" desktop-start
 exec --no-startup-id sh "$profile/session.sh" start
 
-bindsym $mod+Return exec i3-sensible-terminal
+# Launchers
+bindsym $mod+Return exec --no-startup-id i3-sensible-terminal
+bindsym $mod+b exec --no-startup-id sh "$profile/session.sh" browser
+bindsym $mod+e exec --no-startup-id sh "$profile/session.sh" files
 bindsym $mod+d exec --no-startup-id sh "$profile/session.sh" apps
 bindsym $mod+Tab exec --no-startup-id sh "$profile/session.sh" windows
 bindsym $mod+F1 exec --no-startup-id sh "$profile/session.sh" shortcuts
@@ -30,7 +33,9 @@ bindsym $mod+Shift+r restart
 bindsym $mod+Shift+e exec i3-nagbar -t warning -m 'Encerrar a sessão i3?' -B 'Sair' 'i3-msg exit'
 bindsym $mod+l exec --no-startup-id i3lock -c 171a1f
 bindsym --release Print exec --no-startup-id flameshot gui
-bindsym $mod+b exec --no-startup-id sh "$profile/session.sh" bar-toggle
+bindsym --release $mod+Shift+s exec --no-startup-id flameshot gui
+bindsym --release Shift+Print exec --no-startup-id flameshot full -c
+bindsym $mod+Shift+b exec --no-startup-id sh "$profile/session.sh" bar-toggle
 
 bindsym XF86MonBrightnessUp exec --no-startup-id brightnessctl -c backlight set +5%
 bindsym XF86MonBrightnessDown exec --no-startup-id brightnessctl -c backlight --min-value=1 set 5%-
@@ -53,7 +58,8 @@ bindsym $mod+Shift+Right move right
 bindsym $mod+h split h
 bindsym $mod+v split v
 bindsym $mod+w layout tabbed
-bindsym $mod+e layout toggle split
+bindsym $mod+s layout stacking
+bindsym $mod+Ctrl+e layout toggle split
 bindsym $mod+f fullscreen toggle
 bindsym $mod+Shift+space floating toggle
 bindsym $mod+space focus mode_toggle
@@ -75,9 +81,24 @@ set $ws3 "3: Escrita"
 bindsym $mod+1 workspace $ws1
 bindsym $mod+2 workspace $ws2
 bindsym $mod+3 workspace $ws3
+bindsym $mod+4 workspace number 4
+bindsym $mod+5 workspace number 5
+bindsym $mod+6 workspace number 6
+bindsym $mod+7 workspace number 7
+bindsym $mod+8 workspace number 8
+bindsym $mod+9 workspace number 9
+bindsym $mod+0 workspace number 10
+bindsym $mod+Ctrl+Tab workspace back_and_forth
 bindsym $mod+Shift+1 move container to workspace $ws1
 bindsym $mod+Shift+2 move container to workspace $ws2
 bindsym $mod+Shift+3 move container to workspace $ws3
+bindsym $mod+Shift+4 move container to workspace number 4
+bindsym $mod+Shift+5 move container to workspace number 5
+bindsym $mod+Shift+6 move container to workspace number 6
+bindsym $mod+Shift+7 move container to workspace number 7
+bindsym $mod+Shift+8 move container to workspace number 8
+bindsym $mod+Shift+9 move container to workspace number 9
+bindsym $mod+Shift+0 move container to workspace number 10
 
 client.focused {{ .accent }} #252930 #f2f2f2 {{ .accent }} {{ .accent }}
 bar {

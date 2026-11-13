@@ -44,10 +44,16 @@ python3 darfinos_control.py style i3-notebook --apply --all-files
 | Super+F1 | Open the shortcut list, also available as the **Atalhos do i3** tab in Rofi. |
 | Super+F2 | Inspect each output’s current resolution and refresh rate. If the built-in panel advertises 1280×720, test it and confirm within 15 seconds to keep it. |
 | Super+Shift+P | Choose a wallpaper that is reapplied at login. Also available through **Fundo** on the bar. |
-| Super+B | Show or hide the bar to free up screen space. |
+| Super+Enter / Super+B / Super+E | Open the terminal, the default browser, or your home folder in the default file manager. |
+| Super+Shift+B | Show or hide the bar to free up screen space. |
+| Super+1–9 / Super+0 | Switch to workspaces 1–10. Add Shift to move the current window. |
+| Super+Ctrl+Tab | Return to the previous workspace. |
+| Super+H / Super+V / Super+Ctrl+E | Split horizontally or vertically, or toggle the current split direction. |
+| Super+W / Super+S | Switch to tabbed or stacked layout. |
 | Super+Shift+Enter or Super+Grave / Super+R | Pocket terminal and arrow-key resizing (Esc to exit). |
 | Brightness and audio keys | Adjust brightness, volume and mute using your existing PipeWire or PulseAudio setup. |
-| Super+L / Print | Lock the screen or capture an area. xss-lock handles locking before suspend. |
+| Print / Super+Shift+S / Shift+Print | The first two select a region. Shift+Print copies the entire screen. |
+| Super+L | Lock the screen. xss-lock also locks before suspend. |
 | Super+N / Super+Shift+N / Super+Ctrl+N | Redisplay the last notification, toggle Do Not Disturb, and dismiss visible pop-ups. |
 
 The 28 px Polybar sits at the top with arrow separators, JetBrains Mono and a

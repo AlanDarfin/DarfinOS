@@ -13,6 +13,23 @@ bar_pid() {
     printf '%s\n' "$pid"
 }
 
+# Desktop IDs are arguments, not shell commands. Launch without a start-page URL.
+launch_desktop() {
+    case "$1" in
+        -*|*/*) return 1 ;;
+        *.desktop) gtk-launch -- "$@" ;;
+        *) return 1 ;;
+    esac
+}
+
+shortcut_notice() {
+    if command -v notify-send >/dev/null; then
+        notify-send 'DarfinOS · Atalhos' "$1"
+    else
+        printf '%s\n' "$1" >&2
+    fi
+}
+
 case "${1:-}" in
     reload)
         i3-msg reload >/dev/null
@@ -56,6 +73,17 @@ case "${1:-}" in
         fi
         exec xss-lock --transfer-sleep-lock -- i3lock --nofork -c 171a1f
         ;;
+    browser)
+        app=$(xdg-settings get default-web-browser 2>/dev/null) || app=
+        if [ -z "$app" ]; then
+            app=$(xdg-mime query default x-scheme-handler/https 2>/dev/null) || app=
+        fi
+        launch_desktop "$app" || shortcut_notice 'Defina um navegador padrão nos aplicativos do sistema.'
+        ;;
+    files)
+        app=$(xdg-mime query default inode/directory 2>/dev/null) || app=
+        launch_desktop "$app" "$HOME" || shortcut_notice 'Defina um gerenciador de arquivos padrão para abrir pastas.'
+        ;;
     apps|windows|shortcuts)
         if command -v rofi >/dev/null; then
             case "$1" in
@@ -77,22 +105,33 @@ case "${1:-}" in
         [ "$#" -eq 1 ] || exit 0
         printf '\000no-custom\037true\n'
         printf '%s\n' \
+            'Super+Enter · Terminal' \
+            'Super+B · Navegador padrão' \
+            'Super+E · Pasta pessoal no gerenciador padrão' \
             'Super+D · Aplicativos' \
             'Super+Tab · Trocar de janela' \
-            'Super+Shift+P · Escolher papel de parede' \
-            'Super+F2 · Ver resolução e modo 720p' \
-            'Super+Enter · Terminal' \
             'Super+Shift+Enter / Super+Grave · Terminal de bolso' \
-            'Super+1/2/3 · Áreas 1 / Web / Escrita' \
+            'Super+1–9 / Super+0 · Ir para áreas 1–10' \
+            'Super+Shift+1–9 / Super+Shift+0 · Mover janela para áreas 1–10' \
+            'Super+Ctrl+Tab · Voltar à área anterior' \
             'Super+setas · Focar outra janela' \
             'Super+Shift+setas · Mover janela' \
+            'Super+Shift+Q · Fechar janela' \
+            'Super+F · Tela cheia' \
+            'Super+Shift+Espaço · Alternar janela flutuante' \
+            'Super+H / Super+V · Dividir na horizontal / vertical' \
+            'Super+W / Super+S · Abas / pilha' \
+            'Super+Ctrl+E · Alternar divisão horizontal / vertical' \
             'Super+R · Redimensionar com as setas (Esc para sair)' \
-            'Super+B · Mostrar ou ocultar a barra' \
+            'Super+F2 · Ver resolução e modo 720p' \
+            'Super+Shift+P · Escolher papel de parede' \
+            'Super+Shift+B · Mostrar ou ocultar a barra' \
             'Super+N · Recuperar última notificação' \
             'Super+Shift+N · Silenciar/reativar notificações' \
             'Super+Ctrl+N · Dispensar notificações' \
+            'Print / Super+Shift+S · Capturar uma área' \
+            'Shift+Print · Copiar tela inteira' \
             'Super+L · Bloquear tela' \
-            'Print · Capturar uma área' \
             'Super+Shift+C · Recarregar configuração'
         ;;
     pocket)
