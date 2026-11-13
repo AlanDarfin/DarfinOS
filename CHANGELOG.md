@@ -1,64 +1,42 @@
-# Changelog · DarfinOS
+# DarfinOS development history
 
-O projeto segue desenvolvimento contínuo. Esta lista destaca mudanças verificáveis, sem prometer suporte universal a todas as combinações de Arch/derivados.
+**🇺🇸 English (default) · [🇧🇷 Português (Brasil)](CHANGELOG.pt-BR.md)**
 
-## Em preparação — detecção de módulos e Chicago95 (novembro de 2026)
+DarfinOS is under continuous development. These notes describe changes implemented in source and reviewed by automated CI; they do not imply complete compatibility with every Arch system, desktop or hardware configuration.
 
-- Checagem `--check-modules` no Bash (TSV) e TUI (JSON) antes de instalar,
-  distinguindo módulos completos, parciais, ausentes e desconhecidos.
-- Omitir apenas módulos comprovadamente completos; evento `STEP_ALREADY`
-  e estado `ALREADY` no histórico e retomada.
-- `--reinstall` no Bash e tecla X na TUI para reexecutar etapas, preservando
-  confirmações e políticas de não sobrescrita.
-- Etapa Xfce com pacotes oficiais, Chicago95 opcional com cópia segura dos
-  temas/ícones do upstream e novo preset `retro`.
-- 41 etapas, seis presets e 13 projetos Labs no catálogo.
+## In development · English website and development releases (November 2026)
 
-## Em preparação — DarfinOS Labs e i3 (novembro de 2026)
+- English is the default language for the website, README and core documentation, with full Portuguese routes, documents and a persistent manual language selector.
+- The website detects Portuguese browser preferences and serves dedicated `/pt-br/` pages with localized navigation and metadata.
+- The new Downloads page always provides a main-branch ZIP instead of an empty releases link, and lists actual available GitHub prerelease artifacts when published.
+- GitHub Actions can publish SHA-256 checked prerelease candidates only after the offline Python/Bash suite and Arch smoke pass for the exact same commit. **No stable release or ISO is implied.**
 
-- Catálogo de 13 projetos externos, upstream e níveis de risco via `--labs`,
-  `--lab-info` e tecla L da TUI.
-- Integração do i3 nos repositórios oficiais e novo preset com XLibre.
-- Etapas opcionais AUR para NsCDE, JuNest, Decman e Metapac, com confirmação
-  especial e sem automatizar execução de seus gerenciadores.
-- Guias somente leitura para Conty, nix-portable, Trinity, yserver, xomposite,
-  Wayback e Booster. Nenhuma alteração automática de boot ou desktop por esses guias.
-- 41 etapas no manifesto e documentação de experimentos/VM.
+## In development · Module checks and Chicago95 (November 2026)
 
-## Em preparação — Control Center, segurança e release (novembro de 2026)
+- Read-only `--check-modules` reports complete, partial, missing and unknown modules before installation.
+- Only verified complete stages are skipped; `STEP_ALREADY` and `ALREADY` are recognized by TUI history and resume logic.
+- `--reinstall` on Bash and the X key in TUI re-execute selected stages without bypassing confirmation or pacman `--needed`.
+- Optional Xfce session, Chicago95 GTK/icon assets copied with safeguards, and the `retro` preset.
+- 41 stages, six presets and 13 independent Labs projects.
 
-- O instalador Bash passa a exigir seleção explícita (`--only`, `--skip` ou `--all`): executar sem opções não instala todas as etapas.
-- `--preflight` verifica condições básicas sem sudo.
-- A etapa `maintenance` depende de `aur_helper`; presets comuns incluem essa dependência. Ausência dos atualizadores essenciais marca a etapa como incompleta.
-- Control Center com estado do sistema, auditoria parcial de pacotes, inspeção de Topgrade/Arch-Update e comparação declarativa de presets.
-- Perfis exportáveis, importáveis com `yes=false` e comparáveis.
-- Backups locais de configurações com SHA256, proteção contra substituição acidental e tentativa de reverter operações interrompidas por erro; **não é rollback de pacotes/sistema**.
-- Testes Bash e Python ampliados, smoke em contêiner Arch, workflow manual de instalação Base e pacote candidato com SHA256.
-- Checklist de VM e documentação de publicação: release estável bloqueada até validar a instalação real e a recuperação.
+## In development · DarfinOS Labs and i3 (November 2026)
 
-## Em preparação — atualização e TUI de novembro de 2026
+- An upstream-linked catalog of 13 independent projects with risk levels and optional installation modes, accessible via `--labs`, `--lab-info` and TUI key L.
+- i3 X11 WM as a separate desktop option alongside SonicDE/XLibre.
+- Individually confirmed AUR modules for NsCDE, JuNest, Decman and Metapac, without automatically running their system management commands.
+- Documentation-only research into Conty, nix-portable, Trinity, yserver, xomposite, Wayback and Booster.
 
-- Topgrade integrado à TUI: **T** abre o atualizador com confirmação e preserva a interação nativa no terminal.
-- **`topgrade-bin`** e **`arch-update-bin`** passam para a etapa `maintenance` em vez de dependerem do pacote opcional de extras.
-- `arch-update-bin` entrega Arch-Update e o aplicativo `arch-update-tray` juntos; configuração do XDG Autostart e verificação periódica tentada com avisos claros.
-- `maintenance` passa a ser selecionada nos presets básicos, de desktop e jogos.
-- Inspeção e revisão da TUI mostram descrições longas, prévia parcial dos pacotes por origem e escondem dependências quando não há pendências.
-- Testes offline para a integração e as novas informações da interface.
+## In development · Control Center and safe installation (November 2026)
 
-## Em preparação — auditoria de outubro de 2026
+- Module dependencies, package audit previews, status/maintenance diagnostics, a persistent run journal and safe recovery selection.
+- JSON profiles with import/export and diff.
+- Allowlisted HOME configuration archives with SHA-256 integrity, preview-before-restore and confirmation on overwrite.
+- Installer now requires explicit `--only`, `--skip` or `--all` instead of executing everything by default.
+- Arch container smoke tests, Python/Bash offline tests and a manual candidate packaging workflow.
+- Important limitations and a graphical VM validation checklist documented separately.
 
-### Segurança e estabilidade
-- Seleção inicial da TUI reduzida ao preset `minimal`; o `full` passa a ser escolha explícita.
-- Código de saída do Bash não sinaliza mais sucesso se houver etapas falhas ou bloqueadas.
-- Ajuste de tema Flatpak deixou de forçar globalmente o Breeze.
+## Background
 
-### Ferramentas
-- Comandos `--doctor`, `--doctor-json` e `--plan` para diagnóstico e planejamento sem modificações.
-- Filtro de etapas da TUI reconhece aproximações e pequenos erros de digitação.
+The project started as a personal Arch Linux post-install customization collection, evolving into a modular installer and terminal interface. The design includes optional SonicDE and XLibre, maintenance utilities, gaming tools and integrations with independent open-source projects.
 
-### Manutenção
-- Documentação sincronizada com as **41 etapas** do instalador.
-- Guia de segurança e cobertura adicional de testes.
-- Consolidação prevista das verificações de CI.
-
-Histórico anterior: [commits](https://github.com/AlanDarfin/DarfinOS/commits/main) · [releases](https://github.com/AlanDarfin/DarfinOS/releases)
+[Documentation](docs/README.md) · [Testing](docs/TESTES.md) · [Download and release policy](docs/LANCAMENTO.md)
