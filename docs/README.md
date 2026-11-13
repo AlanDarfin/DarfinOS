@@ -2,7 +2,7 @@
 
 **🇺🇸 English (default) · [🇧🇷 Português (Brasil)](pt-BR/README.md)**
 
-DarfinOS is an opinionated Arch Linux post-install toolkit with **63 installer stages**, **seven presets**, the **Control Center** terminal interface and **28 experimental Labs projects**. It is not an independently bootable Linux distribution.
+DarfinOS is an opinionated Arch Linux post-install toolkit with **64 installer stages**, **seven presets**, the **Control Center** terminal interface and **29 experimental Labs projects**. It is not an independently bootable Linux distribution.
 
 Start with the [English README](../README.md), or browse these guides:
 

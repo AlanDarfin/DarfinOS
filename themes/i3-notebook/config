@@ -1,0 +1,91 @@
+# DarfinOS · i3 Notebook (720p)
+set $mod Mod4
+set $profile ~/.config/darfinos/i3-notebook
+font pango:DejaVu Sans 10
+default_border pixel 2
+default_floating_border pixel 2
+gaps inner 4
+gaps outer 0
+smart_gaps on
+floating_modifier $mod
+
+exec --no-startup-id sh $profile/session.sh start
+
+bindsym $mod+Return exec i3-sensible-terminal
+bindsym $mod+d exec --no-startup-id sh $profile/session.sh apps
+bindsym $mod+Tab exec --no-startup-id sh $profile/session.sh windows
+bindsym $mod+F1 exec --no-startup-id sh $profile/session.sh shortcuts
+bindsym --release $mod+grave exec --no-startup-id sh $profile/session.sh pocket
+for_window [instance="^darfinos-pocket$"] mark --add darfinos-pocket, floating enable, resize set 75 ppt 60 ppt, move position center, move scratchpad, scratchpad show
+
+bindsym $mod+Shift+q kill
+bindsym $mod+Shift+c reload
+bindsym $mod+Shift+r restart
+bindsym $mod+Shift+e exec i3-nagbar -t warning -m 'Encerrar a sessão i3?' -B 'Sair' 'i3-msg exit'
+bindsym $mod+l exec --no-startup-id i3lock -c 171a1f
+bindsym --release Print exec --no-startup-id flameshot gui
+bindsym $mod+b bar mode toggle notebook
+
+bindsym XF86MonBrightnessUp exec --no-startup-id brightnessctl -c backlight set +5%
+bindsym XF86MonBrightnessDown exec --no-startup-id brightnessctl -c backlight --min-value=1 set 5%-
+bindsym XF86AudioRaiseVolume exec --no-startup-id sh $profile/session.sh volume-up
+bindsym XF86AudioLowerVolume exec --no-startup-id sh $profile/session.sh volume-down
+bindsym XF86AudioMute exec --no-startup-id sh $profile/session.sh volume-mute
+bindsym XF86AudioMicMute exec --no-startup-id sh $profile/session.sh mic-mute
+bindsym $mod+n exec --no-startup-id dunstctl history-pop
+bindsym $mod+Shift+n exec --no-startup-id dunstctl set-paused toggle
+bindsym $mod+Ctrl+n exec --no-startup-id dunstctl close-all
+
+bindsym $mod+Left focus left
+bindsym $mod+Down focus down
+bindsym $mod+Up focus up
+bindsym $mod+Right focus right
+bindsym $mod+Shift+Left move left
+bindsym $mod+Shift+Down move down
+bindsym $mod+Shift+Up move up
+bindsym $mod+Shift+Right move right
+bindsym $mod+h split h
+bindsym $mod+v split v
+bindsym $mod+w layout tabbed
+bindsym $mod+e layout toggle split
+bindsym $mod+f fullscreen toggle
+bindsym $mod+Shift+space floating toggle
+bindsym $mod+space focus mode_toggle
+
+bindsym $mod+r mode "resize"
+mode "resize" {
+    bindsym Left resize shrink width 10 px or 5 ppt
+    bindsym Down resize grow height 10 px or 5 ppt
+    bindsym Up resize shrink height 10 px or 5 ppt
+    bindsym Right resize grow width 10 px or 5 ppt
+    bindsym Return mode "default"
+    bindsym Escape mode "default"
+    bindsym $mod+r mode "default"
+}
+
+set $ws1 "1: Terminal"
+set $ws2 "2: Web"
+set $ws3 "3: Escrita"
+bindsym $mod+1 workspace $ws1
+bindsym $mod+2 workspace $ws2
+bindsym $mod+3 workspace $ws3
+bindsym $mod+Shift+1 move container to workspace $ws1
+bindsym $mod+Shift+2 move container to workspace $ws2
+bindsym $mod+Shift+3 move container to workspace $ws3
+
+client.focused {{ .accent }} #252930 #f2f2f2 {{ .accent }} {{ .accent }}
+bar {
+    id notebook
+    position bottom
+    mode dock
+    hidden_state hide
+    modifier $mod
+    strip_workspace_numbers yes
+    status_command sh $profile/session.sh status
+    colors {
+        background #171a1f
+        statusline #f2f2f2
+        separator #535861
+        focused_workspace {{ .accent }} #252930 #ffffff
+    }
+}

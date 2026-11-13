@@ -55,6 +55,35 @@ class CustomizationTests(unittest.TestCase):
         self.assertIn("mantido", msg)
         self.assertEqual(target.read_bytes(), b"new custom configuration")
 
+    def test_i3_notebook_matches_accents_preserves_global_settings_and_undoes(self):
+        target = self.home / control.NOTEBOOK_I3_CONFIG
+        target.parent.mkdir(parents=True)
+        target.write_bytes(b"my old i3\n")
+        dunst = self.home / ".config/dunst/dunstrc"
+        dunst.parent.mkdir()
+        dunst.write_bytes(b"my global dunst\n")
+        with self.fake_chezmoi():
+            plan, preview = control.style_preview("i3-notebook", "#aacc33", self.home)
+            self.assertEqual(len(plan), 5)
+            self.assertIn("my old i3", preview)
+            for name, (_, content) in plan.items():
+                if not name.endswith("session.sh"):
+                    self.assertIn(b"#aacc33", content)
+                self.assertNotIn(b"{{ .accent }}", content)
+                if name != control.NOTEBOOK_I3_CONFIG:
+                    self.assertFalse((self.home / name).exists())
+            with self.assertRaisesRegex(ValueError, "aplique também"):
+                control.style_apply("i3-notebook", plan, [control.NOTEBOOK_I3_CONFIG], self.home)
+            self.assertEqual(target.read_bytes(), b"my old i3\n")
+            control.style_apply("i3-notebook", plan, list(plan), self.home)
+            self.assertIn(b"DarfinOS", target.read_bytes())
+            self.assertEqual(dunst.read_bytes(), b"my global dunst\n")
+            control.style_undo(control.style_history(self.home)[0], True, self.home)
+        self.assertEqual(target.read_bytes(), b"my old i3\n")
+        self.assertEqual(dunst.read_bytes(), b"my global dunst\n")
+        for name in control.NOTEBOOK_STYLE_FILES:
+            self.assertFalse((self.home / control.NOTEBOOK_STYLE_DIR / name).exists())
+
     def test_kvantum_only_edits_the_intended_config_keys(self):
         base = self.home / "base"
         base.mkdir()

@@ -1,0 +1,51 @@
+/* DarfinOS · Rofi 720p */
+* {
+    font: "DejaVu Sans 11";
+    panel: #171a1f;
+    surface: #252930;
+    text: #f2f2f2;
+    muted: #c0c4cd;
+    accent: {{ .accent }};
+    background-color: transparent;
+    text-color: @text;
+}
+window {
+    location: center;
+    width: 55%;
+    border: 2px;
+    border-color: @accent;
+    border-radius: 8px;
+    background-color: @panel;
+}
+mainbox {
+    padding: 12px;
+    spacing: 8px;
+    children: [inputbar, message, listview, mode-switcher];
+}
+inputbar {
+    background-color: @surface;
+    padding: 8px;
+    spacing: 8px;
+    children: [prompt, entry];
+}
+prompt { text-color: @accent; }
+listview {
+    lines: 7;
+    fixed-height: false;
+    scrollbar: false;
+    spacing: 2px;
+}
+element {
+    padding: 6px 8px;
+    spacing: 8px;
+    border-radius: 5px;
+}
+element-icon { size: 18px; }
+element-text { text-color: inherit; }
+element normal normal, element alternate normal { text-color: @text; }
+element selected {
+    background-color: @surface;
+    text-color: @accent;
+}
+button { padding: 6px; text-color: @muted; }
+button selected { text-color: @accent; }

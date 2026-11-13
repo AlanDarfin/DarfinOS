@@ -45,7 +45,7 @@ STEPS=(
   lab_conty lab_nix_portable lab_trinity lab_yserver lab_xomposite lab_wayback lab_booster
   lab_windowmaker lab_notion lab_e16 lab_xpra lab_opengamepadui
   lab_wmutils lab_pkgsrc lab_pipeworld lab_chezmoi lab_matugen
-  lab_autorandr lab_desktop_config lab_etckeeper lab_rustic lab_kvantum
+  lab_autorandr lab_desktop_config lab_etckeeper lab_rustic lab_kvantum lab_i3_notebook
 )
 
 declare -A STEP_DESC=(
@@ -112,6 +112,7 @@ declare -A STEP_DESC=(
   [lab_etckeeper]="Labs · etckeeper"
   [lab_rustic]="Labs · rustic"
   [lab_kvantum]="Labs · Kvantum"
+  [lab_i3_notebook]="Labs · i3 Notebook: Rofi, Dunst, i3status-rust e teclas do notebook"
 )
 
 # Explicações para a TUI: informações gerais, sem prometer instalações condicionais.
@@ -179,6 +180,7 @@ declare -A STEP_INFO=(
   [lab_etckeeper]="Histórico local de /etc; inicialização separada, sem envio remoto."
   [lab_rustic]="Backups criptografados em destino escolhido; sem repositório automático."
   [lab_kvantum]="Temas Qt SVG para SonicDE com opção de suporte Qt5."
+  [lab_i3_notebook]="Instala i3 e ferramentas do perfil Notebook sem alterar a sessão ou os arquivos pessoais."
 )
 
 # ----------------------------------------------------------
@@ -190,7 +192,7 @@ LABS=(
   yserver xomposite wayback booster
   windowmaker notion e16 xpra opengamepadui wmutils
   pkgsrc pipeworld chezmoi matugen autorandr desktop_config
-  etckeeper rustic kvantum
+  etckeeper rustic kvantum i3_notebook
 )
 declare -A LABS_URL=(
   [i3]="https://i3wm.org/"
@@ -221,6 +223,7 @@ declare -A LABS_URL=(
   [etckeeper]="https://etckeeper.branchable.com/"
   [rustic]="https://rustic.cli.rs/"
   [kvantum]="https://github.com/tsujan/Kvantum"
+  [i3_notebook]="https://dunst-project.org/"
 )
 declare -A LABS_INFO=(
   [i3]="WM tiling para X11: janela alternativa, sem remover SonicDE."
@@ -251,6 +254,7 @@ declare -A LABS_INFO=(
   [etckeeper]="Histórico local de /etc; inicialização separada, sem envio remoto."
   [rustic]="Backups criptografados em destino escolhido; sem repositório automático."
   [kvantum]="Temas Qt SVG para SonicDE com opção de suporte Qt5."
+  [i3_notebook]="Pacotes Arch para i3 com notificações Dunst, launcher Rofi, bateria e controles 720p. Ativação separada na Oficina."
 )
 declare -A LABS_RISK=(
   [i3]="opcional"
@@ -281,6 +285,7 @@ declare -A LABS_RISK=(
   [etckeeper]="avancado"
   [rustic]="opcional"
   [kvantum]="opcional"
+  [i3_notebook]="opcional"
 )
 declare -A LABS_MODE=(
   [i3]="pacman"
@@ -311,6 +316,7 @@ declare -A LABS_MODE=(
   [etckeeper]="pacman"
   [rustic]="pacman"
   [kvantum]="pacman"
+  [i3_notebook]="pacman"
 )
 declare -A LABS_STEP=(
   [i3]="i3"
@@ -341,6 +347,7 @@ declare -A LABS_STEP=(
   [etckeeper]="lab_etckeeper"
   [rustic]="lab_rustic"
   [kvantum]="lab_kvantum"
+  [i3_notebook]="lab_i3_notebook"
 )
 
 # ----------------------------------------------------------
@@ -612,6 +619,7 @@ module_probe() {
     lab_etckeeper) required=(etckeeper git) ;;
     lab_rustic) required=(rustic) ;;
     lab_kvantum) required=(kvantum) ;;
+    lab_i3_notebook) required=(i3-wm i3status i3lock dmenu xorg-xinit chezmoi rofi dunst i3status-rust brightnessctl xss-lock flameshot xterm ttf-dejavu libpulse libnotify) ;;
     lab_pkgsrc)
       if [[ -x "$HOME/.local/share/darfinos/pkgsrc-prefix/bin/bmake" && -x "$HOME/.local/share/darfinos/pkgsrc-prefix/sbin/pkg_info" && -d "$HOME/.local/share/darfinos/pkgsrc-tree/pkgtools" ]]; then
         MODULE_STATUS=installed; MODULE_REASON="Bootstrap pkgsrc e árvore de pacotes encontrados."
@@ -1797,6 +1805,14 @@ step_lab_kvantum() {
   fi
   info "No SonicDE, selecione Kvantum em Estilo dos aplicativos. Use o Kvantum Manager para escolher o tema."
   info "No Control Center: perfil sonicde-kvantum para prévia/aplicação do estilo KvDark."
+}
+
+step_lab_i3_notebook() {
+  lab_confirm i3_notebook "Instala o i3 e as ferramentas Notebook. Não aplica o perfil nem troca sua sessão." || return 1
+  install_pkgs i3-wm i3status i3lock dmenu xorg-xinit chezmoi rofi dunst i3status-rust \
+    brightnessctl xss-lock flameshot xterm ttf-dejavu libpulse libnotify || return 1
+  info "Abra a Oficina de Temas (W) e selecione i3-notebook. Entre novamente na sessão i3 para ativar."
+  info "O perfil usa o áudio existente (wpctl ou pactl); não troca o servidor de áudio."
 }
 
 step_i3() {

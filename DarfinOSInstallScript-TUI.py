@@ -985,14 +985,16 @@ def profile_screen(win, st: State) -> None:
 
 
 def styles_screen(win, st: State, allow_changes: bool) -> None:
-    lines = ["1–4: prévia de perfil · P: paleta · H: histórico · U: desfazer · X: Xfce", ""]
     profiles = list(control.STYLE_PROFILES)
+    options = {str(i): key for i, key in enumerate(profiles, 1)}
+    lines = [f"1–{len(profiles)}: prévia de perfil · P: paleta · H: histórico · U: desfazer · X: Xfce", ""]
     lines += [f"{i}. {key} · {control.STYLE_PROFILES[key]}" for i, key in enumerate(profiles, 1)]
     lines += ["", "Os presets instalam pacotes. Os perfis abaixo alteram arquivos selecionados no HOME.",
               "No SonicDE, reinicie os aplicativos Qt ou a sessão para ver o Kvantum.",
-              "Window Maker: selecione DarfinOS-1995 no menu de estilos após aplicar."]
+              "Window Maker: selecione DarfinOS-1995 no menu de estilos após aplicar.",
+              "i3 Notebook: instale lab_i3_notebook em Labs. Entre novamente na sessão i3 após aplicar."]
     scroll_screen(win, "◆ DARFINOS · PERFIS DE PERSONALIZAÇÃO", "\n".join(lines))
-    action = prompt(win, "Perfil 1–4 / P paleta / H histórico / U desfazer / X Xfce:")
+    action = prompt(win, f"Perfil 1–{len(profiles)} / P paleta / H histórico / U desfazer / X Xfce:")
     if not action:
         return
     try:
@@ -1020,8 +1022,8 @@ def styles_screen(win, st: State, allow_changes: bool) -> None:
                 scroll_screen(win, "PRÉVIA · DESFAZER", control.style_undo(run))
                 if allow_changes and (prompt(win, "Digite DESFAZER para aplicar:") or "").lower() == 'desfazer':
                     scroll_screen(win, "PERSONALIZAÇÃO · RESTAURADA", control.style_undo(run, apply=True))
-        elif action in ('1', '2', '3', '4'):
-            profile = profiles[int(action) - 1]
+        elif action in options:
+            profile = options[action]
             accent = prompt(win, "Cor de destaque (#RRGGBB):", control.DEFAULT_ACCENT)
             if accent is None:
                 return
@@ -1029,6 +1031,12 @@ def styles_screen(win, st: State, allow_changes: bool) -> None:
             scroll_screen(win, "PRÉVIA DE PERSONALIZAÇÃO", preview)
             if not allow_changes:
                 st.message = '--dry-run ativo. A prévia não alterou arquivos.'
+                return
+            if profile == "i3-notebook":
+                count = sum(old != new for old, new in plan.values())
+                if count and (prompt(win, f"Digite APLICAR para atualizar {count} arquivos do i3 Notebook:") or "").lower() == "aplicar":
+                    report = control.style_apply(profile, plan, list(plan))
+                    scroll_screen(win, "PERSONALIZAÇÃO", report + "\nEntre novamente na sessão i3.")
                 return
             selected = []
             for rel, (old, new) in plan.items():
