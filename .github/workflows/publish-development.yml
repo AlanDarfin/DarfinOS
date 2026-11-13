@@ -1,0 +1,80 @@
+name: DarfinOS · Development preview
+
+on:
+  workflow_run:
+    workflows: ["DarfinOS · Smoke real de ambiente Arch"]
+    types: [completed]
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: candidate-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Tested prerelease (never stable)
+    if: >-
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - name: Require successful matching offline tests
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 40); do
+            result="$(gh api "/repos/$GITHUB_REPOSITORY/actions/workflows/tests.yml/runs?head_sha=$COMMIT_SHA&event=push&per_page=20" --jq '[.workflow_runs[] | select(.head_sha == "'"$COMMIT_SHA"'")] | first | .conclusion // "pending"')"
+            case "$result" in
+              success) echo "Offline tests passed: $COMMIT_SHA"; exit 0 ;;
+              failure|cancelled|timed_out|action_required|startup_failure)
+                echo "::error::Matching offline suite failed: $result"
+                exit 1 ;;
+              *) sleep 12 ;;
+            esac
+          done
+          echo "::error::Timed out waiting for matching offline suite"
+          exit 1
+
+      - name: Checkout the validated commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.COMMIT_SHA }}
+          persist-credentials: false
+
+      - name: Verify package structure
+        run: |
+          set -euo pipefail
+          bash -n DarfinOSInstallScript.sh
+          python3 -m py_compile DarfinOSInstallScript-TUI.py darfinos_control.py
+          python3 DarfinOSInstallScript-TUI.py --doctor
+
+      - name: Package candidate and verify checksums
+        id: package
+        run: |
+          set -euo pipefail
+          version="0.1.0-rc${GITHUB_RUN_NUMBER}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          bash scripts/package_release.sh "$version"
+          (cd dist && sha256sum -c "darfinos-$version.tar.gz.sha256")
+
+      - name: Publish clearly labeled GitHub prerelease
+        env:
+          VERSION: ${{ steps.package.outputs.version }}
+        run: |
+          set -euo pipefail
+          tag="v$VERSION"
+          test "$(git rev-parse HEAD)" = "$COMMIT_SHA"
+          gh release create "$tag" \
+            "dist/darfinos-$VERSION.tar.gz" \
+            "dist/darfinos-$VERSION.tar.gz.sha256" \
+            --target "$COMMIT_SHA" \
+            --title "DarfinOS $VERSION · Development preview" \
+            --notes "Tested development candidate at commit $COMMIT_SHA. NOT a stable release. The offline suite and Arch container smoke passed; full graphical VM/recovery testing is still pending. Verify the attached SHA256. No ISO is provided." \
+            --prerelease
