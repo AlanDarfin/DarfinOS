@@ -812,7 +812,7 @@ def draw_v3(win, st: State, visible: list[int], cursor: int, top: int,
     line(win, 1)
     profile = st.profile_name or 'personalizado'
     put(win, 2, 2, f'FONTE  {st.source}  ·  PERFIL  {profile}'[:w-4], colors('muted'))
-    put(win, 3, 2, f'SHA  {digest[:12]}   AUTO -y  {"SIM" if st.yes else "NÃO"}', colors('muted'))
+    put(win, 3, 2, f'SHA {digest[:12]}  -y {"SIM" if st.yes else "NÃO"}  REINSTALAR {"SIM" if st.force_modules else "NÃO"}', colors('muted'))
     bar_width = max(8, w - 39)
     put(win, 3, min(w-2, 38), progress_meter(selected, len(st.steps), bar_width), colors('green'))
     line(win, 4)
@@ -829,7 +829,8 @@ def draw_v3(win, st: State, visible: list[int], cursor: int, top: int,
             if active:
                 put(win, y, 1, ' ' * (pane - 2), attr)
             marker = '■' if checked else '□'
-            label = f'{marker} {step.name:<20} {step.desc}'
+            status_tag = '✓ ' if st.statuses.get(step.name, '').startswith('installed:') else ''
+            label = f'{marker} {status_tag}{step.name:<19} {step.desc}'
             put(win, y, 2, label[:pane-4], attr | (colors('green') if checked else 0))
         if not visible:
             put(win, 7, 3, 'Nenhum resultado para a busca.', colors('yellow'))
@@ -859,20 +860,22 @@ def draw_v3(win, st: State, visible: list[int], cursor: int, top: int,
                 if missing:
                     put(win, h-4, 2, 'Dependências pendentes: ' + ', '.join(missing), colors('yellow'))
         put(win, h-2, 2, '↑↓ navegar · Espaço marcar · G grupo · A/N todos/nenhum · / busca · F filtro', colors('muted'))
-        put(win, h-1, 2, 'R revisar · L Labs · C sistema · V auditar · O presets · M manutenção · P perfis · Q sair', colors('muted'))
+        put(win, h-1, 2, 'R revisar · I checar · X reinstalar · L Labs · C sistema · V auditar · Q sair', colors('muted'))
     else:
         put(win, 5, 2, '02  REVISÃO DA INSTALAÇÃO  /  ENTER CONFIRMA', curses.A_BOLD | colors('pink'))
         chosen = [step for step in st.steps if step.name in st.selected]
         rows = []
         for step in chosen:
             rows.append(f' ■ {step.name:<20} {step.desc}')
+            if step.name in st.statuses:
+                rows.append('    Estado local: ' + st.statuses[step.name])
             packages = st.packages.get(step.name, [])
             rows.append('    Pacotes (prévia parcial): ' + package_summary(packages, 7))
         missing = st.missing()
         if missing:
             rows += ['', 'DEPENDÊNCIAS PENDENTES']
             rows += [f' ! {name}: {", ".join(deps)}' for name, deps in missing.items()]
-        rows += ['', 'D: incluir dependências   Y: alternar -y   B: aplicativos',
+        rows += ['', 'D: incluir dependências   Y: alternar -y   X: forçar reinstalação   B: aplicativos',
                  'ATENÇÃO: o instalador pode executar comandos com sudo.']
         wrapped = []
         for row in rows:
@@ -1026,6 +1029,7 @@ def ui_v3(win, st: State, digest: str, allow_updates: bool = True) -> str:
             elif key in (curses.KEY_UP, ord('k')): scroll = max(0, scroll-1)
             elif key in (ord('d'), ord('D')): st.add_deps()
             elif key in (ord('y'), ord('Y')): st.yes = not st.yes
+            elif key in (ord('x'), ord('X')): st.force_modules = not st.force_modules
             elif key in (ord('b'), ord('B')): apps_screen(win, st, CURRENT_SCRIPT)
             elif key in (10, 13) and st.selected: return 'run'
             continue
@@ -1058,6 +1062,9 @@ def ui_v3(win, st: State, digest: str, allow_updates: bool = True) -> str:
         elif key in (ord('p'), ord('P')): profile_screen(win, st)
         elif key in (ord('o'), ord('O')): preset_screen(win, st)
         elif key in (ord('i'), ord('I')): inspect_steps(st)
+        elif key in (ord('x'), ord('X')):
+            st.force_modules = not st.force_modules
+            st.message = 'Reinstalação: ' + ('FORÇADA' if st.force_modules else 'com detecção automática')
         elif key in (ord('b'), ord('B')): apps_screen(win, st, CURRENT_SCRIPT)
         elif key in (ord('m'), ord('M')): maintenance_screen(win)
         elif key in (ord('l'), ord('L')): labs_screen(win, st, CURRENT_SCRIPT)
