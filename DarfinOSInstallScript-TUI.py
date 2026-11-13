@@ -86,6 +86,32 @@ def parse_script(path: Path) -> list[Step]:
     return result
 
 
+
+def labs_catalog(script: Path) -> list[dict]:
+    """Lê o catálogo do Bash sem executar comandos ou baixar dados."""
+    source = script.read_text(encoding='utf-8')
+    pair = re.compile(r'^\s*\[([\w-]+)\]\s*=\s*["\'](.*)["\']\s*(?:#.*)?$', re.M)
+    projects = []
+    for raw in block(source, 'LABS').splitlines():
+        projects += raw.split('#', 1)[0].split()
+    tables = {field: dict(pair.findall(block(source, key))) for key, field in (
+        ('LABS_URL', 'url'), ('LABS_INFO', 'description'), ('LABS_RISK', 'risk'),
+        ('LABS_MODE', 'mode'), ('LABS_STEP', 'step'))}
+    if not projects or len(projects) != len(set(projects)):
+        raise ValueError('Catálogo Labs vazio ou duplicado.')
+    result = []
+    for name in projects:
+        data = {'id': name}
+        for field in ('url', 'description', 'risk', 'mode'):
+            if name not in tables[field]:
+                raise ValueError(f'Lab {name}: metadado {field} ausente.')
+            data[field] = tables[field][name]
+        if not data['url'].startswith('https://'):
+            raise ValueError('Lab sem URL HTTPS: ' + name)
+        data['step'] = tables['step'].get(name)
+        result.append(data)
+    return result
+
 def fetch_script() -> tuple[Path, str]:
     CACHE.mkdir(parents=True, exist_ok=True)
     target = CACHE / NAME
@@ -166,7 +192,7 @@ class State:
             if not query:
                 matches.append((0, index))
                 continue
-            fields = (step.name, step.desc, step.group)
+            fields = (step.name, step.desc, step.group, step.detail)
             joined = " ".join(fields).casefold()
             if step.name.casefold() == query:
                 score = 100
@@ -807,7 +833,7 @@ def draw_v3(win, st: State, visible: list[int], cursor: int, top: int,
                 if missing:
                     put(win, h-4, 2, 'Dependências pendentes: ' + ', '.join(missing), colors('yellow'))
         put(win, h-2, 2, '↑↓ navegar · Espaço marcar · G grupo · A/N todos/nenhum · / busca · F filtro', colors('muted'))
-        put(win, h-1, 2, 'R revisar · C sistema · V auditar · O presets · P perfis · M manutenção · T Topgrade · Z retomar · Q sair', colors('muted'))
+        put(win, h-1, 2, 'R revisar · L Labs · C sistema · V auditar · O presets · M manutenção · P perfis · Q sair', colors('muted'))
     else:
         put(win, 5, 2, '02  REVISÃO DA INSTALAÇÃO  /  ENTER CONFIRMA', curses.A_BOLD | colors('pink'))
         chosen = [step for step in st.steps if step.name in st.selected]
@@ -833,6 +859,73 @@ def draw_v3(win, st: State, visible: list[int], cursor: int, top: int,
     put(win, h-1 if mode == 'review' else h-3, 2, st.message[:w-4], colors('yellow'))
     win.refresh()
 
+
+
+def labs_screen(win, st: State, script: Path) -> None:
+    """Catálogo navegável. Espaço apenas marca etapa opcional."""
+    try:
+        projects = labs_catalog(script)
+    except (OSError, ValueError) as exc:
+        st.message = 'Labs: ' + str(exc)
+        return
+    cursor, top = 0, 0
+    while True:
+        h, w = win.getmaxyx()
+        win.erase()
+        if h < 13 or w < 48:
+            put(win, 1, 2, 'Labs exige 48x13. Esc retorna.')
+            win.refresh()
+            if win.getch() in (27, ord('q'), ord('Q')): return
+            continue
+        height = max(1, h-8)
+        if cursor < top: top = cursor
+        if cursor >= top+height: top = cursor-height+1
+        put(win, 0, 2, '◆ DARFINOS LABS · PROJETOS ORIGINAIS', curses.A_BOLD | colors('pink'))
+        line(win, 1)
+        put(win, 2, 2, 'AUR: revisão obrigatória. Guias não instalam nada.', colors('yellow'))
+        for idx in range(top, min(len(projects), top+height)):
+            project = projects[idx]
+            step = project['step']
+            selected = bool(step and step in st.selected)
+            marker = '■' if selected else '□' if step else '·'
+            caption = f'{marker} {project["id"]:<14} [{project["risk"]:<9}] {project["mode"]}'
+            put(win, 3+idx-top, 2, caption[:w-4],
+                (curses.A_REVERSE if idx == cursor else 0) |
+                (colors('green') if selected else 0))
+        current = projects[cursor]
+        line(win, h-5)
+        put(win, h-4, 2, current['description'][:w-4])
+        put(win, h-3, 2, current['url'][:w-4], colors('yellow'))
+        put(win, h-2, 2, '↑↓ mover · Enter detalhes · Espaço selecionar · Esc sair'[:w-4],
+            colors('muted'))
+        put(win, h-1, 2, 'Selecionar não executa; revisar antes da instalação.'[:w-4], colors('muted'))
+        win.refresh()
+        key = win.getch()
+        if key in (27, ord('q'), ord('Q')): return
+        if key in (curses.KEY_DOWN, ord('j')): cursor = min(len(projects)-1, cursor+1)
+        elif key in (curses.KEY_UP, ord('k')): cursor = max(0, cursor-1)
+        elif key == curses.KEY_NPAGE: cursor = min(len(projects)-1, cursor+height)
+        elif key == curses.KEY_PPAGE: cursor = max(0, cursor-height)
+        elif key in (10, 13):
+            detail = '\n'.join([
+                'PROJETO: ' + current['id'],
+                'NÍVEL: ' + current['risk'],
+                'MÉTODO: ' + current['mode'],
+                'ETAPA: ' + (current['step'] or 'guia manual'), '',
+                current['description'], '', 'LINK UPSTREAM:', current['url'], '',
+                'Projetos independentes. O catálogo não executa links remotos.'
+            ])
+            scroll_screen(win, 'DARFINOS LABS · '+current['id'], detail)
+        elif key == ord(' '):
+            step = current['step']
+            if not step or step not in st.lookup:
+                st.message = current['id'] + ': somente guia manual.'
+            elif step in st.selected:
+                st.selected.remove(step)
+                st.message = step + ' desmarcado.'
+            else:
+                st.selected.add(step)
+                st.message = step + ' marcado; confirme dependências e riscos.'
 
 def profile_screen(win, st: State) -> None:
     profiles = [p.stem for p in profile_paths()]
@@ -923,9 +1016,13 @@ def ui_v3(win, st: State, digest: str, allow_updates: bool = True) -> str:
         elif key in (ord('g'), ord('G')) and visible:
             group = st.steps[visible[current]].group
             names = {s.name for s in st.steps if s.group == group}
-            if names <= st.selected: st.selected -= names
+            if group.startswith('DarfinOS Labs'):
+                st.message = 'Labs: selecione projetos individualmente com L ou Espaço.'
+            elif names <= st.selected: st.selected -= names
             else: st.selected |= names
-        elif key in (ord('a'), ord('A')): st.selected = set(st.lookup)
+        elif key in (ord('a'), ord('A')):
+            st.selected = {name for name in st.lookup if not name.startswith('lab_')}
+            st.message = 'Marcadas etapas tradicionais. Labs AUR requer seleção individual.'
         elif key in (ord('n'), ord('N')): st.selected.clear()
         elif key in (ord('f'), ord('F')): st.show_selected = not st.show_selected; current = top = 0
         elif key == ord('/'):
@@ -937,6 +1034,7 @@ def ui_v3(win, st: State, digest: str, allow_updates: bool = True) -> str:
         elif key in (ord('i'), ord('I')): inspect_steps(st)
         elif key in (ord('b'), ord('B')): apps_screen(win, st, CURRENT_SCRIPT)
         elif key in (ord('m'), ord('M')): maintenance_screen(win)
+        elif key in (ord('l'), ord('L')): labs_screen(win, st, CURRENT_SCRIPT)
         elif key in (ord('c'), ord('C')): control_center_screen(win)
         elif key in (ord('v'), ord('V')): audit_screen(win, st)
         elif key in (ord('t'), ord('T')): launch_topgrade(win, st, allow_updates)
@@ -1103,8 +1201,9 @@ def recovery_screen(win, st: State, script: Path):
 PRESETS = {
     'minimal': ('Base enxuta', ('pacman_conf', 'mirrors', 'sysupgrade', 'base', 'aur_helper', 'fonts', 'hardware', 'cli_tools', 'maintenance')),
     'desktop': ('SonicDE + XLibre e desktop', ('pacman_conf', 'mirrors', 'repo_xlibre', 'repo_sonicde', 'sysupgrade', 'base', 'aur_helper', 'fonts', 'hardware', 'xlibre', 'sonicde', 'desktop_extras', 'bluetooth', 'cli_tools', 'shells', 'flatpak', 'apps', 'maintenance')),
+    'i3': ('i3 + XLibre, sem SonicDE', ('pacman_conf', 'mirrors', 'repo_xlibre', 'sysupgrade', 'base', 'aur_helper', 'fonts', 'hardware', 'xlibre', 'i3', 'cli_tools', 'maintenance')),
     'gaming': ('Desktop e jogos', ('pacman_conf', 'mirrors', 'repo_xlibre', 'repo_sonicde', 'sysupgrade', 'base', 'aur_helper', 'fonts', 'hardware', 'xlibre', 'sonicde', 'desktop_extras', 'bluetooth', 'cli_tools', 'flatpak', 'gaming', 'maintenance')),
-    'full': ('Todas as etapas, inclusive Bedrock (RISCO)', tuple()),
+    'full': ('Etapas convencionais, inclusive Bedrock; Labs AUR fora', tuple()),
 }
 
 
@@ -1112,7 +1211,7 @@ def preset_selection(name: str, steps: list[Step]) -> set[str]:
     if name not in PRESETS:
         raise ValueError('Preset desconhecido: ' + name)
     known = {step.name for step in steps}
-    chosen = set(known if name == 'full' else PRESETS[name][1])
+    chosen = set((step for step in known if not step.startswith('lab_')) if name == 'full' else PRESETS[name][1])
     unknown = chosen - known
     if unknown:
         raise ValueError('Preset incompatível com o Bash: ' + ', '.join(sorted(unknown)))
@@ -1145,7 +1244,7 @@ def preset_screen(win, st: State) -> None:
     lines = ['PRESETS OFICIAIS · nenhum executa comandos ao selecionar', '']
     for index, (name, (description, _)) in enumerate(PRESETS.items(), 1):
         lines.append(f'{index}. {name:<10} {description}')
-    lines.extend(['', 'Full inclui etapas de alto risco, como Bedrock.',
+    lines.extend(['', 'Full inclui Bedrock, mas NÃO inclui pacotes AUR Labs.',
                   'Todos os presets exigem revisão antes de executar.'])
     scroll_screen(win, 'PRESETS', '\n'.join(lines))
     value = prompt(win, 'Preset (minimal/desktop/gaming/full):')
@@ -1208,6 +1307,14 @@ def diagnose_script(script: Path) -> dict:
 
     for name in graph:
         visit(name)
+    # Um link upstream faltante/sem HTTPS é um erro no manifesto, não um detalhe visual.
+    try:
+        projects = labs_catalog(script)
+        for project in projects:
+            if project['step'] and project['step'] not in known:
+                errors.append('Etapa Labs ausente: ' + project['step'])
+    except ValueError as exc:
+        errors.append('Catálogo Labs inválido: ' + str(exc))
     if shutil.which('bash'):
         result = subprocess.run(['bash', '-n', str(script)], capture_output=True, text=True)
         if result.returncode:
@@ -1221,7 +1328,7 @@ def diagnose_script(script: Path) -> dict:
         warnings.append('Este ambiente não parece ser Arch Linux.')
     return {
         'script': str(script), 'script_sha256': sha(script), 'steps': len(steps),
-        'presets': list(PRESETS), 'errors': errors, 'warnings': warnings,
+        'presets': list(PRESETS), 'labs': 12, 'errors': errors, 'warnings': warnings,
         'ready': not errors,
     }
 
@@ -1239,6 +1346,8 @@ def main() -> int:
     ap.add_argument('--runs', action='store_true', help='Lista execuções registradas')
     ap.add_argument('--preset', choices=tuple(PRESETS), help='Pré-seleciona um preset oficial')
     ap.add_argument('--list-presets', action='store_true', help='Lista os presets sem abrir a TUI')
+    ap.add_argument('--labs', action='store_true', help='Catálogo Labs JSON (somente leitura)')
+    ap.add_argument('--lab-info', metavar='NOME', help='Dados de um projeto Labs em JSON')
     ap.add_argument('--manifest', action='store_true', help='Imprime manifesto JSON parcial, sem executar o Bash')
     ap.add_argument('--doctor', action='store_true', help='Audita Bash, etapas e dependências sem instalar')
     ap.add_argument('--doctor-json', action='store_true', help='Emite diagnóstico estruturado em JSON')
@@ -1251,6 +1360,20 @@ def main() -> int:
     if args.status_json:
         print(json.dumps(control.system_status(), ensure_ascii=False, indent=2))
         return 0
+    if args.labs or args.lab_info:
+        script = (args.script or LOCAL).expanduser().resolve()
+        if not script.is_file(): ap.error(f'Não encontrado: {script}')
+        try:
+            projects = labs_catalog(script)
+            if args.lab_info:
+                project = next((p for p in projects if p['id'] == args.lab_info), None)
+                if not project: ap.error('Projeto desconhecido: '+args.lab_info)
+                print(json.dumps(project, ensure_ascii=False, indent=2))
+            else:
+                print(json.dumps({'schema': 1, 'projects': projects}, ensure_ascii=False, indent=2))
+            return 0
+        except (OSError, ValueError) as exc:
+            ap.error(str(exc))
     if args.list_presets:
         for name, (description, _) in PRESETS.items():
             print(f'{name:<10} {description}')

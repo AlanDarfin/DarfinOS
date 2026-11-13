@@ -6,7 +6,9 @@
 #   bash DarfinOSInstallScript.sh --list
 #   bash DarfinOSInstallScript.sh --only base,cli_tools
 #   bash DarfinOSInstallScript.sh --skip bedrock,cleanup
-#   bash DarfinOSInstallScript.sh -y       # automatiza perguntas elegíveis
+#   bash DarfinOSInstallScript.sh --only i3         # WM opcional
+#   bash DarfinOSInstallScript.sh --labs            # catálogo sem sudo
+#   bash DarfinOSInstallScript.sh --only base -y    # confirmações elegíveis
 #
 # Segurança: -y não desativa as confirmações do pacman e NÃO aprova substituições,
 # confiança em chaves, remoções, ativação do firewall ou reinicialização. AUR e
@@ -28,6 +30,8 @@ STEPS=(
   base aur_helper fonts hardware
   # Desktop (SonicDE + XLibre)
   xlibre sonicde desktop_extras bluetooth
+  # Window managers independentes
+  i3
   # Shell e desenvolvimento
   cli_tools dev_tools pkg_managers shells git_setup
   # Rede e serviços
@@ -36,6 +40,8 @@ STEPS=(
   flatpak apps gaming browser
   # Manutenção
   maintenance firewall cleanup bobagens bedrock terminal_extras
+  # DarfinOS Labs (AUR opcional; fora de TODOS os presets, inclusive full)
+  lab_nscde lab_junest lab_decman lab_metapac
 )
 
 declare -A STEP_DESC=(
@@ -54,6 +60,7 @@ declare -A STEP_DESC=(
   [sonicde]="Ambiente SonicDE, login manager, rede e áudio"
   [desktop_extras]="Extras do desktop (portais, energia, KDE Connect...)"
   [bluetooth]="Bluetooth"
+  [i3]="i3 WM: tiling X11, i3status, i3lock e dmenu (sem trocar sua sessão)"
   [cli_tools]="Ferramentas de terminal (fzf, eza, yazi, starship...)"
   [dev_tools]="Desenvolvimento (neovim, gcc, clang, rust, go, node...)"
   [pkg_managers]="pip, pipx, cargo, npm e go: instalação, PATH e config"
@@ -73,6 +80,10 @@ declare -A STEP_DESC=(
   [bobagens]="Coisas extras ai"
   [bedrock]="Instalação do Bedrock Linux"
   [terminal_extras]="Extras do terminal (tmux, ranger, OpenCode e sudo)"
+  [lab_nscde]="Labs · NsCDE (AUR, desktop estilo UNIX clássico)"
+  [lab_junest]="Labs · JuNest (AUR, ambientes Arch em usuário)"
+  [lab_decman]="Labs · Decman (AUR, configuração declarativa; sem aplicar)"
+  [lab_metapac]="Labs · Metapac (AUR, pacotes declarativos; sem aplicar)"
 )
 
 # Explicações para a TUI: informações gerais, sem prometer instalações condicionais.
@@ -92,6 +103,7 @@ declare -A STEP_INFO=(
   [sonicde]="Instala e configura o ambiente gráfico SonicDE e serviços associados."
   [desktop_extras]="Acrescenta integração, portais e utilitários do desktop."
   [bluetooth]="Instala os componentes Bluetooth e prepara o serviço."
+  [i3]="Instala a sessão i3 como alternativa X11. Não substitui SonicDE nem altera gerenciador de login ou configuração pessoal."
   [cli_tools]="Adiciona utilitários de produtividade, navegação e busca no terminal."
   [dev_tools]="Instala compiladores, linguagens e ferramentas de programação."
   [pkg_managers]="Prepara gerenciadores de pacotes de linguagens e seus caminhos."
@@ -111,6 +123,83 @@ declare -A STEP_INFO=(
   [bobagens]="Ferramentas e personalizações experimentais/opcionais com perguntas próprias."
   [bedrock]="Executa processo avançado e opcional do Bedrock Linux com avisos."
   [terminal_extras]="Adiciona ferramentas e personalizações avançadas do terminal."
+  [lab_nscde]="Requer confirmação LABS para instalar pacote nscde do AUR. Sessão gráfica separada; revise o PKGBUILD."
+  [lab_junest]="Requer confirmação LABS para instalar junest do AUR. Não executa junest setup nem altera namespaces."
+  [lab_decman]="Requer confirmação LABS para instalar decman do AUR. NÃO executa configurações Python ou sincroniza pacotes."
+  [lab_metapac]="Requer confirmação LABS para instalar metapac do AUR. NÃO executa sync nem clean."
+)
+
+# ----------------------------------------------------------
+# DarfinOS Labs · catálogo estático auditável, sem execução automática.
+# Os 12 projetos têm link upstream; somente cinco oferecem etapa automática.
+# O padrão full NÃO seleciona lab_* nem o catálogo.
+# ----------------------------------------------------------
+LABS=(
+  i3 nscde junest decman metapac conty nix_portable trinity
+  yserver xomposite wayback booster
+)
+declare -A LABS_URL=(
+  [i3]="https://i3wm.org/"
+  [nscde]="https://github.com/NsCDE/NsCDE"
+  [junest]="https://github.com/fsquillace/junest"
+  [decman]="https://github.com/kiviktnm/decman"
+  [metapac]="https://github.com/ripytide/metapac"
+  [conty]="https://github.com/Kron4ek/Conty"
+  [nix_portable]="https://github.com/DavHau/nix-portable"
+  [trinity]="https://www.trinitydesktop.org/"
+  [yserver]="https://github.com/joske/yserver"
+  [xomposite]="https://github.com/demostenex/xlibre-compositor-poc"
+  [wayback]="https://gitlab.freedesktop.org/wayback/wayback"
+  [booster]="https://github.com/anatol/booster"
+)
+declare -A LABS_INFO=(
+  [i3]="WM tiling para X11: janela alternativa, sem remover SonicDE."
+  [nscde]="Desktop retro UNIX com FVWM; pacote AUR e login alternativo."
+  [junest]="Ambiente Arch no HOME; namespaces/proot exigem verificacao."
+  [decman]="Estado declarativo em Python; aplicar perfis pode remover pacotes."
+  [metapac]="Gerenciador declarativo; sync/clean podem alterar ou remover pacotes."
+  [conty]="Container portatil com jogos e Wine; download manual dos releases."
+  [nix_portable]="Nix sem instalacao tradicional; binario upstream manual."
+  [trinity]="Desktop KDE 3 independente; exige repositorio e chaves externas."
+  [yserver]="Servidor X11 escrito em Rust; testar somente em VM/TTY."
+  [xomposite]="Compositor experimental para XLibre; pode conflitar com KWin."
+  [wayback]="Camada experimental X11 sobre Wayland; somente laboratorio."
+  [booster]="Gerador de initramfs; alteracoes no boot exigem snapshot."
+)
+declare -A LABS_RISK=(
+  [i3]="opcional"
+  [nscde]="avancado"
+  [junest]="avancado"
+  [decman]="avancado"
+  [metapac]="avancado"
+  [conty]="manual"
+  [nix_portable]="manual"
+  [trinity]="critico"
+  [yserver]="critico"
+  [xomposite]="critico"
+  [wayback]="critico"
+  [booster]="critico"
+)
+declare -A LABS_MODE=(
+  [i3]="pacman"
+  [nscde]="aur"
+  [junest]="aur"
+  [decman]="aur"
+  [metapac]="aur"
+  [conty]="documentacao"
+  [nix_portable]="documentacao"
+  [trinity]="documentacao"
+  [yserver]="documentacao"
+  [xomposite]="documentacao"
+  [wayback]="documentacao"
+  [booster]="documentacao"
+)
+declare -A LABS_STEP=(
+  [i3]="i3"
+  [nscde]="lab_nscde"
+  [junest]="lab_junest"
+  [decman]="lab_decman"
+  [metapac]="lab_metapac"
 )
 
 # ----------------------------------------------------------
@@ -150,11 +239,13 @@ usage() {
   cat <<'HELP'
 DarfinOS · instalador modular de pós-instalação para Arch Linux
 Uso: bash DarfinOSInstallScript.sh [opções]
-  --list                 Lista as 34 etapas disponíveis (somente leitura).
+  --list                 Lista etapas disponíveis (somente leitura).
+  --labs                 Catálogo dos 12 projetos Labs, sem sudo.
+  --lab-info NOME        Detalhes e URL original de um projeto Labs.
   --preflight            Verifica requisitos básicos sem sudo nem alterações.
   --only a,b,c           Executa apenas as etapas informadas.
-  --skip a,b,c           Executa todas, exceto as etapas listadas (avançado).
-  --all                  Executa todas as etapas, inclusive opções avançadas.
+  --skip a,b,c           Executa etapas convencionais, exceto as listadas; exclui Labs AUR.
+  --all                  Executa as etapas convencionais, inclusive Bedrock; exclui Labs AUR.
   -y, --yes              Usa valores padrão apenas em perguntas elegíveis.
   -h, --help             Exibe esta ajuda.
 É obrigatório escolher --only, --skip ou --all antes de instalar.
@@ -184,6 +275,10 @@ declare -A STEP_DEPS=(
   [gaming]="hardware"
   [apps]="flatpak"
   [maintenance]="aur_helper"
+  [lab_nscde]="aur_helper"
+  [lab_junest]="aur_helper"
+  [lab_decman]="aur_helper"
+  [lab_metapac]="aur_helper"
 )
 
 preflight() {
@@ -223,6 +318,26 @@ list_steps() {
   done
 }
 
+list_labs() {
+  local name
+  printf 'DarfinOS Labs · catalogo de projetos independentes\n'
+  for name in "${LABS[@]}"; do
+    printf '%-15s %-14s %-12s %s\n' "$name" "${LABS_RISK[$name]}" "${LABS_MODE[$name]}" "${LABS_URL[$name]}"
+    printf '  %s\n' "${LABS_INFO[$name]}"
+  done
+  printf 'Somente os modos pacman/AUR possuem etapa; os demais sao guias manuais.\n'
+}
+lab_info() {
+  local name="${1:-}"
+  if [[ ! "$name" =~ ^[a-z0-9_]+$ || -z "${LABS_URL[$name]:-}" ]]; then
+    die "Projeto Labs desconhecido: $name (veja --labs)"
+  fi
+  printf 'Projeto: %s\nOrigem: %s\nNivel: %s\nModo: %s\nEtapa: %s\n\n%s\n' \
+    "$name" "${LABS_URL[$name]}" "${LABS_RISK[$name]}" "${LABS_MODE[$name]}" \
+    "${LABS_STEP[$name]:-manual}" "${LABS_INFO[$name]}"
+  echo 'A TUI e o instalador nao executam projetos documentados como manuais.'
+}
+
 validate_steps() {
   local item
   local -a items
@@ -242,6 +357,8 @@ while [[ $# -gt 0 ]]; do
     --skip)    [[ -n "${2:-}" ]] || die "--skip exige uma lista"; SKIP="$2"; validate_steps "$SKIP"; shift ;;
     --all)     EXPLICIT_ALL=1 ;;
     --list)    list_steps; exit 0 ;;
+    --labs)    list_labs; exit 0 ;;
+    --lab-info) [[ -n "${2:-}" ]] || die "--lab-info exige um nome"; lab_info "$2"; exit $? ;;
     --preflight) preflight; exit $? ;;
     -h|--help) usage; exit 0 ;;
     *) die "Opção desconhecida: $1 (use --help)" ;;
@@ -518,7 +635,8 @@ step_enabled() {
   if [[ -n "$ONLY" ]]; then
     [[ ",$ONLY," == *",$name,"* ]]
   else
-    [[ ",$SKIP," != *",$name,"* ]]
+    # --all / --skip nunca fazem instalação do AUR Labs sem --only explícito.
+    [[ "$name" != lab_* ]] && [[ ",$SKIP," != *",$name,"* ]]
   fi
 }
 
@@ -753,6 +871,55 @@ step_repo_chaotic() {
 step_sysupgrade() {
   info "Sincronizando bancos de dados e atualizando o sistema..."
   sudo pacman -Syu
+}
+
+# ==========================================================
+# LABS · instalação assistida, sempre fora dos presets tradicionais
+# ==========================================================
+lab_aur_install() {
+  local project="$1" package="$2" helper reply
+  # AUR é código de terceiros. Recusa automação -y em toda etapa Labs.
+  if (( ASSUME_YES )); then
+    warn "Labs/AUR não permite -y. Use modo interativo, revise o PKGBUILD."
+    return 1
+  fi
+  if pacman -Qq "$package" >/dev/null 2>&1; then
+    ok "Labs: $package já está instalado."
+    return 0
+  fi
+  helper=$(detect_aur_helper)
+  if [[ -z "$helper" ]]; then
+    warn "Labs: instale primeiro aur_helper; pacote AUR não foi instalado."
+    return 1
+  fi
+  info "Upstream oficial: ${LABS_URL[$project]}"
+  warn "PKGBUILD do AUR é de terceiros. Revise alterações, fontes e dependências no helper."
+  # Usa o protocolo de prompts da TUI para que o modal aceite a confirmação.
+  # O choose normaliza para minúsculas e publica PROMPT_CHOOSE no FD de eventos.
+  reply=$(choose "Digite LABS para abrir a transação de $package" "labs/n" "n") || return 1
+  if [[ "$reply" != "labs" ]]; then
+    warn "Instalação Labs cancelada; etapa não concluída."
+    return 1
+  fi
+  aur_install "$package" || return 1
+  if ! pacman -Qq "$package" >/dev/null 2>&1; then
+    warn "Labs: o pacote $package não foi detectado após a transação."
+    return 1
+  fi
+  ok "Pacote $package instalado; execução/configuração ficam a seu critério."
+}
+
+step_lab_nscde() { lab_aur_install nscde nscde; }
+step_lab_junest() { lab_aur_install junest junest; }
+step_lab_decman() { lab_aur_install decman decman; }
+step_lab_metapac() { lab_aur_install metapac metapac; }
+
+step_i3() {
+  info "Instalando i3 como window manager alternativo, sem substituir SonicDE."
+  info "Fonte: ${LABS_URL[i3]}"
+  install_pkgs i3-wm i3status i3lock dmenu xorg-xinit
+  ok "i3 instalado. Selecione a sessão i3 no login ou configure ~/.xinitrc para startx."
+  info "O DarfinOS não altera seu login manager, tema ou arquivos ~/.config/i3."
 }
 
 # ==========================================================

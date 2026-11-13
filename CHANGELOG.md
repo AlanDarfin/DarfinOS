@@ -2,6 +2,17 @@
 
 O projeto segue desenvolvimento contínuo. Esta lista destaca mudanças verificáveis, sem prometer suporte universal a todas as combinações de Arch/derivados.
 
+## Em preparação — DarfinOS Labs e i3 (novembro de 2026)
+
+- Catálogo de 12 projetos externos, upstream e níveis de risco via `--labs`,
+  `--lab-info` e tecla L da TUI.
+- Integração do i3 nos repositórios oficiais e novo preset com XLibre.
+- Etapas opcionais AUR para NsCDE, JuNest, Decman e Metapac, com confirmação
+  especial e sem automatizar execução de seus gerenciadores.
+- Guias somente leitura para Conty, nix-portable, Trinity, yserver, xomposite,
+  Wayback e Booster. Nenhuma alteração automática de boot ou desktop por esses guias.
+- 39 etapas no manifesto e documentação de experimentos/VM.
+
 ## Em preparação — Control Center, segurança e release (novembro de 2026)
 
 - O instalador Bash passa a exigir seleção explícita (`--only`, `--skip` ou `--all`): executar sem opções não instala todas as etapas.
@@ -34,7 +45,7 @@ O projeto segue desenvolvimento contínuo. Esta lista destaca mudanças verific�
 - Filtro de etapas da TUI reconhece aproximações e pequenos erros de digitação.
 
 ### Manutenção
-- Documentação sincronizada com as **34 etapas** do instalador.
+- Documentação sincronizada com as **39 etapas** do instalador.
 - Guia de segurança e cobertura adicional de testes.
 - Consolidação prevista das verificações de CI.
 

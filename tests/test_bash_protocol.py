@@ -57,6 +57,59 @@ class BashProtocolTests(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertNotIn('Autenticando sudo', result.stdout)
 
+    def test_labs_catalog_does_not_ask_for_sudo_or_start_installing(self):
+        for args in (['--labs'], ['--lab-info', 'yserver'], ['--lab-info', 'i3']):
+            with self.subTest(args=args):
+                res = subprocess.run(['bash', str(ROOT / 'DarfinOSInstallScript.sh'), *args],
+                                     capture_output=True, text=True, timeout=5)
+                self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+                self.assertIn('https://', res.stdout)
+                self.assertNotIn('Autenticando sudo', res.stdout)
+
+    def test_labs_install_stays_off_on_full_and_skip(self):
+        codes = function('step_enabled') + '''
+ONLY=""
+SKIP=""
+step_enabled lab_nscde && exit 13
+step_enabled i3 || exit 14
+ONLY="lab_nscde"
+step_enabled lab_nscde || exit 15
+'''
+        result, _ = bash_harness(codes)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_lab_confirmation_is_explicit_and_tui_compatible(self):
+        code = function('lab_aur_install') + """
+ASSUME_YES=0
+declare -A LABS_URL=([nscde]="https://github.com/NsCDE/NsCDE")
+info() { :; }
+warn() { :; }
+ok() { :; }
+detect_aur_helper() { echo yay; }
+LAB_INSTALLED=0
+pacman() { [[ "$LAB_INSTALLED" == 1 ]]; }
+aur_install() { LAB_INSTALLED=1; }
+lab_aur_install nscde nscde
+"""
+        result, events = bash_harness(code, stdin='LABS\n')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(events, [
+            'PROMPT_CHOOSE:n:labs/n:Digite LABS para abrir a transação de nscde'
+        ])
+        result, events = bash_harness(code, stdin='\n')
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(len(events), 1)
+
+    def test_labs_refuse_yes_even_when_explicitly_selected(self):
+        code = function('lab_aur_install') + """
+ASSUME_YES=1
+warn() { :; }
+lab_aur_install nscde nscde
+"""
+        result, events = bash_harness(code)
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(events, [])
+
     def test_event_success_failure_skip_and_dependency(self):
         result, events = bash_harness('''
 STEPS=(ok bad dependent disabled)
