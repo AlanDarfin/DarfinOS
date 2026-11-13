@@ -77,7 +77,7 @@ O DarfinOS oferece uma **etapa opcional** relacionada ao Bedrock. Ela não é ne
 
 ## 🛠 O que o DarfinOS configura
 
-O instalador Bash organiza **39 etapas** em grupos. A seleção pode ser feita pela linha de comando ou pela TUI.
+O instalador Bash organiza **41 etapas** em grupos. A seleção pode ser feita pela linha de comando ou pela TUI.
 
 | Área | Exemplos de etapas | O que faz |
 | --- | --- | --- |
@@ -147,7 +147,7 @@ python3 DarfinOSInstallScript-TUI.py --resume
 O instalador continua independente da interface:
 
 ```bash
-# Consultar as 39 etapas
+# Consultar as 41 etapas
 bash DarfinOSInstallScript.sh --list
 
 # Para uma instalação interativa e seleção segura, use a TUI
@@ -169,7 +169,25 @@ bash DarfinOSInstallScript.sh --only base,cli_tools -y
 
 O Bash **não executa mais todas as etapas sem argumentos**. Ele exige `--only`, `--skip` ou `--all` explícito; `--skip` é uma seleção ampla e avançada. O modo `-y` **não é aprovação irrestrita** de operações do `pacman`, chaves de assinatura ou outras ferramentas. Evite executar o instalador por `curl | bash` sem revisar o código.
 
-## ⚡ DarfinOS Labs · 12 projetos independentes e i3 WM
+## 🔍 Checagem automática dos módulos
+
+Antes de cada etapa, o instalador consulta o estado real do sistema. Os módulos
+com provas suficientes de instalação completa são **pulados**, gerando o evento
+`STEP_ALREADY`. Instalações parciais ou não verificáveis continuam disponíveis
+para execução, evitando confundir um pacote com todo um módulo configurado.
+
+```bash
+bash DarfinOSInstallScript.sh --check-modules      # TSV, sem sudo
+python3 DarfinOSInstallScript-TUI.py --check-modules  # JSON
+bash DarfinOSInstallScript.sh --only i3 --reinstall   # reexecutar etapa
+```
+
+Na TUI, **I** atualiza a checagem; **X** alterna a reexecução explícita.
+O parâmetro `--reinstall` não remove `--needed` do pacman e não autoriza
+sobrescrever arquivos de tema. Saiba como interpretar os estados:
+**[docs/MODULOS.md](docs/MODULOS.md)**.
+
+## ⚡ DarfinOS Labs · 13 projetos independentes, i3 e Chicago95
 
 **Minha cara, minhas ideias.** O DarfinOS passa a incluir uma seleção de
 projetos independentes e menos convencionais, sem configurar automaticamente
@@ -177,6 +195,7 @@ aqueles que exigem substituir o sistema gráfico, o boot ou repositórios de
 terceiros.
 
 - **i3**: WM X11 oficial do Arch, como etapa `i3` e novo preset `i3` (com XLibre; sem SonicDE).
+- **Xfce + Chicago95**: preset `retro` instala Xfce oficial e copia temas/ícones Chicago95 upstream para o HOME, após confirmação, sem modificar a sessão atual.
 - **NsCDE, JuNest, Decman e Metapac**: etapas AUR individuais com confirmação
   obrigatória `LABS` e sem suporte a `-y`.
 - **Conty, nix-portable, Trinity, yserver, xomposite, Wayback e Booster**:
@@ -344,7 +363,7 @@ Na interface, use **`Z`** para acessar o diagnóstico.
 | `minimal` | Base enxuta e ferramentas essenciais | Menor conjunto de etapas |
 | `desktop` | SonicDE, XLibre, integração e aplicativos | Modifica a pilha gráfica |
 | `gaming` | Desktop e ferramentas para jogos | Inclui recursos voltados a jogos |
-| `full` | Todas as **35 etapas convencionais** | **Inclui Bedrock e outras operações avançadas** |
+| `full` | Todas as **36 etapas convencionais** | **Inclui Bedrock e outras operações avançadas** |
 
 Um preset **apenas marca etapas**; ele não executa nada por conta própria. Perfis personalizados (`P`) e presets oficiais (`O`) são recursos distintos.
 
@@ -366,7 +385,7 @@ O DarfinOS possui testes automatizados com **`unittest`**, sem dependências Pyt
 
 Os testes cobrem, entre outros pontos:
 
-- Parser das **39 etapas** e resolução de dependências.
+- Parser das **41 etapas** e resolução de dependências.
 - Perfis, presets e exportação do manifesto.
 - Registros de execução, recuperação e proteção contra Bash diferente.
 - Eventos de progresso e confirmações do Bash em cenários isolados.
