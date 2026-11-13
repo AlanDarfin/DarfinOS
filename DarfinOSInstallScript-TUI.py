@@ -145,6 +145,7 @@ class State:
     cursor: int = 0
     search: str = ""
     yes: bool = False
+    force_modules: bool = False
     show_selected: bool = False
     message: str = ""
     statuses: dict[str, str] = field(default_factory=dict)
@@ -222,6 +223,8 @@ def command(path: Path, state: State) -> list[str]:
     result = ["bash", str(path), "--only", ",".join(ordered)]
     if state.yes:
         result.append("-y")
+    if state.force_modules:
+        result.append("--reinstall")
     return result
 
 
@@ -560,19 +563,42 @@ def installed_packages() -> tuple[set[str], set[str]]:
     return native, flat
 
 
+
+def module_checks(script: Path) -> dict[str, dict[str, str]]:
+    """Consulta o verificador Bash sem privilégios. Não infere estado por nome da etapa."""
+    try:
+        result = subprocess.run(['bash', str(script), '--check-modules'],
+                                capture_output=True, text=True, timeout=25)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise ValueError('Falha ao verificar módulos: ' + str(exc)) from exc
+    if result.returncode:
+        raise ValueError('Verificação de módulos falhou: ' + result.stderr.strip()[:250])
+    checks = {}
+    for line in result.stdout.splitlines():
+        if line == 'module\tstatus\treason':
+            continue
+        parts = line.split('\t', 2)
+        if len(parts) != 3 or parts[1] not in ('installed', 'partial', 'missing', 'unknown'):
+            raise ValueError('Resposta inválida do verificador de módulos')
+        checks[parts[0]] = {'status': parts[1], 'reason': parts[2]}
+    known = {step.name for step in parse_script(script)}
+    if set(checks) != known:
+        raise ValueError('Verificação incompleta: lista difere das etapas do Bash')
+    return checks
+
 def inspect_steps(st: State) -> None:
-    """Only mark verified package presence, not installation-step completion."""
-    native, flat = installed_packages()
-    # Step name equals package is only a heuristic; use explicit description for safety.
-    st.statuses = {}
-    for step in st.steps:
-        if step.name in native:
-            st.statuses[step.name] = 'pacman: instalado'
-        elif step.name in flat:
-            st.statuses[step.name] = 'flatpak: instalado'
-        else:
-            st.statuses[step.name] = 'não verificado'
-    st.message = f'Pacman: {len(native)} pacotes; Flatpak: {len(flat)} apps. Etapas não são pacotes.'
+    """Mostra os resultados do mesmo verificador usado para pular módulos."""
+    try:
+        checks = module_checks(CURRENT_SCRIPT)
+    except ValueError as exc:
+        st.statuses = {}
+        st.message = str(exc)
+        return
+    st.statuses = {name: item['status'] + ': ' + item['reason']
+                   for name, item in checks.items()}
+    complete = sum(item['status'] == 'installed' for item in checks.values())
+    partial = sum(item['status'] == 'partial' for item in checks.values())
+    st.message = f'Checagem: {complete} instalados, {partial} parciais; só instalados serão pulados.'
 
 
 def maintenance_items() -> list[tuple[str, str, list[str]]]:
@@ -1353,10 +1379,23 @@ def main() -> int:
     ap.add_argument('--doctor-json', action='store_true', help='Emite diagnóstico estruturado em JSON')
     ap.add_argument('--status-json', action='store_true', help='Mostra estado local sem sudo ou alterações')
     ap.add_argument('--audit', action='store_true', help='Audita pacotes de um perfil/preset sem instalar')
+    ap.add_argument('--check-modules', action='store_true', help='Consulta módulos verificáveis; JSON sem sudo')
     ap.add_argument('--compare-presets', nargs=2, metavar=('ORIGEM', 'DESTINO'),
                     help='Compara dois presets sem modificar o sistema')
     ap.add_argument('--plan', action='store_true', help='Mostra as etapas de um preset sem executar')
     args = ap.parse_args()
+    if args.check_modules:
+        script = (args.script or LOCAL).expanduser().resolve()
+        if not script.is_file(): ap.error(f'Não encontrado: {script}')
+        try:
+            checks = module_checks(script)
+            print(json.dumps({'schema': 1, 'modules': checks,
+                              'complete': sum(x['status'] == 'installed' for x in checks.values()),
+                              'note': 'Apenas installed permite pular; partial e unknown exigem revisão.'},
+                             ensure_ascii=False, indent=2))
+            return 0
+        except ValueError as exc:
+            ap.error(str(exc))
     if args.status_json:
         print(json.dumps(control.system_status(), ensure_ascii=False, indent=2))
         return 0
@@ -1471,6 +1510,7 @@ def main() -> int:
                    selected=set() if args.empty else preset_selection('minimal', steps),
                    profile_name='manual' if args.empty else 'preset:minimal')
         load_package_preview(st, script)
+        inspect_steps(st)
         if args.preset:
             try: apply_preset(st, args.preset)
             except ValueError as exc: ap.error(str(exc))
