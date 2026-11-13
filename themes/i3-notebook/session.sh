@@ -14,6 +14,10 @@ bar_pid() {
 }
 
 case "${1:-}" in
+    reload)
+        i3-msg reload >/dev/null
+        exec sh "$0" desktop-start
+        ;;
     desktop-start)
         python3 "$profile_dir/desktop.py" "$@"
         exec sh "$0" bar-start

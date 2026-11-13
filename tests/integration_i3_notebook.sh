@@ -126,10 +126,10 @@ bar_has_height() {
 # X11 can reuse a window ID on restart. Change a visible setting to prove the
 # config was actually read again, and ensure a second dock was not created.
 sed -i 's/^height = 28px$/height = 32px/' "$profile/polybar.ini"
-i3-msg reload >/dev/null
+xdotool key super+shift+c
 await_result bar_has_height 32
 sed -i 's/^height = 32px$/height = 28px/' "$profile/polybar.ini"
-i3-msg reload >/dev/null
+xdotool key super+shift+c
 await_result bar_has_height 28
 
 pocket_visible() {
