@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <rect width="1920" height="1080" fill="#252930"/>
+  <g fill="none" stroke="{{ .accent }}" stroke-width="3.5" stroke-linejoin="round" transform="translate(931 465)">
+    <path d="M26 1 4 27h14l-4 15 23-27H24z"/>
+    <path d="M47 1 25 27h14l-4 15 23-27H45z" opacity=".5"/>
+  </g>
+  <text x="960" y="559" text-anchor="middle" fill="{{ .accent }}" font-family="JetBrains Mono, DejaVu Sans Mono, monospace" font-size="40">seu arch, minhas regras</text>
+</svg>

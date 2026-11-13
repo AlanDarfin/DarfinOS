@@ -9,6 +9,50 @@ warning_fg = "{{ .accent }}"
 critical_fg = "#ff7b7b"
 
 [[block]]
+block = "custom"
+command = "echo Apps"
+interval = "once"
+[block.theme_overrides]
+idle_bg = "#252930"
+idle_fg = "{{ .accent }}"
+[[block.click]]
+button = "left"
+cmd = 'sh "$HOME/.config/darfinos/i3-notebook/session.sh" apps'
+
+[[block]]
+block = "custom"
+command = "echo Janelas"
+interval = "once"
+[block.theme_overrides]
+idle_bg = "#252930"
+idle_fg = "{{ .accent }}"
+[[block.click]]
+button = "left"
+cmd = 'sh "$HOME/.config/darfinos/i3-notebook/session.sh" windows'
+
+[[block]]
+block = "custom"
+command = "echo Atalhos"
+interval = "once"
+[block.theme_overrides]
+idle_bg = "#252930"
+idle_fg = "{{ .accent }}"
+[[block.click]]
+button = "left"
+cmd = 'sh "$HOME/.config/darfinos/i3-notebook/session.sh" shortcuts'
+
+[[block]]
+block = "custom"
+command = "echo Fundo"
+interval = "once"
+[block.theme_overrides]
+idle_bg = "#252930"
+idle_fg = "{{ .accent }}"
+[[block.click]]
+button = "left"
+cmd = 'sh "$HOME/.config/darfinos/i3-notebook/session.sh" wallpaper'
+
+[[block]]
 block = "battery"
 driver = "sysfs"
 format = " BAT $percentage "

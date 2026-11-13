@@ -112,7 +112,7 @@ declare -A STEP_DESC=(
   [lab_etckeeper]="Labs · etckeeper"
   [lab_rustic]="Labs · rustic"
   [lab_kvantum]="Labs · Kvantum"
-  [lab_i3_notebook]="Labs · i3 Notebook: Rofi, Dunst, i3status-rust e teclas do notebook"
+  [lab_i3_notebook]="Labs · i3 Notebook: Polybar, Rofi, Dunst e teclas do notebook"
 )
 
 # Explicações para a TUI: informações gerais, sem prometer instalações condicionais.
@@ -254,7 +254,7 @@ declare -A LABS_INFO=(
   [etckeeper]="Histórico local de /etc; inicialização separada, sem envio remoto."
   [rustic]="Backups criptografados em destino escolhido; sem repositório automático."
   [kvantum]="Temas Qt SVG para SonicDE com opção de suporte Qt5."
-  [i3_notebook]="Pacotes Arch para i3 com notificações Dunst, launcher Rofi, bateria e controles 720p. Ativação separada na Oficina."
+  [i3_notebook]="Pacotes Arch para i3 com Polybar, notificações Dunst, launcher Rofi e controles 720p. Ativação separada na Oficina."
 )
 declare -A LABS_RISK=(
   [i3]="opcional"
@@ -619,7 +619,7 @@ module_probe() {
     lab_etckeeper) required=(etckeeper git) ;;
     lab_rustic) required=(rustic) ;;
     lab_kvantum) required=(kvantum) ;;
-    lab_i3_notebook) required=(i3-wm i3status i3lock dmenu xorg-xinit chezmoi rofi dunst i3status-rust brightnessctl xss-lock flameshot xterm ttf-dejavu libpulse libnotify) ;;
+    lab_i3_notebook) required=(i3-wm i3status i3lock dmenu xorg-xinit chezmoi rofi dunst i3status-rust brightnessctl xss-lock flameshot xterm ttf-dejavu libpulse libnotify feh zenity xorg-xrandr xorg-xrdb xorg-xsetroot xsettingsd polybar xdotool ttf-jetbrains-mono powerline-fonts otf-font-awesome librsvg xdg-utils gtk3) ;;
     lab_pkgsrc)
       if [[ -x "$HOME/.local/share/darfinos/pkgsrc-prefix/bin/bmake" && -x "$HOME/.local/share/darfinos/pkgsrc-prefix/sbin/pkg_info" && -d "$HOME/.local/share/darfinos/pkgsrc-tree/pkgtools" ]]; then
         MODULE_STATUS=installed; MODULE_REASON="Bootstrap pkgsrc e árvore de pacotes encontrados."
@@ -1810,7 +1810,8 @@ step_lab_kvantum() {
 step_lab_i3_notebook() {
   lab_confirm i3_notebook "Instala o i3 e as ferramentas Notebook. Não aplica o perfil nem troca sua sessão." || return 1
   install_pkgs i3-wm i3status i3lock dmenu xorg-xinit chezmoi rofi dunst i3status-rust \
-    brightnessctl xss-lock flameshot xterm ttf-dejavu libpulse libnotify || return 1
+    brightnessctl xss-lock flameshot xterm ttf-dejavu libpulse libnotify feh zenity xorg-xrandr xorg-xrdb xorg-xsetroot xsettingsd \
+    polybar xdotool ttf-jetbrains-mono powerline-fonts otf-font-awesome librsvg xdg-utils gtk3 || return 1
   info "Abra a Oficina de Temas (W) e selecione i3-notebook. Entre novamente na sessão i3 para ativar."
   info "O perfil usa o áudio existente (wpctl ou pactl); não troca o servidor de áudio."
 }

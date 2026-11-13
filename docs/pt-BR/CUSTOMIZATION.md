@@ -29,7 +29,7 @@ Veja as novas etapas e os links originais no [DarfinOS Labs](LABS.md). Arcan/Pip
 O perfil **i3 Notebook** é separado do i3 Compacto. Instale **i3 Notebook** pelo
 Labs (**L**), abra **W → i3-notebook**, revise a prévia e aplique. Ele guarda a
 configuração anterior do i3 no histórico da Oficina e não sobrescreve suas
-configurações globais de Rofi ou Dunst. Encerre e entre novamente na sessão i3
+configurações globais de Polybar, Rofi ou Dunst. Encerre e entre novamente na sessão i3
 para carregar os utilitários do perfil. Não precisa instalar XLibre se já tem
 um servidor X11 funcionando.
 
@@ -43,14 +43,43 @@ python3 darfinos_control.py style i3-notebook --apply --all-files
 | --- | --- |
 | Super+D / Super+Tab | Apps e janelas no Rofi. dmenu fica de reserva para apps. |
 | Super+F1 | Lista de atalhos, disponível também como aba **Atalhos do i3** no Rofi. |
-| Super+B | Modo Escrita. A barra some e volta enquanto você segura Super ou se houver uma janela urgente. |
-| Super+Grave / Super+R | Terminal de bolso e redimensionamento com as setas (Esc para sair). |
+| Super+F2 | Mostra a resolução e os Hz atuais por saída. Se a tela interna oferecer 1280×720, dá para testar o modo. Sem confirmar em 15 s, volta ao anterior. |
+| Super+Shift+P | Escolhe uma imagem de papel de parede e reaplica ao entrar no i3. Também disponível em **Fundo**, na barra. |
+| Super+Enter / Super+B / Super+E | Abre o terminal, o navegador padrão ou a pasta pessoal no gerenciador de arquivos padrão. |
+| Super+Shift+B | Mostra ou oculta a barra para liberar espaço na tela. |
+| Super+1–9 / Super+0 | Vai para as áreas 1–10. Com Shift, move a janela atual. |
+| Super+Ctrl+Tab | Volta à área anterior. |
+| Super+H / Super+V / Super+Ctrl+E | Divide na horizontal ou vertical, ou alterna a direção da divisão atual. |
+| Super+W / Super+S | Organiza as janelas em abas ou em pilha. |
+| Super+Shift+Enter ou Super+Grave / Super+R | Terminal de bolso e redimensionamento com as setas (Esc para sair). |
 | Teclas de brilho e áudio | Brilho, volume e mute. O perfil usa o PipeWire ou PulseAudio já configurado. |
-| Super+L / Print | Bloquear tela ou capturar uma área. A sessão também usa xss-lock antes de suspender. |
+| Print / Super+Shift+S / Shift+Print | Os dois primeiros selecionam uma área. Shift+Print copia a tela inteira. |
+| Super+L | Bloqueia a tela. A sessão também usa xss-lock antes de suspender. |
 | Super+N / Super+Shift+N / Super+Ctrl+N | Recuperar a última notificação, ativar ou desativar o Não Perturbe e dispensar os pop-ups. |
 
-A barra mostra bateria, rede, volume e hora. O Dunst exibe até três notificações
-no canto superior direito, com fundo grafite e a cor de destaque do Rofi.
+A Polybar de 28 px fica no topo, com divisões em seta, tipografia JetBrains Mono
+e título curto da janela ativa. **Apps**, **Janelas**, **Atalhos** e **Fundo** são
+clicáveis. Brilho, bateria, rede, volume e hora aparecem à direita conforme o
+hardware disponível. A primeira área é **1**. **Super+Enter** abre o terminal.
+As janelas recebem foco ao passar o mouse, sem mover o ponteiro ao trocar de
+monitor pelo teclado. Se a Polybar estiver ausente ou falhar ao iniciar, a barra
+nativa do i3 fica como reserva.
+
+O visual da barra e do Rofi foi inspirado nos [dotfiles do iamabhas](https://github.com/iamabhas/dotfiles),
+com as cores e os atalhos do DarfinOS. A cor de destaque escolhida na Oficina
+é aplicada na barra, no Rofi, no Dunst e no papel de parede padrão.
+
+O perfil reaproveita o tema e o tamanho do cursor configurados no SonicDE, quando
+o tema está instalado. Se não achar o tema escolhido, tenta uma variante Bibata
+já instalada. A sessão i3 não altera os arquivos do SonicDE. A opção de 720p
+só mexe na tela interna, não inventa modos nem força taxa de atualização. Sem
+uma imagem selecionada, o perfil usa o papel de parede grafite com o duplo raio
+e o lema do DarfinOS. Se estiver atualizando a versão
+anterior do perfil, rode o Labs novamente para instalar as novas dependências
+antes de reaplicar pela Oficina.
+
+O Dunst exibe até três notificações no canto superior direito, abaixo da barra,
+com fundo grafite e a cor de destaque do Rofi.
 Se outro daemon de notificações já estiver ativo no mesmo barramento D-Bus, o
 perfil não o encerra. Nesse caso, saia do outro ambiente e entre na sessão i3
 para testar. Dentro do i3, rode `dunstify "DarfinOS" "Notificações prontas"` para

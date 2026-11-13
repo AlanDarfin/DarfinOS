@@ -3,13 +3,86 @@
 set -eu
 profile_dir="$HOME/.config/darfinos/i3-notebook"
 
+# Look up only the named Notebook dock on this X display, never broadcast IPC.
+bar_pid() {
+    command -v xdotool >/dev/null || return 1
+    window=$(xdotool search --name '^darfinos-notebook-bar$' 2>/dev/null | head -n 1)
+    [ -n "$window" ] || return 1
+    pid=$(xdotool getwindowpid "$window" 2>/dev/null) || return 1
+    case "$pid" in ''|*[!0-9]*) return 1 ;; esac
+    printf '%s\n' "$pid"
+}
+
+# Desktop IDs are arguments, not shell commands. Launch without a start-page URL.
+launch_desktop() {
+    case "$1" in
+        -*|*/*) return 1 ;;
+        *.desktop) gtk-launch -- "$@" ;;
+        *) return 1 ;;
+    esac
+}
+
+shortcut_notice() {
+    if command -v notify-send >/dev/null; then
+        notify-send 'DarfinOS · Atalhos' "$1"
+    else
+        printf '%s\n' "$1" >&2
+    fi
+}
+
 case "${1:-}" in
+    reload)
+        i3-msg reload >/dev/null
+        exec sh "$0" desktop-start
+        ;;
+    desktop-start)
+        python3 "$profile_dir/desktop.py" "$@"
+        exec sh "$0" bar-start
+        ;;
+    display|wallpaper|window-title)
+        exec python3 "$profile_dir/desktop.py" "$@"
+        ;;
+    bar-start)
+        if command -v polybar >/dev/null && command -v polybar-msg >/dev/null &&
+           command -v xdotool >/dev/null && [ -r "$profile_dir/polybar.ini" ]; then
+            if pid=$(bar_pid); then
+                exec polybar-msg -p "$pid" cmd restart
+            fi
+            # Only this profile uses the discovered laptop battery; no BAT0 assumption.
+            for supply in /sys/class/power_supply/*; do
+                if [ -r "$supply/type" ] && [ "$(cat "$supply/type")" = Battery ]; then
+                    export DARFINOS_BAR_BATTERY="${supply##*/}"
+                    break
+                fi
+            done
+            # A clean exit (including logout) shouldn't start a new bar.
+            polybar -c "$profile_dir/polybar.ini" notebook && exit 0
+        fi
+        exec i3-msg 'bar mode dock notebook'
+        ;;
+    bar-toggle)
+        if command -v polybar-msg >/dev/null && pid=$(bar_pid); then
+            exec polybar-msg -p "$pid" cmd toggle
+        fi
+        exec i3-msg 'bar mode toggle notebook'
+        ;;
     start)
         # Don't take the D-Bus name from a notification daemon already in use.
         if command -v dunst >/dev/null; then
             dunst -conf "$profile_dir/dunstrc" &
         fi
         exec xss-lock --transfer-sleep-lock -- i3lock --nofork -c 171a1f
+        ;;
+    browser)
+        app=$(xdg-settings get default-web-browser 2>/dev/null) || app=
+        if [ -z "$app" ]; then
+            app=$(xdg-mime query default x-scheme-handler/https 2>/dev/null) || app=
+        fi
+        launch_desktop "$app" || shortcut_notice 'Defina um navegador padrão nos aplicativos do sistema.'
+        ;;
+    files)
+        app=$(xdg-mime query default inode/directory 2>/dev/null) || app=
+        launch_desktop "$app" "$HOME" || shortcut_notice 'Defina um gerenciador de arquivos padrão para abrir pastas.'
         ;;
     apps|windows|shortcuts)
         if command -v rofi >/dev/null; then
@@ -32,20 +105,33 @@ case "${1:-}" in
         [ "$#" -eq 1 ] || exit 0
         printf '\000no-custom\037true\n'
         printf '%s\n' \
+            'Super+Enter · Terminal' \
+            'Super+B · Navegador padrão' \
+            'Super+E · Pasta pessoal no gerenciador padrão' \
             'Super+D · Aplicativos' \
             'Super+Tab · Trocar de janela' \
-            'Super+Enter · Terminal' \
-            'Super+Grave · Terminal de bolso' \
-            'Super+1/2/3 · Terminal / Web / Escrita' \
+            'Super+Shift+Enter / Super+Grave · Terminal de bolso' \
+            'Super+1–9 / Super+0 · Ir para áreas 1–10' \
+            'Super+Shift+1–9 / Super+Shift+0 · Mover janela para áreas 1–10' \
+            'Super+Ctrl+Tab · Voltar à área anterior' \
             'Super+setas · Focar outra janela' \
             'Super+Shift+setas · Mover janela' \
+            'Super+Shift+Q · Fechar janela' \
+            'Super+F · Tela cheia' \
+            'Super+Shift+Espaço · Alternar janela flutuante' \
+            'Super+H / Super+V · Dividir na horizontal / vertical' \
+            'Super+W / Super+S · Abas / pilha' \
+            'Super+Ctrl+E · Alternar divisão horizontal / vertical' \
             'Super+R · Redimensionar com as setas (Esc para sair)' \
-            'Super+B · Mostrar/ocultar a barra (segure Super para revelar)' \
+            'Super+F2 · Ver resolução e modo 720p' \
+            'Super+Shift+P · Escolher papel de parede' \
+            'Super+Shift+B · Mostrar ou ocultar a barra' \
             'Super+N · Recuperar última notificação' \
             'Super+Shift+N · Silenciar/reativar notificações' \
             'Super+Ctrl+N · Dispensar notificações' \
+            'Print / Super+Shift+S · Capturar uma área' \
+            'Shift+Print · Copiar tela inteira' \
             'Super+L · Bloquear tela' \
-            'Print · Capturar uma área' \
             'Super+Shift+C · Recarregar configuração'
         ;;
     pocket)
@@ -58,7 +144,7 @@ case "${1:-}" in
             exec i3-msg '[con_mark="^darfinos-pocket$"] scratchpad show'
         fi
         xterm -name darfinos-pocket -title 'DarfinOS · Terminal de bolso' \
-            -bg '#171a1f' -fg '#f2f2f2' -fa 'DejaVu Sans Mono' -fs 11 9>&- &
+            -bg '#171a1f' -fg '#f2f2f2' -fa 'JetBrains Mono' -fs 11 9>&- &
         if [ -n "${XDG_RUNTIME_DIR:-}" ]; then
             for tick in 1 2 3 4 5 6 7 8 9 10; do
                 i3-msg -t get_marks | grep -Fq '"darfinos-pocket"' && break
@@ -68,7 +154,7 @@ case "${1:-}" in
         ;;
     status)
         if command -v i3status-rs >/dev/null && [ -r "$profile_dir/status.toml" ]; then
-            exec i3status-rs "$profile_dir/status.toml"
+            SHELL=/bin/sh exec i3status-rs "$profile_dir/status.toml"
         fi
         exec i3status
         ;;

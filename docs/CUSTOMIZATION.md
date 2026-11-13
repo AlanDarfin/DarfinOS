@@ -29,7 +29,7 @@ For new Labs stages and original links, see [DarfinOS Labs](LABS.md). Arcan/Pipe
 **i3 Notebook** is separate from Compact i3. Install **i3 Notebook** in Labs
 (**L**), then open **W → i3-notebook**, review the preview and apply it. The
 Workshop keeps your previous i3 configuration in its undo history and leaves
-global Rofi and Dunst configs alone. Log out and back into i3 to load the
+global Polybar, Rofi and Dunst configs alone. Log out and back into i3 to load the
 profile's session tools. XLibre is not required if X11 already works.
 
 ```bash
@@ -42,15 +42,42 @@ python3 darfinos_control.py style i3-notebook --apply --all-files
 | --- | --- |
 | Super+D / Super+Tab | Launch apps and switch windows in Rofi. dmenu is the app-launch fallback. |
 | Super+F1 | Open the shortcut list, also available as the **Atalhos do i3** tab in Rofi. |
-| Super+B | Writing mode. Hold Super or receive an urgent window hint to reveal the hidden bar. |
-| Super+Grave / Super+R | Pocket terminal and arrow-key resizing (Esc to exit). |
+| Super+F2 | Inspect each output’s current resolution and refresh rate. If the built-in panel advertises 1280×720, test it and confirm within 15 seconds to keep it. |
+| Super+Shift+P | Choose a wallpaper that is reapplied at login. Also available through **Fundo** on the bar. |
+| Super+Enter / Super+B / Super+E | Open the terminal, the default browser, or your home folder in the default file manager. |
+| Super+Shift+B | Show or hide the bar to free up screen space. |
+| Super+1–9 / Super+0 | Switch to workspaces 1–10. Add Shift to move the current window. |
+| Super+Ctrl+Tab | Return to the previous workspace. |
+| Super+H / Super+V / Super+Ctrl+E | Split horizontally or vertically, or toggle the current split direction. |
+| Super+W / Super+S | Switch to tabbed or stacked layout. |
+| Super+Shift+Enter or Super+Grave / Super+R | Pocket terminal and arrow-key resizing (Esc to exit). |
 | Brightness and audio keys | Adjust brightness, volume and mute using your existing PipeWire or PulseAudio setup. |
-| Super+L / Print | Lock the screen or capture an area. xss-lock handles locking before suspend. |
+| Print / Super+Shift+S / Shift+Print | The first two select a region. Shift+Print copies the entire screen. |
+| Super+L | Lock the screen. xss-lock also locks before suspend. |
 | Super+N / Super+Shift+N / Super+Ctrl+N | Redisplay the last notification, toggle Do Not Disturb, and dismiss visible pop-ups. |
 
-The bar shows battery, network, volume and time. Dunst shows up to three
-floating notifications in the top-right corner, with Rofi's graphite palette
-and accent color. The profile does not stop a notification daemon already
+The 28 px Polybar sits at the top with arrow separators, JetBrains Mono and a
+short active window title. **Apps**, **Janelas** (Windows), **Atalhos** (Shortcuts),
+and **Fundo** (Wallpaper) are clickable. Brightness, battery, network, audio
+and time appear on the right as available. The first workspace is **1**.
+**Super+Enter** opens the terminal. Focus follows the pointer without warping
+it between monitors. If Polybar is unavailable or fails to start, the profile
+falls back to native i3bar.
+
+The bar and Rofi design draw on [iamabhas’s dotfiles](https://github.com/iamabhas/dotfiles)
+with DarfinOS colors and shortcuts. The Workshop accent applies to the bar,
+Rofi, Dunst and the default wallpaper.
+
+The profile reuses the SonicDE cursor theme and size if that theme is installed,
+or tries an installed Bibata variant. It does not edit SonicDE settings. The
+720p choice only changes the built-in panel and neither creates a mode nor
+forces a refresh rate. With no image selected, the profile uses a graphite wallpaper with the
+DarfinOS double lightning mark and motto.
+When upgrading, run the Notebook Labs step again for the new dependencies,
+then reapply the Workshop profile.
+
+Dunst shows up to three notifications in the top-right corner below the bar,
+with Rofi's graphite palette and accent color. The profile does not stop a notification daemon already
 running on the same D-Bus session. If needed, sign out of the other desktop
 before testing in i3. Run `dunstify "DarfinOS" "Notifications ready"` in the i3
 session to see the theme. Picom is neither installed nor started by this profile.

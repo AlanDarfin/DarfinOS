@@ -34,7 +34,16 @@ jobs:
     steps:
       - name: Preparar i3 e servidor virtual no contêiner
         run: |
-          pacman -Syu --noconfirm --needed python git dbus i3-wm i3status i3lock xss-lock xterm ttf-dejavu rofi dunst libnotify i3status-rust chezmoi xorg-server-xvfb
+          pacman -Syu --noconfirm --needed python git dbus i3-wm i3status i3lock xss-lock xterm ttf-dejavu rofi dunst libnotify i3status-rust chezmoi xorg-server-xvfb xorg-xrandr xorg-xrdb xorg-xsetroot xorg-xprop feh adwaita-cursors polybar xdotool xorg-xwininfo ttf-jetbrains-mono powerline-fonts otf-font-awesome librsvg xdg-utils gtk3 imagemagick
       - uses: actions/checkout@v4
       - name: Validar perfil e notificações sem alterar o host
+        env:
+          DARFINOS_PREVIEW_DIR: ${{ github.workspace }}/i3-notebook-preview
         run: bash tests/integration_i3_notebook.sh
+      - name: Guardar prévias em 720p
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: i3-notebook-preview
+          path: i3-notebook-preview/*.png
+          if-no-files-found: ignore
