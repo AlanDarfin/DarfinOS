@@ -1071,6 +1071,93 @@ step_lab_junest() { lab_aur_install junest junest; }
 step_lab_decman() { lab_aur_install decman decman; }
 step_lab_metapac() { lab_aur_install metapac metapac; }
 
+
+step_xfce() {
+  info "Xfce opcional: instalar sessão X11 paralela, sem substituir SonicDE."
+  # Grupo xfce4 com nomes explícitos: sem prompt de escolha de grupo.
+  install_pkgs exo garcon thunar thunar-volman tumbler xfce4-appfinder \
+    xfce4-panel xfce4-power-manager xfce4-session xfce4-settings \
+    xfce4-terminal xfconf xfdesktop xfwm4 xorg-xinit
+  ok "Xfce instalado. Selecione a sessão Xfce no gerenciador de login."
+  info "O DarfinOS não altera a sessão padrão nem ~/.config/xfce4."
+}
+
+step_lab_chicago95() {
+  local source theme icon_theme staged_theme staged_icons upstream
+  theme="$HOME/.themes/Chicago95"
+  icon_theme="$HOME/.icons/Chicago95"
+
+  if [[ -e "$theme" || -L "$theme" || -e "$icon_theme" || -L "$icon_theme" ]]; then
+    warn "Chicago95 detectado parcialmente ou customizado: preserve os arquivos e faça a revisão manual."
+    return 1
+  fi
+  if ! command -v git >/dev/null 2>&1; then
+    warn "Chicago95 precisa do git para consultar o repositório original."
+    return 1
+  fi
+  if ! pacman -Qq xfce4-session >/dev/null 2>&1; then
+    warn "Xfce não instalado. Execute o módulo xfce primeiro."
+    return 1
+  fi
+  if (( ASSUME_YES )); then
+    warn "Chicago95 exige confirmação individual e não aceita -y."
+    return 1
+  fi
+  info "Upstream: ${LABS_URL[chicago95]}"
+  info "Serão copiadas apenas as pastas Theme/Chicago95 e Icons/Chicago95 para o HOME."
+  info "Nenhum installer.py remoto será executado; painéis e tema ativos serão mantidos."
+  if ! confirm "Baixar e instalar os arquivos Chicago95 para este usuário (sem sobrescrever)?" n; then
+    warn "Chicago95 cancelado; etapa não concluída."
+    return 1
+  fi
+
+  source="$TMP_DIR/chicago95-upstream"
+  git clone --depth 1 --quiet -- https://github.com/grassmunk/Chicago95.git "$source" || return 1
+  if [[ ! -f "$source/Theme/Chicago95/index.theme" ||
+        ! -f "$source/Icons/Chicago95/index.theme" ]]; then
+    warn "Chicago95: estrutura inesperada do projeto oficial; abortando."
+    return 1
+  fi
+  if find "$source/Theme/Chicago95" "$source/Icons/Chicago95" -type l -print -quit | grep -q .; then
+    warn "Chicago95: upstream contém links simbólicos; cópia não autorizada."
+    return 1
+  fi
+  upstream=$(git -C "$source" rev-parse --short=12 HEAD) || return 1
+  [[ ! -L "$HOME/.themes" && ! -L "$HOME/.icons" ]] || {
+    warn "Diretório de temas/ícones é link simbólico; instale manualmente."
+    return 1
+  }
+  mkdir -p -- "$HOME/.themes" "$HOME/.icons" || return 1
+  staged_theme=$(mktemp -d "$HOME/.themes/.chicago95-stage.XXXXXXXX") || return 1
+  staged_icons=$(mktemp -d "$HOME/.icons/.chicago95-stage.XXXXXXXX") || {
+    rmdir "$staged_theme"
+    return 1
+  }
+  if ! cp -a -- "$source/Theme/Chicago95/." "$staged_theme/" ||
+     ! cp -a -- "$source/Icons/Chicago95/." "$staged_icons/"; then
+    rm -rf -- "$staged_theme" "$staged_icons"
+    return 1
+  fi
+  if [[ -e "$theme" || -L "$theme" || -e "$icon_theme" || -L "$icon_theme" ]]; then
+    warn "Chicago95: destino criado enquanto baixava; não sobrescrevo."
+    rm -rf -- "$staged_theme" "$staged_icons"
+    return 1
+  fi
+  if ! mv -- "$staged_theme" "$theme"; then
+    rm -rf -- "$staged_theme" "$staged_icons"
+    return 1
+  fi
+  if ! mv -- "$staged_icons" "$icon_theme"; then
+    warn "Chicago95 parcial: tema copiado, ícones pendentes. Revise manualmente."
+    rm -rf -- "$staged_icons"
+    return 1
+  fi
+  ok "Chicago95 upstream $upstream copiado sem modificar configurações existentes."
+  info "Abra Xfce > Aparência > Estilo e Ícones; escolha Chicago95."
+  info "No Gerenciador de Janelas, selecione Chicago95 manualmente."
+  info "Leia: https://github.com/grassmunk/Chicago95/blob/master/INSTALL.md"
+}
+
 step_i3() {
   info "Instalando i3 como window manager alternativo, sem substituir SonicDE."
   info "Fonte: ${LABS_URL[i3]}"
