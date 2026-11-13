@@ -31,7 +31,7 @@ STEPS=(
   # Desktop (SonicDE + XLibre)
   xlibre sonicde desktop_extras bluetooth
   # Window managers independentes
-  i3
+  i3 xfce
   # Shell e desenvolvimento
   cli_tools dev_tools pkg_managers shells git_setup
   # Rede e serviços
@@ -41,7 +41,7 @@ STEPS=(
   # Manutenção
   maintenance firewall cleanup bobagens bedrock terminal_extras
   # DarfinOS Labs (AUR opcional; fora de TODOS os presets, inclusive full)
-  lab_nscde lab_junest lab_decman lab_metapac
+  lab_nscde lab_junest lab_decman lab_metapac lab_chicago95
 )
 
 declare -A STEP_DESC=(
@@ -61,6 +61,7 @@ declare -A STEP_DESC=(
   [desktop_extras]="Extras do desktop (portais, energia, KDE Connect...)"
   [bluetooth]="Bluetooth"
   [i3]="i3 WM: tiling X11, i3status, i3lock e dmenu (sem trocar sua sessão)"
+  [xfce]="Xfce: desktop X11 alternativo, mantém SonicDE e login atuais"
   [cli_tools]="Ferramentas de terminal (fzf, eza, yazi, starship...)"
   [dev_tools]="Desenvolvimento (neovim, gcc, clang, rust, go, node...)"
   [pkg_managers]="pip, pipx, cargo, npm e go: instalação, PATH e config"
@@ -84,6 +85,7 @@ declare -A STEP_DESC=(
   [lab_junest]="Labs · JuNest (AUR, ambientes Arch em usuário)"
   [lab_decman]="Labs · Decman (AUR, configuração declarativa; sem aplicar)"
   [lab_metapac]="Labs · Metapac (AUR, pacotes declarativos; sem aplicar)"
+  [lab_chicago95]="Labs · Chicago95: tema Windows 95 no Xfce, sem sobrescrever preferências"
 )
 
 # Explicações para a TUI: informações gerais, sem prometer instalações condicionais.
@@ -104,6 +106,7 @@ declare -A STEP_INFO=(
   [desktop_extras]="Acrescenta integração, portais e utilitários do desktop."
   [bluetooth]="Instala os componentes Bluetooth e prepara o serviço."
   [i3]="Instala a sessão i3 como alternativa X11. Não substitui SonicDE nem altera gerenciador de login ou configuração pessoal."
+  [xfce]="Instala pacotes Xfce oficiais como sessão alternativa. Não modifica tema, painel nem gerenciador de login."
   [cli_tools]="Adiciona utilitários de produtividade, navegação e busca no terminal."
   [dev_tools]="Instala compiladores, linguagens e ferramentas de programação."
   [pkg_managers]="Prepara gerenciadores de pacotes de linguagens e seus caminhos."
@@ -127,19 +130,21 @@ declare -A STEP_INFO=(
   [lab_junest]="Requer confirmação LABS para instalar junest do AUR. Não executa junest setup nem altera namespaces."
   [lab_decman]="Requer confirmação LABS para instalar decman do AUR. NÃO executa configurações Python ou sincroniza pacotes."
   [lab_metapac]="Requer confirmação LABS para instalar metapac do AUR. NÃO executa sync nem clean."
+  [lab_chicago95]="Baixa apenas arquivos Theme/Icons oficiais para o HOME; não executa installer.py nem ativa o tema."
 )
 
 # ----------------------------------------------------------
 # DarfinOS Labs · catálogo estático auditável, sem execução automática.
-# Os 12 projetos têm link upstream; somente cinco oferecem etapa automática.
+# Os 13 projetos têm link upstream; sete têm etapa opcional (pacman, AUR ou assets).
 # O padrão full NÃO seleciona lab_* nem o catálogo.
 # ----------------------------------------------------------
 LABS=(
-  i3 nscde junest decman metapac conty nix_portable trinity
+  i3 chicago95 nscde junest decman metapac conty nix_portable trinity
   yserver xomposite wayback booster
 )
 declare -A LABS_URL=(
   [i3]="https://i3wm.org/"
+  [chicago95]="https://github.com/grassmunk/Chicago95"
   [nscde]="https://github.com/NsCDE/NsCDE"
   [junest]="https://github.com/fsquillace/junest"
   [decman]="https://github.com/kiviktnm/decman"
@@ -154,6 +159,7 @@ declare -A LABS_URL=(
 )
 declare -A LABS_INFO=(
   [i3]="WM tiling para X11: janela alternativa, sem remover SonicDE."
+  [chicago95]="Tema GTK e ícones Windows 95 para Xfce; aplicações opcionais dependem de configuração manual."
   [nscde]="Desktop retro UNIX com FVWM; pacote AUR e login alternativo."
   [junest]="Ambiente Arch no HOME; namespaces/proot exigem verificacao."
   [decman]="Estado declarativo em Python; aplicar perfis pode remover pacotes."
@@ -168,6 +174,7 @@ declare -A LABS_INFO=(
 )
 declare -A LABS_RISK=(
   [i3]="opcional"
+  [chicago95]="avancado"
   [nscde]="avancado"
   [junest]="avancado"
   [decman]="avancado"
@@ -182,6 +189,7 @@ declare -A LABS_RISK=(
 )
 declare -A LABS_MODE=(
   [i3]="pacman"
+  [chicago95]="assets"
   [nscde]="aur"
   [junest]="aur"
   [decman]="aur"
@@ -196,6 +204,7 @@ declare -A LABS_MODE=(
 )
 declare -A LABS_STEP=(
   [i3]="i3"
+  [chicago95]="lab_chicago95"
   [nscde]="lab_nscde"
   [junest]="lab_junest"
   [decman]="lab_decman"
@@ -240,9 +249,11 @@ usage() {
 DarfinOS · instalador modular de pós-instalação para Arch Linux
 Uso: bash DarfinOSInstallScript.sh [opções]
   --list                 Lista etapas disponíveis (somente leitura).
-  --labs                 Catálogo dos 12 projetos Labs, sem sudo.
+  --labs                 Catálogo dos 13 projetos Labs, sem sudo.
   --lab-info NOME        Detalhes e URL original de um projeto Labs.
   --preflight            Verifica requisitos básicos sem sudo nem alterações.
+  --check-modules        Inspeciona módulos e mostra TSV, sem sudo.
+  --reinstall            Força repetir módulos já detectados como instalados.
   --only a,b,c           Executa apenas as etapas informadas.
   --skip a,b,c           Executa etapas convencionais, exceto as listadas; exclui Labs AUR.
   --all                  Executa as etapas convencionais, inclusive Bedrock; exclui Labs AUR.
@@ -259,6 +270,7 @@ HELP
 # Opções
 # ----------------------------------------------------------
 ASSUME_YES=0
+FORCE_MODULES=0
 EXPLICIT_ALL=0
 ONLY=""
 SKIP=""
@@ -279,6 +291,7 @@ declare -A STEP_DEPS=(
   [lab_junest]="aur_helper"
   [lab_decman]="aur_helper"
   [lab_metapac]="aur_helper"
+  [lab_chicago95]="xfce"
 )
 
 preflight() {
@@ -356,6 +369,8 @@ while [[ $# -gt 0 ]]; do
     --only)    [[ -n "${2:-}" ]] || die "--only exige uma lista"; ONLY="$2"; validate_steps "$ONLY"; shift ;;
     --skip)    [[ -n "${2:-}" ]] || die "--skip exige uma lista"; SKIP="$2"; validate_steps "$SKIP"; shift ;;
     --all)     EXPLICIT_ALL=1 ;;
+    --reinstall) FORCE_MODULES=1 ;;
+    --check-modules) list_module_status; exit $? ;;
     --list)    list_steps; exit 0 ;;
     --labs)    list_labs; exit 0 ;;
     --lab-info) [[ -n "${2:-}" ]] || die "--lab-info exige um nome"; lab_info "$2"; exit $? ;;
