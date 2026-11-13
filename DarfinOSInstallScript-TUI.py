@@ -750,7 +750,7 @@ def progress_meter(completed: int, total: int, width: int) -> str:
 
 def visual_status(flag: str) -> tuple[str, str]:
     return {
-        'DONE': ('✓', 'green'), 'FAIL': ('✗', 'red'),
+        'DONE': ('✓', 'green'), 'ALREADY': ('≡', 'green'), 'FAIL': ('✗', 'red'),
         'SKIP': ('–', 'yellow'), 'RUN': ('◌', 'blue'),
         'PEND': ('·', 'muted'),
     }.get(flag, ('?', 'muted'))
@@ -1165,7 +1165,7 @@ def recovery_selection(st: State, script: Path, record: dict) -> tuple[set[str],
     if not original or not original <= set(known):
         raise ValueError('O histórico contém etapas ausentes ou inválidas.')
     # RUN significa interrupção em etapa possivelmente parcialmente aplicada.
-    retry = {name for name in original if previous.get(name) != 'DONE'}
+    retry = {name for name in original if previous.get(name) not in ('DONE', 'ALREADY')}
     if not retry:
         raise ValueError('Todas as etapas registradas já foram concluídas.')
     # Dependências concluídas não precisam ser executadas de novo.
@@ -1173,7 +1173,7 @@ def recovery_selection(st: State, script: Path, record: dict) -> tuple[set[str],
     while queue:
         name = queue.pop()
         for dep in known[name].deps:
-            if dep in known and dep not in retry and previous.get(dep) != 'DONE':
+            if dep in known and dep not in retry and previous.get(dep) not in ('DONE', 'ALREADY'):
                 retry.add(dep)
                 queue.append(dep)
     uncertain = [n for n in retry if previous.get(n) in ('RUN', 'PEND', None)]
@@ -1196,16 +1196,16 @@ def prepare_run(script: Path, names: list[str], log: Path, parent: str | None = 
 def update_run(path: Path, data: dict, event: str | None = None, code: int | None = None):
     if event:
         parts = event.split(':', 2)
-        if len(parts) >= 2 and parts[0] in ('STEP_START','STEP_DONE','STEP_FAIL','STEP_SKIP'):
+        if len(parts) >= 2 and parts[0] in ('STEP_START','STEP_DONE','STEP_ALREADY','STEP_FAIL','STEP_SKIP'):
             name = parts[1]
             if name in data['statuses']:
                 data['statuses'][name] = {'STEP_START':'RUN','STEP_DONE':'DONE',
-                    'STEP_FAIL':'FAIL','STEP_SKIP':'SKIP'}[parts[0]]
+                    'STEP_ALREADY':'ALREADY','STEP_FAIL':'FAIL','STEP_SKIP':'SKIP'}[parts[0]]
                 data['events'].append({'time':datetime.now(timezone.utc).isoformat(), 'event':event})
     if code is not None:
         data['exit_code'] = code
         data['finished_at'] = datetime.now(timezone.utc).isoformat()
-        data['state'] = 'DONE' if code == 0 and all(v == 'DONE' for v in data['statuses'].values()) else 'INCOMPLETE'
+        data['state'] = 'DONE' if code == 0 and all(v in ('DONE','ALREADY') for v in data['statuses'].values()) else 'INCOMPLETE'
     atomic_json(path, data)
 
 def recovery_screen(win, st: State, script: Path):
@@ -1220,7 +1220,7 @@ def recovery_screen(win, st: State, script: Path):
         return
     details = [f'Registro: {path.name}', f'Origem: {record.get("started_at", "?")}',
                f'Estado: {record.get("state", "?")}', f'SHA256: {record["script_sha256"][:20]}', '',
-               'Concluídas anteriormente: ' + ', '.join(n for n,v in record['statuses'].items() if v=='DONE'),
+               'Concluídas anteriormente: ' + ', '.join(n for n,v in record['statuses'].items() if v in ('DONE','ALREADY')),
                '', 'Serão selecionadas para nova tentativa:', *('  - '+n+' ['+record['statuses'].get(n,'?')+']' for n in sorted(selection)),
                '', warning, '', 'A retomada NÃO desfaz mudanças anteriores.']
     scroll_screen(win, 'DIAGNÓSTICO DA ÚLTIMA INSTALAÇÃO', '\n'.join(details))
@@ -1798,7 +1798,7 @@ def _install_draw(win, names, status, current, tail, elapsed, log_mode, count, w
         put(win, 0, 1, 'Terminal pequeno. Amplie para 48x15.', colors('yellow'))
         win.refresh()
         return
-    done = sum(status.get(n) == 'DONE' for n in names)
+    done = sum(status.get(n) in ('DONE','ALREADY') for n in names)
     fail = sum(status.get(n) == 'FAIL' for n in names)
     skip = sum(status.get(n) == 'SKIP' for n in names)
     total = len(names)
@@ -1877,7 +1877,7 @@ def stream_install_v4(cmd: list[str], step_names: list[str], logfile: Path, jour
                                 name=parts[1]
                                 if name in statuses:
                                     statuses[name]={'STEP_START':'RUN','STEP_DONE':'DONE',
-                                      'STEP_FAIL':'FAIL','STEP_SKIP':'SKIP'}.get(typ,statuses[name])
+                                      'STEP_FAIL':'FAIL','STEP_SKIP':'SKIP','STEP_ALREADY':'ALREADY'}.get(typ,statuses[name])
                                     if typ=='STEP_START':current=name
                             elif typ=='PKG' and len(parts)==3:
                                 packages.update((parts[1],p) for p in parts[2].split())
