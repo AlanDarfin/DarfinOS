@@ -119,6 +119,35 @@ lab_aur_install nscde nscde
         self.assertTrue(any(x.startswith('lab_chicago95\t') for x in rows))
         self.assertNotIn('Autenticando sudo', result.stdout)
 
+    def test_modular_probe_reads_complete_partial_and_chicago_files(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            bin_dir = Path(tmp) / "bin"
+            home.mkdir()
+            bin_dir.mkdir()
+            packages = ["i3-wm", "i3status", "i3lock", "dmenu", "xorg-xinit", "xfce4-session"]
+            pacman = bin_dir / "pacman"
+            pacman.write_text("#!/bin/sh\nif [ \"$1\" = \"-Qq\" ]; then\n" +
+                              "printf '%s\\n' " + " ".join(packages) + "\nfi\n")
+            pacman.chmod(0o755)
+            env = dict(os.environ, HOME=str(home), PATH=str(bin_dir) + ":" + os.environ["PATH"])
+            cmd = ['bash', str(ROOT / 'DarfinOSInstallScript.sh'), '--check-modules']
+            result = subprocess.run(cmd, env=env, capture_output=True, text=True, check=True)
+            rows = {parts[0]: parts[1:] for line in result.stdout.splitlines()[1:]
+                    if len(parts := line.split("\t", 2)) == 3}
+            self.assertEqual(rows['i3'][0], 'installed')
+            self.assertEqual(rows['xfce'][0], 'partial')
+            self.assertEqual(rows['lab_chicago95'][0], 'missing')
+            for directory in ('.themes/Chicago95', '.icons/Chicago95'):
+                target = home / directory
+                target.mkdir(parents=True)
+                (target / 'index.theme').write_text('[Icon Theme]\\n')
+            result = subprocess.run(cmd, env=env, capture_output=True, text=True, check=True)
+            rows = {parts[0]: parts[1:] for line in result.stdout.splitlines()[1:]
+                    if len(parts := line.split("\t", 2)) == 3}
+            self.assertEqual(rows['lab_chicago95'][0], 'installed')
+
     def test_skip_verified_module_before_installing(self):
         codes = '''
 STEPS=(i3)
