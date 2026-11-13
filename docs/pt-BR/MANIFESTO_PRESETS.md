@@ -22,6 +22,7 @@ O comando `python3 DarfinOSInstallScript-TUI.py --manifest` exporta JSON estáti
 | `desktop` | SonicDE e XLibre | Altera componentes gráficos |
 | `i3` | WM i3 + XLibre | Nova sessão X11, sem SonicDE |
 | `retro` | Xfce e Chicago95 | Tema opcional no HOME, sem trocar sessão |
+| `workstation` | Window Maker e chezmoi | Perfil Workstation 1995 opcional |
 | `gaming` | Desktop e jogos | Depende do hardware |
 | `full` | Todas as 36 etapas convencionais | Inclui Bedrock e opções avançadas |
 
@@ -73,6 +74,6 @@ podem ser consultados com `--labs` ou a tecla L. O `full` contém as 35 etapas
 convencionais e exclui todos os `lab_*`.
 
 O sexto preset, `retro`, adiciona `xfce` e `lab_chicago95` com confirmação
-e cópia de tema/ícones para o HOME. O catálogo Labs soma 13 projetos e o Bash
-48 etapas; o `full` continua excluindo `lab_*`.
+e cópia de tema/ícones para o HOME. O catálogo Labs soma 28 projetos e o Bash
+63 etapas; o `full` continua excluindo `lab_*`.
 Ver [MODULOS.md](MODULOS.md) para a checagem automática de instalações.

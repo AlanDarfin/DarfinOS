@@ -9,13 +9,15 @@ python -m py_compile DarfinOSInstallScript-TUI.py darfinos_control.py
 python -m unittest discover -s tests -v
 bash DarfinOSInstallScript.sh --preflight
 bash DarfinOSInstallScript.sh --list >/tmp/darfinos-steps.txt
-python DarfinOSInstallScript-TUI.py --doctor-json | python -c 'import json,sys; x=json.load(sys.stdin); assert x["ready"] and x["steps"] == 48 and x["labs"] == 13, x'
-python DarfinOSInstallScript-TUI.py --manifest | python -c 'import json,sys; x=json.load(sys.stdin); assert x["accuracy"] == "partial_static" and len(x["steps"]) == 48'
+python DarfinOSInstallScript-TUI.py --doctor-json | python -c 'import json,sys; x=json.load(sys.stdin); assert x["ready"] and x["steps"] == 63 and x["labs"] == 28, x'
+python DarfinOSInstallScript-TUI.py --manifest | python -c 'import json,sys; x=json.load(sys.stdin); assert x["accuracy"] == "partial_static" and len(x["steps"]) == 63'
 python DarfinOSInstallScript-TUI.py --plan --preset minimal >/dev/null
 python DarfinOSInstallScript-TUI.py --plan --preset i3 >/dev/null
 python DarfinOSInstallScript-TUI.py --plan --preset retro >/dev/null
-python DarfinOSInstallScript-TUI.py --check-modules | python -c 'import json,sys; x=json.load(sys.stdin); assert len(x["modules"])==48'
-python DarfinOSInstallScript-TUI.py --labs | python -c 'import json,sys; p=json.load(sys.stdin)["projects"]; assert len(p)==13 and all(x["url"].startswith("https://") and x["step"] for x in p)'
+python DarfinOSInstallScript-TUI.py --plan --preset workstation | grep -F lab_windowmaker >/dev/null
+python darfinos_control.py styles | grep -F sonicde-kvantum >/dev/null
+python DarfinOSInstallScript-TUI.py --check-modules | python -c 'import json,sys; x=json.load(sys.stdin); assert len(x["modules"])==63'
+python DarfinOSInstallScript-TUI.py --labs | python -c 'import json,sys; p=json.load(sys.stdin)["projects"]; assert len(p)==28 and all(x["url"].startswith("https://") and x["step"] for x in p)'
 bash DarfinOSInstallScript.sh --labs | grep -F 'https://i3wm.org/' >/dev/null
 python DarfinOSInstallScript-TUI.py --compare-presets minimal gaming | python -c 'import json,sys; x=json.load(sys.stdin); assert "gaming" in x["add"] and "xlibre" in x["review_required"]'
 python DarfinOSInstallScript-TUI.py --audit --preset minimal | python -c 'import json,sys; x=json.load(sys.stdin); assert x["accuracy"] == "partial_static" and x["selected_steps"] > 0'

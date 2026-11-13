@@ -78,7 +78,7 @@ use `-y` como substituto para essa revisão.
 
 ## DarfinOS Labs
 
-A categoria [Labs](LABS.md) reúne 13 projetos externos com etapas de
+A categoria [Labs](LABS.md) reúne 28 projetos externos com etapas de
 instalação. As etapas avançadas `lab_*` exigem seleção individual, confirmação
 `LABS` e não aceitam `-y`. Revise os PKGBUILDs do AUR e teste os
 experimentos gráficos e de boot numa VM. Trinity usa um repositório assinado

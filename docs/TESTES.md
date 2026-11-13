@@ -25,12 +25,12 @@ The development preview workflow does not create stable releases or ISO images. 
 
 ## What the tests cover
 
-- Correct and unique list of all 48 stage names and six presets.
+- Correct and unique list of all 63 stage names and seven presets.
 - Installer refuses accidental implicit full installations.
 - Module checks show complete/partial/missing/unknown without sudo.
 - Only verified complete modules generate `STEP_ALREADY`; `--reinstall` allows manual re-execution.
 - TUI records `ALREADY` correctly and does not requeue it during recovery.
-- 13 Labs projects with original upstream HTTPS links and safe handling of AUR confirmations.
+- 28 Labs projects with original upstream HTTPS links and safe handling of AUR confirmations.
 - Chicago95/Xfce integration planning without running a graphical session, remote Python installer or real clone during offline CI.
 - Profile diff, read-only maintenance status, limited ZIP backup validation and restore-preparation behavior.
 

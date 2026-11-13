@@ -663,7 +663,10 @@ def control_center_screen(win) -> None:
     ]
     lines += ["  " + name + ": " + ("sim" if installed else "não")
               for name, installed in status["tools"].items()]
-    lines += ["", "Atualizadores (somente detecção):",
+    pending = maintenance["config_review"]["pending"]
+    lines += ["", "Revisão de .pacnew/.pacsave: " + ("indisponível" if pending is None else str(len(pending))),
+              *["  " + entry for entry in (pending or [])],
+              "", "Atualizadores (somente detecção):",
               "  Topgrade: " + ("disponível" if maintenance["tools"]["topgrade"] else "ausente"),
               "  Arch-Update: " + ("disponível" if maintenance["tools"]["arch-update"] else "ausente"),
               "  Applet: " + ("disponível" if maintenance["tools"]["arch-update-tray"] else "ausente"),
@@ -676,6 +679,9 @@ def control_center_screen(win) -> None:
               "  python3 darfinos_control.py profile-diff BASE DESTINO",
               "  python3 darfinos_control.py backup ~/darfinos-config.zip",
               "  python3 darfinos_control.py restore ~/darfinos-config.zip",
+              "  W · Oficina de Temas / perfis de personalização",
+              "  python3 darfinos_control.py maintenance --json · pendências pacnew/pacsave",
+              "  python3 darfinos_control.py maintenance-timer enable · aviso semanal opcional",
               "",
               "Restauração é prévia por padrão; --apply e --overwrite exigem decisão explícita.",
               "Cópias podem conter dados privados: não compartilhe os arquivos ZIP."]
@@ -860,7 +866,7 @@ def draw_v3(win, st: State, visible: list[int], cursor: int, top: int,
                 if missing:
                     put(win, h-4, 2, 'Dependências pendentes: ' + ', '.join(missing), colors('yellow'))
         put(win, h-2, 2, '↑↓ navegar · Espaço marcar · G grupo · A/N todos/nenhum · / busca · F filtro', colors('muted'))
-        put(win, h-1, 2, 'R revisar · I checar · X reinstalar · L Labs · C sistema · V auditar · Q sair', colors('muted'))
+        put(win, h-1, 2, 'R revisar · I checar · X reinstalar · L Labs · C sistema · W temas · Q sair', colors('muted'))
     else:
         put(win, 5, 2, '02  REVISÃO DA INSTALAÇÃO  /  ENTER CONFIRMA', curses.A_BOLD | colors('pink'))
         chosen = [step for step in st.steps if step.name in st.selected]
@@ -978,6 +984,65 @@ def profile_screen(win, st: State) -> None:
         st.message = str(exc)
 
 
+def styles_screen(win, st: State, allow_changes: bool) -> None:
+    lines = ["1–4: prévia de perfil · P: paleta · H: histórico · U: desfazer · X: Xfce", ""]
+    profiles = list(control.STYLE_PROFILES)
+    lines += [f"{i}. {key} · {control.STYLE_PROFILES[key]}" for i, key in enumerate(profiles, 1)]
+    lines += ["", "Os presets instalam pacotes. Os perfis abaixo alteram arquivos selecionados no HOME.",
+              "No SonicDE, reinicie os aplicativos Qt ou a sessão para ver o Kvantum.",
+              "Window Maker: selecione DarfinOS-1995 no menu de estilos após aplicar."]
+    scroll_screen(win, "◆ DARFINOS · PERFIS DE PERSONALIZAÇÃO", "\n".join(lines))
+    action = prompt(win, "Perfil 1–4 / P paleta / H histórico / U desfazer / X Xfce:")
+    if not action:
+        return
+    try:
+        action = action.strip().lower()
+        if action == 'x':
+            scroll_screen(win, "PRÉVIA · CHICAGO95 NO XFCE", control.xfce_look())
+            if allow_changes and (prompt(win, "Digite APLICAR para mudar tema e cursor:") or "").lower() == 'aplicar':
+                scroll_screen(win, "CHICAGO95", control.xfce_look(apply=True))
+        elif action == 'p':
+            path = prompt(win, "Caminho do wallpaper:")
+            if path:
+                report = control.theme_palette(Path(path))
+                scroll_screen(win, "PALETA · MATUGEN",
+                              "\n".join(f"{k}: {v}" for k, v in report.items()) +
+                              "\n\nUse a cor primary na prévia de um perfil.")
+        elif action == 'h':
+            scroll_screen(win, "HISTÓRICO DE PERSONALIZAÇÃO", "\n".join(control.style_history()) or "Sem aplicações.")
+        elif action == 'u':
+            history = control.style_history()
+            if not history:
+                st.message = 'Nenhuma aplicação para desfazer.'
+                return
+            run = prompt(win, "Identificador da aplicação:", history[0])
+            if run:
+                scroll_screen(win, "PRÉVIA · DESFAZER", control.style_undo(run))
+                if allow_changes and (prompt(win, "Digite DESFAZER para aplicar:") or "").lower() == 'desfazer':
+                    scroll_screen(win, "PERSONALIZAÇÃO · RESTAURADA", control.style_undo(run, apply=True))
+        elif action in ('1', '2', '3', '4'):
+            profile = profiles[int(action) - 1]
+            accent = prompt(win, "Cor de destaque (#RRGGBB):", control.DEFAULT_ACCENT)
+            if accent is None:
+                return
+            plan, preview = control.style_preview(profile, accent)
+            scroll_screen(win, "PRÉVIA DE PERSONALIZAÇÃO", preview)
+            if not allow_changes:
+                st.message = '--dry-run ativo. A prévia não alterou arquivos.'
+                return
+            selected = []
+            for rel, (old, new) in plan.items():
+                if old == new:
+                    continue
+                answer = prompt(win, ("Substituir " if old is not None else "Criar ") + rel + "? S/n", "n")
+                if (answer or "").lower() in ('s', 'sim'):
+                    selected.append(rel)
+            if selected and (prompt(win, f"Digite APLICAR para alterar {len(selected)} arquivos:") or "").lower() == 'aplicar':
+                scroll_screen(win, "PERSONALIZAÇÃO", control.style_apply(profile, plan, selected))
+    except (OSError, ValueError, RuntimeError, TypeError, KeyError, subprocess.TimeoutExpired) as exc:
+        scroll_screen(win, "PERSONALIZAÇÃO · ERRO", str(exc))
+
+
 def launch_topgrade(win, st: State, allow_updates: bool = True) -> None:
     """Execução interativa no terminal real; sem sudo automático ou shell."""
     if not allow_updates:
@@ -1077,6 +1142,7 @@ def ui_v3(win, st: State, digest: str, allow_updates: bool = True) -> str:
         elif key in (ord('m'), ord('M')): maintenance_screen(win)
         elif key in (ord('l'), ord('L')): labs_screen(win, st, CURRENT_SCRIPT)
         elif key in (ord('c'), ord('C')): control_center_screen(win)
+        elif key in (ord('w'), ord('W')): styles_screen(win, st, allow_updates)
         elif key in (ord('v'), ord('V')): audit_screen(win, st)
         elif key in (ord('t'), ord('T')): launch_topgrade(win, st, allow_updates)
         elif key in (ord('z'), ord('Z')): recovery_screen(win, st, CURRENT_SCRIPT)
@@ -1244,6 +1310,7 @@ PRESETS = {
     'desktop': ('SonicDE + XLibre e desktop', ('pacman_conf', 'mirrors', 'repo_xlibre', 'repo_sonicde', 'sysupgrade', 'base', 'aur_helper', 'fonts', 'hardware', 'xlibre', 'sonicde', 'desktop_extras', 'bluetooth', 'cli_tools', 'shells', 'flatpak', 'apps', 'maintenance')),
     'i3': ('i3 + XLibre, sem SonicDE', ('pacman_conf', 'mirrors', 'repo_xlibre', 'sysupgrade', 'base', 'aur_helper', 'fonts', 'hardware', 'xlibre', 'i3', 'cli_tools', 'maintenance')),
     'retro': ('Xfce + Chicago95, tema opcional no HOME', ('base', 'xfce', 'lab_chicago95')),
+    'workstation': ('Workstation 1995 · Window Maker, terminal e perfil opcional', ('base', 'lab_windowmaker', 'lab_chezmoi')),
     'gaming': ('Desktop e jogos', ('pacman_conf', 'mirrors', 'repo_xlibre', 'repo_sonicde', 'sysupgrade', 'base', 'aur_helper', 'fonts', 'hardware', 'xlibre', 'sonicde', 'desktop_extras', 'bluetooth', 'cli_tools', 'flatpak', 'gaming', 'maintenance')),
     'full': ('Etapas convencionais, inclusive Bedrock; módulos Labs fora', tuple()),
 }
@@ -1272,7 +1339,7 @@ def compare_presets(steps: list[Step], base: str, target: str) -> dict:
             'add': to_add,
             'remove': [name for name in ordered if name in before - after],
             'unchanged': len(before & after),
-            'review_required': [name for name in to_add if name in risks],
+            'review_required': [name for name in to_add if name in risks or name.startswith('lab_')],
             'note': 'Comparação declarativa entre presets; não detecta instalação real e não executa ações.'}
 
 
@@ -1289,7 +1356,7 @@ def preset_screen(win, st: State) -> None:
     lines.extend(['', 'Full inclui Bedrock, mas NÃO inclui módulos Labs (Chicago95 incluso).',
                   'Todos os presets exigem revisão antes de executar.'])
     scroll_screen(win, 'PRESETS', '\n'.join(lines))
-    value = prompt(win, 'Preset (minimal/desktop/i3/retro/gaming/full):')
+    value = prompt(win, 'Preset (minimal/desktop/i3/retro/workstation/gaming/full):')
     if value:
         try:
             apply_preset(st, value.strip().lower())

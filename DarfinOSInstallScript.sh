@@ -40,9 +40,12 @@ STEPS=(
   flatpak apps gaming browser
   # Manutenção
   maintenance firewall cleanup bobagens bedrock terminal_extras
-  # DarfinOS Labs (seleção individual; somente Retro inclui Chicago95)
+  # DarfinOS Labs (seleção individual; presets Retro e Workstation são explícitos)
   lab_nscde lab_junest lab_decman lab_metapac lab_chicago95
   lab_conty lab_nix_portable lab_trinity lab_yserver lab_xomposite lab_wayback lab_booster
+  lab_windowmaker lab_notion lab_e16 lab_xpra lab_opengamepadui
+  lab_wmutils lab_pkgsrc lab_pipeworld lab_chezmoi lab_matugen
+  lab_autorandr lab_desktop_config lab_etckeeper lab_rustic lab_kvantum
 )
 
 declare -A STEP_DESC=(
@@ -94,6 +97,21 @@ declare -A STEP_DESC=(
   [lab_xomposite]="Labs · Xomposite: compositor X11 compilado no HOME"
   [lab_wayback]="Labs · Wayback: camada experimental de X11 sobre Wayland (AUR)"
   [lab_booster]="Labs · Booster: gerador alternativo de initramfs"
+  [lab_windowmaker]="Labs · Window Maker"
+  [lab_notion]="Labs · Notion WM"
+  [lab_e16]="Labs · Enlightenment E16"
+  [lab_xpra]="Labs · Xpra"
+  [lab_opengamepadui]="Labs · OpenGamepadUI"
+  [lab_wmutils]="Labs · wmutils"
+  [lab_pkgsrc]="Labs · pkgsrc"
+  [lab_pipeworld]="Labs · Arcan + Pipeworld"
+  [lab_chezmoi]="Labs · chezmoi"
+  [lab_matugen]="Labs · Matugen"
+  [lab_autorandr]="Labs · autorandr"
+  [lab_desktop_config]="Labs · Xfconf + KConfig"
+  [lab_etckeeper]="Labs · etckeeper"
+  [lab_rustic]="Labs · rustic"
+  [lab_kvantum]="Labs · Kvantum"
 )
 
 # Explicações para a TUI: informações gerais, sem prometer instalações condicionais.
@@ -146,6 +164,21 @@ declare -A STEP_INFO=(
   [lab_xomposite]="Instala dependências Arch e compila um commit fixo com Cargo. Não inicia o compositor nem edita o i3."
   [lab_wayback]="Instala wayback-x11 pelo AUR, sem substituir o X padrão ou editar o login."
   [lab_booster]="Instala Booster em paralelo. O hook do pacote gera imagens alternativas, sem trocar o initramfs padrão ou configurar o bootloader."
+  [lab_windowmaker]="Sessão X11 inspirada no NeXTSTEP; não troca o login."
+  [lab_notion]="WM X11 com mosaico estático e abas; pacote notion-git."
+  [lab_e16]="Window manager X11 retrô; sessão alternativa."
+  [lab_xpra]="Encaminha janelas X11; não inicia serviços nem abre portas."
+  [lab_opengamepadui]="Launcher e overlay para controle pelo AUR; não troca a sessão ativa."
+  [lab_wmutils]="Utilitários para mover e organizar janelas X11 por script."
+  [lab_pkgsrc]="Bootstrap sem sudo no HOME com prefixo separado e sem alterar PATH."
+  [lab_pipeworld]="Instala Arcan pelo AUR e prepara um lançador Pipeworld no HOME; uso experimental."
+  [lab_chezmoi]="Motor dos perfis de personalização com prévia e aplicação seletiva."
+  [lab_matugen]="Extrai paletas de wallpapers para a Oficina de Temas."
+  [lab_autorandr]="Perfis de monitores X11; aplica somente modos disponíveis."
+  [lab_desktop_config]="Ajustes pontuais de tema no Xfce e estilo Qt no SonicDE."
+  [lab_etckeeper]="Histórico local de /etc; inicialização separada, sem envio remoto."
+  [lab_rustic]="Backups criptografados em destino escolhido; sem repositório automático."
+  [lab_kvantum]="Temas Qt SVG para SonicDE com opção de suporte Qt5."
 )
 
 # ----------------------------------------------------------
@@ -155,6 +188,9 @@ declare -A STEP_INFO=(
 LABS=(
   i3 chicago95 nscde junest decman metapac conty nix_portable trinity
   yserver xomposite wayback booster
+  windowmaker notion e16 xpra opengamepadui wmutils
+  pkgsrc pipeworld chezmoi matugen autorandr desktop_config
+  etckeeper rustic kvantum
 )
 declare -A LABS_URL=(
   [i3]="https://i3wm.org/"
@@ -170,6 +206,21 @@ declare -A LABS_URL=(
   [xomposite]="https://github.com/demostenex/xomposite"
   [wayback]="https://gitlab.freedesktop.org/wayback/wayback"
   [booster]="https://github.com/anatol/booster"
+  [windowmaker]="https://www.windowmaker.org/"
+  [notion]="https://notionwm.net/"
+  [e16]="https://www.enlightenment.org/e16"
+  [xpra]="https://xpra-org.github.io/xpra/"
+  [opengamepadui]="https://github.com/ShadowBlip/OpenGamepadUI"
+  [wmutils]="https://github.com/wmutils/core"
+  [pkgsrc]="https://www.netbsd.org/docs/pkgsrc/pkgsrc.html"
+  [pipeworld]="https://github.com/letoram/pipeworld"
+  [chezmoi]="https://www.chezmoi.io/"
+  [matugen]="https://github.com/InioX/matugen"
+  [autorandr]="https://github.com/phillipberndt/autorandr"
+  [desktop_config]="https://docs.xfce.org/xfce/xfconf/xfconf-query"
+  [etckeeper]="https://etckeeper.branchable.com/"
+  [rustic]="https://rustic.cli.rs/"
+  [kvantum]="https://github.com/tsujan/Kvantum"
 )
 declare -A LABS_INFO=(
   [i3]="WM tiling para X11: janela alternativa, sem remover SonicDE."
@@ -185,6 +236,21 @@ declare -A LABS_INFO=(
   [xomposite]="Compila compositor X11 para sessão separada; não roda junto do KWin."
   [wayback]="Instala Wayback pelo AUR sem alterar o servidor gráfico padrão."
   [booster]="Instala Booster e suas imagens alternativas, sem trocar a entrada de boot."
+  [windowmaker]="Sessão X11 inspirada no NeXTSTEP; não troca o login."
+  [notion]="WM X11 com mosaico estático e abas; pacote notion-git."
+  [e16]="Window manager X11 retrô; sessão alternativa."
+  [xpra]="Encaminha janelas X11; não inicia serviços nem abre portas."
+  [opengamepadui]="Launcher e overlay para controle pelo AUR; não troca a sessão ativa."
+  [wmutils]="Utilitários para mover e organizar janelas X11 por script."
+  [pkgsrc]="Bootstrap sem sudo no HOME com prefixo separado e sem alterar PATH."
+  [pipeworld]="Instala Arcan pelo AUR e prepara um lançador Pipeworld no HOME; uso experimental."
+  [chezmoi]="Motor dos perfis de personalização com prévia e aplicação seletiva."
+  [matugen]="Extrai paletas de wallpapers para a Oficina de Temas."
+  [autorandr]="Perfis de monitores X11; aplica somente modos disponíveis."
+  [desktop_config]="Ajustes pontuais de tema no Xfce e estilo Qt no SonicDE."
+  [etckeeper]="Histórico local de /etc; inicialização separada, sem envio remoto."
+  [rustic]="Backups criptografados em destino escolhido; sem repositório automático."
+  [kvantum]="Temas Qt SVG para SonicDE com opção de suporte Qt5."
 )
 declare -A LABS_RISK=(
   [i3]="opcional"
@@ -200,6 +266,21 @@ declare -A LABS_RISK=(
   [xomposite]="critico"
   [wayback]="critico"
   [booster]="critico"
+  [windowmaker]="opcional"
+  [notion]="avancado"
+  [e16]="opcional"
+  [xpra]="opcional"
+  [opengamepadui]="avancado"
+  [wmutils]="avancado"
+  [pkgsrc]="avancado"
+  [pipeworld]="critico"
+  [chezmoi]="opcional"
+  [matugen]="opcional"
+  [autorandr]="opcional"
+  [desktop_config]="opcional"
+  [etckeeper]="avancado"
+  [rustic]="opcional"
+  [kvantum]="opcional"
 )
 declare -A LABS_MODE=(
   [i3]="pacman"
@@ -215,6 +296,21 @@ declare -A LABS_MODE=(
   [xomposite]="compilacao"
   [wayback]="aur"
   [booster]="pacman"
+  [windowmaker]="pacman"
+  [notion]="aur"
+  [e16]="pacman"
+  [xpra]="pacman"
+  [opengamepadui]="aur"
+  [wmutils]="aur"
+  [pkgsrc]="compilacao"
+  [pipeworld]="aur + fonte"
+  [chezmoi]="pacman"
+  [matugen]="pacman"
+  [autorandr]="pacman"
+  [desktop_config]="pacman"
+  [etckeeper]="pacman"
+  [rustic]="pacman"
+  [kvantum]="pacman"
 )
 declare -A LABS_STEP=(
   [i3]="i3"
@@ -230,6 +326,21 @@ declare -A LABS_STEP=(
   [xomposite]="lab_xomposite"
   [wayback]="lab_wayback"
   [booster]="lab_booster"
+  [windowmaker]="lab_windowmaker"
+  [notion]="lab_notion"
+  [e16]="lab_e16"
+  [xpra]="lab_xpra"
+  [opengamepadui]="lab_opengamepadui"
+  [wmutils]="lab_wmutils"
+  [pkgsrc]="lab_pkgsrc"
+  [pipeworld]="lab_pipeworld"
+  [chezmoi]="lab_chezmoi"
+  [matugen]="lab_matugen"
+  [autorandr]="lab_autorandr"
+  [desktop_config]="lab_desktop_config"
+  [etckeeper]="lab_etckeeper"
+  [rustic]="lab_rustic"
+  [kvantum]="lab_kvantum"
 )
 
 # ----------------------------------------------------------
@@ -277,7 +388,7 @@ usage() {
 DarfinOS · instalador modular de pós-instalação para Arch Linux
 Uso: bash DarfinOSInstallScript.sh [opções]
   --list                 Lista etapas disponíveis (somente leitura).
-  --labs                 Catálogo dos 13 projetos Labs, sem sudo.
+  --labs                 Catálogo dos projetos Labs, sem sudo.
   --lab-info NOME        Detalhes e URL original de um projeto Labs.
   --preflight            Verifica requisitos básicos sem sudo nem alterações.
   --check-modules        Inspeciona módulos e mostra TSV, sem sudo.
@@ -322,6 +433,10 @@ declare -A STEP_DEPS=(
   [lab_yserver]="aur_helper"
   [lab_wayback]="aur_helper"
   [lab_chicago95]="xfce"
+  [lab_notion]="aur_helper"
+  [lab_opengamepadui]="aur_helper"
+  [lab_wmutils]="aur_helper"
+  [lab_pipeworld]="aur_helper"
 )
 
 
@@ -484,6 +599,37 @@ module_probe() {
     lab_wayback)
       if module_any_package wayback-x11-git; then required=(wayback-x11-git); else required=(wayback-x11); fi ;;
     lab_booster) required=(booster) ;;
+    lab_windowmaker) required=(windowmaker xorg-xinit) ;;
+    lab_notion) required=(notion-git xorg-xinit) ;;
+    lab_e16) required=(e16 xorg-xinit) ;;
+    lab_xpra) required=(xpra) ;;
+    lab_opengamepadui) required=(opengamepadui-bin) ;;
+    lab_wmutils) required=(wmutils-git) ;;
+    lab_chezmoi) required=(chezmoi) ;;
+    lab_matugen) required=(matugen) ;;
+    lab_autorandr) required=(autorandr) ;;
+    lab_desktop_config) required=(xfconf kconfig) ;;
+    lab_etckeeper) required=(etckeeper git) ;;
+    lab_rustic) required=(rustic) ;;
+    lab_kvantum) required=(kvantum) ;;
+    lab_pkgsrc)
+      if [[ -x "$HOME/.local/share/darfinos/pkgsrc-prefix/bin/bmake" && -x "$HOME/.local/share/darfinos/pkgsrc-prefix/sbin/pkg_info" && -d "$HOME/.local/share/darfinos/pkgsrc-tree/pkgtools" ]]; then
+        MODULE_STATUS=installed; MODULE_REASON="Bootstrap pkgsrc e árvore de pacotes encontrados."
+      elif [[ -e "$HOME/.local/share/darfinos/pkgsrc-prefix" || -e "$HOME/.local/share/darfinos/pkgsrc-tree" ]]; then
+        MODULE_STATUS=partial; MODULE_REASON="Bootstrap ou árvore do pkgsrc incompletos."
+      else
+        MODULE_STATUS=missing; MODULE_REASON="Bootstrap local pkgsrc não encontrado."
+      fi
+      return 0 ;;
+    lab_pipeworld)
+      if module_packages_ready arcan && [[ -x "$HOME/.local/bin/darfinos-pipeworld" && -f "$HOME/.local/share/darfinos/pipeworld/pipeworld/pipeworld.lua" ]]; then
+        MODULE_STATUS=installed; MODULE_REASON="Arcan, aplicativo Pipeworld e lançador encontrados; sessão não testada."
+      elif module_any_package arcan || [[ -e "$HOME/.local/share/darfinos/pipeworld" || -e "$HOME/.local/bin/darfinos-pipeworld" ]]; then
+        MODULE_STATUS=partial; MODULE_REASON="Falta o Arcan, o aplicativo ou o lançador."
+      else
+        MODULE_STATUS=missing; MODULE_REASON="Pipeworld não encontrado."
+      fi
+      return 0 ;;
     lab_decman) required=(decman) ;;
     lab_metapac)
       if module_any_package metapac-bin; then required=(metapac-bin); else required=(metapac); fi ;;
@@ -1514,6 +1660,143 @@ step_lab_chicago95() {
   chicago95_ready || { warn "Chicago95 não passou na checagem final dos arquivos."; return 1; }
   ok "Chicago95 instalado. Selecione Chicago95 em Aparência e no Gerenciador de Janelas do Xfce."
   info "O cursor aparece em Mouse e Touchpad. Para GTK4, painel e outros extras: ${LABS_URL[chicago95]}/blob/$CHICAGO95_REV/INSTALL.md"
+}
+
+step_lab_windowmaker() {
+  lab_confirm windowmaker "Instala Window Maker como sessão X11 paralela." || return 1
+  install_pkgs windowmaker xorg-xinit || return 1
+  info "Escolha Window Maker na tela de login ou use wmaker como cliente do startx."
+}
+
+step_lab_notion() {
+  lab_aur_install notion notion-git || return 1
+  install_pkgs xorg-xinit || return 1
+  info "Escolha Notion na tela de login se a sessão estiver disponível; em TTY, startx /usr/bin/notion."
+}
+
+step_lab_e16() {
+  lab_confirm e16 "Instala E16 como sessão X11 alternativa." || return 1
+  install_pkgs e16 xorg-xinit || return 1
+  info "Escolha Enlightenment DR16 no login ou inicie e16 como cliente do startx."
+}
+
+step_lab_xpra() {
+  lab_confirm xpra "Instala Xpra, sem habilitar serviços ou abrir portas." || return 1
+  install_pkgs xpra || return 1
+  info "Para usar sobre SSH, leia https://xpra-org.github.io/xpra/Usage/Seamless.html"
+}
+
+step_lab_opengamepadui() {
+  lab_aur_install opengamepadui opengamepadui-bin || return 1
+  info "Abra OpenGamepadUI pelo menu. Não habilitamos serviços de entrada nem trocamos sua sessão."
+}
+
+step_lab_wmutils() {
+  lab_aur_install wmutils wmutils-git || return 1
+  info "Use os utilitários em uma sessão X11. Não mexemos nas teclas nem no WM atual."
+}
+
+# Mantém o prefixo, a árvore de pacotes e o PATH sob controle do usuário.
+step_lab_pkgsrc() {
+  local parent="$HOME/.local/share/darfinos" prefix="$HOME/.local/share/darfinos/pkgsrc-prefix"
+  local tree="$HOME/.local/share/darfinos/pkgsrc-tree" staging="$TMP_DIR/pkgsrc-tree"
+  lab_confirm pkgsrc "Prepara pkgsrc 2026Q3 no HOME. O bootstrap compila ferramentas como usuário comum." || return 1
+  install_pkgs base-devel git openssl ncurses gawk zlib || return 1
+  mkdir -p -- "$parent" || return 1
+  if [[ ! -d "$tree/pkgtools" ]]; then
+    if [[ -e "$tree" || -L "$tree" ]]; then
+      warn "Árvore pkgsrc existente em $tree; revise antes de continuar."
+      return 1
+    fi
+    lab_source_checkout "https://github.com/NetBSD/pkgsrc.git" b905145c25084a9b3173e6647a3f21e6e5aabf80 "$staging" || return 1
+    mv -nT -- "$staging" "$tree" && [[ ! -e "$staging" ]] || return 1
+  fi
+  if [[ ! -x "$prefix/bin/bmake" || ! -x "$prefix/sbin/pkg_info" ]]; then
+    if [[ -e "$prefix" || -L "$prefix" ]]; then
+      warn "Prefixo incompleto em $prefix; preserve ou mova-o antes de repetir o bootstrap."
+      return 1
+    fi
+    (cd -- "$tree/bootstrap" && ./bootstrap --unprivileged --prefix "$prefix" --workdir "$TMP_DIR/pkgsrc-bootstrap") || return 1
+  fi
+  [[ -x "$prefix/bin/bmake" && -x "$prefix/sbin/pkg_info" ]] || return 1
+  info "pkgsrc pronto em $prefix. Use $prefix/bin/bmake na árvore $tree; o PATH foi preservado."
+}
+
+step_lab_pipeworld() {
+  local dest="$HOME/.local/share/darfinos/pipeworld" staging="$TMP_DIR/pipeworld"
+  local launcher="$HOME/.local/bin/darfinos-pipeworld" draft="$TMP_DIR/pipeworld-launcher"
+  lab_confirm pipeworld "Instala o Arcan e copia o Pipeworld experimental, sem iniciar ou substituir sua sessão." || return 1
+  lab_aur_install pipeworld arcan || return 1
+  install_pkgs git || return 1
+  if [[ ! -f "$dest/pipeworld/pipeworld.lua" ]]; then
+    if [[ -e "$dest" || -L "$dest" ]]; then
+      warn "Pasta Pipeworld existente em $dest; não será sobrescrita."
+      return 1
+    fi
+    mkdir -p -- "$(dirname -- "$dest")" || return 1
+    lab_source_checkout "https://github.com/letoram/pipeworld.git" edc3821404b3a1274b8a50d2fb1c6b523fbd4a1c "$staging" || return 1
+    [[ -f "$staging/pipeworld/pipeworld.lua" ]] || return 1
+    mv -nT -- "$staging" "$dest" && [[ ! -e "$staging" ]] || return 1
+  fi
+  if [[ ! -x "$launcher" ]]; then
+    cat > "$draft" <<'LAUNCHER'
+#!/bin/sh
+exec arcan "$HOME/.local/share/darfinos/pipeworld/pipeworld" "$@"
+LAUNCHER
+    lab_publish_binary "$draft" darfinos-pipeworld || return 1
+  fi
+  info "Teste com $launcher. O upstream do Pipeworld recomenda Arcan recente; a execução gráfica ainda é experimental."
+}
+
+step_lab_chezmoi() {
+  lab_confirm chezmoi "Instala o motor dos perfis do Control Center sem importar dotfiles externos." || return 1
+  install_pkgs chezmoi
+}
+
+step_lab_matugen() {
+  lab_confirm matugen "Instala o gerador de paletas da Oficina de Temas." || return 1
+  install_pkgs matugen
+}
+
+step_lab_autorandr() {
+  lab_confirm autorandr "Instala autorandr. O pacote pode reagir a monitores conectados quando houver perfis salvos." || return 1
+  install_pkgs autorandr || return 1
+  info "No X11, ajuste a tela primeiro e use autorandr --save notebook-720p; use autorandr --change para testar."
+}
+
+step_lab_desktop_config() {
+  lab_confirm desktop_config "Instala os utilitários Xfconf e KConfig, sem alterar a aparência ativa." || return 1
+  install_pkgs xfconf kconfig
+}
+
+step_lab_etckeeper() {
+  lab_confirm etckeeper "Instala etckeeper. Inicializar o histórico local de /etc é uma escolha separada." || return 1
+  install_pkgs etckeeper git || return 1
+  local vcs present=0
+  for vcs in .git .hg .bzr _darcs; do
+    if sudo test -e "/etc/$vcs"; then present=1; break; fi
+  done
+  if (( ! present )) && confirm "Inicializar histórico LOCAL de /etc (sem remoto)?" n; then
+    sudo etckeeper init || return 1
+    sudo etckeeper commit "Initial DarfinOS configuration baseline" || return 1
+  fi
+  info "Não publique o histórico de /etc. Ele pode conter credenciais e outros dados privados."
+}
+
+step_lab_rustic() {
+  lab_confirm rustic "Instala o rustic sem criar repositório, agendar backup ou selecionar destino." || return 1
+  install_pkgs rustic || return 1
+  info "Escolha destino, senha e faça um teste de restauração: https://rustic.cli.rs/docs/"
+}
+
+step_lab_kvantum() {
+  lab_confirm kvantum "Instala o estilo Qt6 e o Kvantum Manager. Não modifica seu tema ativo." || return 1
+  install_pkgs kvantum || return 1
+  if confirm "Instalar também o plugin para aplicativos Qt5?" n; then
+    install_pkgs kvantum-qt5 || return 1
+  fi
+  info "No SonicDE, selecione Kvantum em Estilo dos aplicativos. Use o Kvantum Manager para escolher o tema."
+  info "No Control Center: perfil sonicde-kvantum para prévia/aplicação do estilo KvDark."
 }
 
 step_i3() {

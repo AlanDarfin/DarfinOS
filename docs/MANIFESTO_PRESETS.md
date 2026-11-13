@@ -2,7 +2,7 @@
 
 **🇺🇸 English (default) · [🇧🇷 Português (Brasil)](pt-BR/MANIFESTO_PRESETS.md)**
 
-DarfinOS uses a versioned list of **48 Bash stages**, with names, descriptions and known dependencies. The Python TUI parses that structure for inspection and offers six curated selections.
+DarfinOS uses a versioned list of **63 Bash stages**, with names, descriptions and known dependencies. The Python TUI parses that structure for inspection and offers seven curated selections.
 
 ```bash
 python3 DarfinOSInstallScript-TUI.py --manifest
@@ -19,6 +19,7 @@ python3 DarfinOSInstallScript-TUI.py --compare-presets minimal gaming
 | `desktop` | SonicDE + XLibre and desktop utilities | Display stack and login changes require care |
 | `i3` | i3 tiling WM + XLibre | Does not install SonicDE |
 | `retro` | Xfce and Chicago95 | Copies upstream GTK/icons into HOME with explicit confirmation; does not activate theme |
+| `workstation` | Window Maker X11 and chezmoi for the optional Workstation 1995 style |
 | `gaming` | SonicDE + games tools | Compatibility depends on GPU and package availability |
 | `full` | All conventional stages | Includes high-risk Bedrock; deliberately excludes all `lab_*` |
 

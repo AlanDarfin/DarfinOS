@@ -78,7 +78,7 @@ exato da execução e o commit SHA antes de considerar o resultado válido.
 
 ## 5. Validar Labs e i3 em VMs separadas
 
-- [ ] Conferir 13 URLs no catálogo Bash/TUI e confirmar que listar não pede sudo.
+- [ ] Conferir 28 URLs no catálogo Bash/TUI e confirmar que listar não pede sudo.
 - [ ] Verificar que `full`, `--all`, `--skip` e tecla A excluem etapas `lab_*`.
 - [ ] Instalar `i3` no Arch com `--only i3` e verificar sessão alternativa,
   arquivos pessoais intactos e saída para o SonicDE.
