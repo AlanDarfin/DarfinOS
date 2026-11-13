@@ -35,7 +35,7 @@ GitHub Markdown cannot detect a reader's browser locale or automatically render 
 
 ## What you can customize
 
-DarfinOS currently describes **63 modular stages**, **seven presets**, and **28 independent projects in Labs**.
+DarfinOS currently describes **64 modular stages**, **seven presets**, and **29 Labs entries** (28 upstream projects and the i3 Notebook bundle).
 
 | Area | Modules and examples |
 | --- | --- |
@@ -45,7 +45,7 @@ DarfinOS currently describes **63 modular stages**, **seven presets**, and **28 
 | Network and services | ZeroTier, Hamachi, Syncthing, Docker/Podman |
 | Applications and games | Flatpak, selected desktop apps, browser, Steam, Wine, GameMode and MangoHud |
 | Maintenance | Topgrade, Arch-Update/tray, service timers, firewall, cleanup and optional advanced steps |
-| DarfinOS Labs | 28 projects with optional installer stages and original project links |
+| DarfinOS Labs | 29 entries with optional installer stages and original project links |
 
 Features are conditional. A module is not guaranteed to install every named program on all hardware or configurations.
 
@@ -126,9 +126,11 @@ See [module verification details](docs/MODULOS.md) and the [TUI guide](docs/TUI_
 
 Use `python3 DarfinOSInstallScript-TUI.py --list-presets` to list them or `--compare-presets minimal gaming` to inspect the difference.
 
+The [i3 Notebook profile](docs/CUSTOMIZATION.md#i3-notebook-720p) adds a themed Rofi launcher, Dunst pop-ups, laptop controls and a writing mode without changing Compact i3.
+
 ### DarfinOS Labs
 
-Labs catalogs 28 independent projects. Bash `--labs` and TUI `--labs` only list them. The **L** key opens the catalog in the terminal UI. All 28 projects can be installed. The advanced Labs stages require confirmation and reject `-y`. Trinity installs the signed repository and `tde-meta` without switching your login manager.
+Labs catalogs 28 upstream projects and the i3 Notebook bundle. Bash `--labs` and TUI `--labs` only list them. The **L** key opens the catalog in the terminal UI. All 29 entries can be installed. The advanced Labs stages require confirmation and reject `-y`. Trinity installs the signed repository and `tde-meta` without switching your login manager.
 
 Full descriptions, integration limits and **original upstream links**: [DarfinOS Labs](docs/LABS.md) and the [Labs website](https://darfinos.vercel.app/labs/).
 

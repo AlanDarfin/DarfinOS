@@ -80,6 +80,7 @@ exato da execução e o commit SHA antes de considerar o resultado válido.
 
 - [ ] Conferir 28 URLs no catálogo Bash/TUI e confirmar que listar não pede sudo.
 - [ ] Verificar que `full`, `--all`, `--skip` e tecla A excluem etapas `lab_*`.
+- [ ] No i3 Notebook em 720p, conferir brilho, teclas de mídia, bloqueio antes de suspender e pop-ups do Dunst sem compositor.
 - [ ] Instalar `i3` no Arch com `--only i3` e verificar sessão alternativa,
   arquivos pessoais intactos e saída para o SonicDE.
 - [ ] Testar o preset `i3` com XLibre a partir de TTY e login após reinicialização.

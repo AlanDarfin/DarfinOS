@@ -2,7 +2,7 @@
 
 # DarfinOS Labs · projetos independentes e experimentais
 
-**Seu Arch, minhas regras.** Os 28 projetos independentes agora têm uma etapa no instalador. Na TUI, pressione **L** para abrir o Labs, **Enter** para ler os detalhes e **Espaço** para selecionar. No Bash, passe o nome da etapa para `--only`.
+**Seu Arch, minhas regras.** Os 28 projetos independentes e o pacote i3 Notebook agora têm uma etapa no instalador. Na TUI, pressione **L** para abrir o Labs, **Enter** para ler os detalhes e **Espaço** para selecionar. No Bash, passe o nome da etapa para `--only`.
 
 ```bash
 bash DarfinOSInstallScript.sh --labs
@@ -47,6 +47,7 @@ As etapas `lab_*` são interativas, recusam `-y` e ficam fora de `--all`, `--ski
 | [etckeeper](https://etckeeper.branchable.com/) | `lab_etckeeper` | Histórico local de /etc; inicialização separada, sem envio remoto. |
 | [rustic](https://rustic.cli.rs/) | `lab_rustic` | Backups criptografados em destino escolhido; sem repositório automático. |
 | [Kvantum](https://github.com/tsujan/Kvantum) | `lab_kvantum` | Temas Qt SVG para SonicDE com opção de suporte Qt5. |
+| **i3 Notebook** | `lab_i3_notebook` | Pacote DarfinOS com [Rofi](https://github.com/davatorium/rofi), [Dunst](https://dunst-project.org/) e [i3status-rust](https://github.com/greshake/i3status-rust). Ative à parte na [Oficina de Temas](CUSTOMIZATION.md#i3-notebook-720p). |
 
 ### Depois de instalar
 

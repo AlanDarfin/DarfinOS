@@ -24,3 +24,17 @@ jobs:
         uses: actions/checkout@v4
       - name: Executar testes e verificações somente leitura
         run: bash tests/integration_arch_smoke.sh
+
+  i3-notebook:
+    name: Arch Linux · i3 Notebook em X11 virtual
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: archlinux:latest
+    steps:
+      - name: Preparar i3 e servidor virtual no contêiner
+        run: |
+          pacman -Syu --noconfirm --needed python git dbus i3-wm i3status i3lock xss-lock xterm ttf-dejavu rofi dunst i3status-rust chezmoi xorg-server-xvfb
+      - uses: actions/checkout@v4
+      - name: Validar perfil e notificações sem alterar o host
+        run: bash tests/integration_i3_notebook.sh

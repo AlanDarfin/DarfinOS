@@ -1,0 +1,33 @@
+# DarfinOS · i3bar com rótulos legíveis sem fontes de ícones
+[theme]
+theme = "plain"
+[theme.overrides]
+idle_bg = "#171a1f"
+idle_fg = "#f2f2f2"
+info_fg = "{{ .accent }}"
+warning_fg = "{{ .accent }}"
+critical_fg = "#ff7b7b"
+
+[[block]]
+block = "battery"
+driver = "sysfs"
+format = " BAT $percentage "
+full_format = " BAT $percentage "
+missing_format = ""
+
+[[block]]
+block = "net"
+interval = 5
+format = " {Wi-Fi $signal_strength|Rede} "
+inactive_format = " Sem rede "
+missing_format = " Sem rede "
+
+[[block]]
+block = "sound"
+format = " {VOL $volume|Mudo} "
+max_vol = 100
+
+[[block]]
+block = "time"
+interval = 30
+format = " $timestamp.datetime(f:'%d/%m %H:%M') "

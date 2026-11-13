@@ -2,7 +2,7 @@
 
 **🇺🇸 English (default) · [🇧🇷 Português (Brasil)](pt-BR/TUI_V5.md)**
 
-The Python `curses` terminal UI is an optional front end for the Bash installer. It can inspect 63 stages, handle seven presets, show dependency information, browse 28 Labs projects, record installation events and present a package audit. Opening the TUI does not begin installation.
+The Python `curses` terminal UI is an optional front end for the Bash installer. It can inspect 64 stages, handle seven presets, show dependency information, browse 29 Labs entries, record installation events and present a package audit. Opening the TUI does not begin installation.
 
 ```bash
 python3 DarfinOSInstallScript-TUI.py --doctor

@@ -25,14 +25,16 @@ The development preview workflow does not create stable releases or ISO images. 
 
 ## What the tests cover
 
-- Correct and unique list of all 63 stage names and seven presets.
+- Correct and unique list of all 64 stage names and seven presets.
 - Installer refuses accidental implicit full installations.
 - Module checks show complete/partial/missing/unknown without sudo.
 - Only verified complete modules generate `STEP_ALREADY`; `--reinstall` allows manual re-execution.
 - TUI records `ALREADY` correctly and does not requeue it during recovery.
-- 28 Labs projects with original upstream HTTPS links and safe handling of AUR confirmations.
+- 29 Labs entries with original upstream HTTPS links and safe handling of AUR confirmations.
 - Chicago95/Xfce integration planning without running a graphical session, remote Python installer or real clone during offline CI.
 - Profile diff, read-only maintenance status, limited ZIP backup validation and restore-preparation behavior.
+
+The Arch CI also runs an isolated 720p X11 session to check the Notebook bar, pocket terminal, Rofi theme parsing and Dunst notification display, history and pause. Physical brightness keys and suspend still need manual testing.
 
 ## Not yet certified
 

@@ -407,9 +407,13 @@ STYLE_PROFILES = {
     "i3-compacto": "i3 compacto para telas de 720p",
     "workstation-1995": "Window Maker grafite e amarelo",
     "sonicde-kvantum": "Kvantum com KvDark em grafite e amarelo, sem mudar o painel",
+    "i3-notebook": "DarfinOS Notebook 720p · Rofi, Dunst e atalhos de notebook",
 }
 STYLE_ROOT = ".local/state/darfinos-customization"
 DEFAULT_ACCENT = "#ffcb2e"
+NOTEBOOK_I3_CONFIG = ".config/i3/config"
+NOTEBOOK_STYLE_DIR = ".config/darfinos/i3-notebook"
+NOTEBOOK_STYLE_FILES = ("session.sh", "rofi.rasi", "dunstrc", "status.toml")
 
 
 def _style_path(root: Path, relative: str) -> Path:
@@ -491,6 +495,7 @@ def _style_paths(profile: str) -> tuple[str, ...]:
         "terminal": (".config/fish/conf.d/90-darfinos.fish", ".config/starship.toml",
                      ".config/fastfetch/config.jsonc", ".config/fastfetch/logo.png"),
         "i3-compacto": (".config/i3/config",),
+        "i3-notebook": (NOTEBOOK_I3_CONFIG, *(f"{NOTEBOOK_STYLE_DIR}/{name}" for name in NOTEBOOK_STYLE_FILES)),
         "workstation-1995": ("GNUstep/Library/WindowMaker/Styles/DarfinOS-1995.style",),
         "sonicde-kvantum": (".config/kdeglobals", ".config/Kvantum/kvantum.kvconfig",
                            ".config/Kvantum/DarfinOSGold/DarfinOSGold.kvconfig",
@@ -562,6 +567,11 @@ bar {
     }
 }
 ''', accent),)
+    elif profile == "i3-notebook":
+        theme = source / "themes/i3-notebook"
+        templates = ((theme / name).read_text(encoding="utf-8") for name in ("config", *NOTEBOOK_STYLE_FILES))
+        files = tuple(_render_style(text, accent) if "{{ .accent }}" in text else text.encode()
+                      for text in templates)
     elif profile == "workstation-1995":
         files = (_render_style('''{
   FTitleBack = (solid, "#2a2d32");
@@ -620,7 +630,14 @@ def style_apply(profile: str, plan: dict, selected: list[str], home: Path | None
     allowed = set(_style_paths(profile))
     if not selected or not set(selected) <= set(plan) <= allowed:
         raise ValueError("Selecione apenas arquivos do perfil.")
+    if profile == "i3-notebook" and NOTEBOOK_I3_CONFIG in selected:
+        for rel in _style_paths(profile)[1:]:
+            if rel not in selected and (rel not in plan or _style_read(_style_path(root, rel)) != plan[rel][1]):
+                raise ValueError("Para ativar o i3 Notebook, aplique também os arquivos do perfil.")
     changes = {rel: plan[rel] for rel in dict.fromkeys(selected) if plan[rel][0] != plan[rel][1]}
+    if profile == "i3-notebook" and NOTEBOOK_I3_CONFIG in changes:
+        # Publish the entry point after the files it uses.
+        changes[NOTEBOOK_I3_CONFIG] = changes.pop(NOTEBOOK_I3_CONFIG)
     if not changes:
         return "Nada a mudar."
     for rel, (old, _) in changes.items():
@@ -873,7 +890,9 @@ def main(argv: list[str] | None = None) -> int:
     style.add_argument("name", choices=STYLE_PROFILES)
     style.add_argument("--accent", default=DEFAULT_ACCENT)
     style.add_argument("--apply", action="store_true")
-    style.add_argument("--file", action="append", default=[], help="Arquivo relativo ao HOME; pode repetir")
+    selection = style.add_mutually_exclusive_group()
+    selection.add_argument("--file", action="append", default=[], help="Arquivo relativo ao HOME; pode repetir")
+    selection.add_argument("--all-files", action="store_true", help="Selecionar todos os arquivos deste perfil")
     sub.add_parser("style-history", help="Listar aplicações que podem ser desfeitas")
     undo = sub.add_parser("style-undo", help="Prévia ou desfazer alterações de uma aplicação")
     undo.add_argument("run")
@@ -899,7 +918,7 @@ def main(argv: list[str] | None = None) -> int:
         elif args.action == "style":
             plan, preview = style_preview(args.name, args.accent)
             if args.apply:
-                print(style_apply(args.name, plan, args.file))
+                print(style_apply(args.name, plan, list(plan) if args.all_files else args.file))
             else:
                 print(preview)
         elif args.action == "style-history":

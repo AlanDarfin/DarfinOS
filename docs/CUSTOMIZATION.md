@@ -23,3 +23,34 @@ python3 darfinos_control.py style-undo RUN
 - **Backups**. etckeeper optionally initializes local /etc history. rustic is installed without setting up credentials, destinations or backup schedules. Neither is an OS snapshot.
 
 For new Labs stages and original links, see [DarfinOS Labs](LABS.md). Arcan/Pipeworld and desktop sessions still need graphical validation in a disposable VM.
+
+## i3 Notebook (720p)
+
+**i3 Notebook** is separate from Compact i3. Install **i3 Notebook** in Labs
+(**L**), then open **W → i3-notebook**, review the preview and apply it. The
+Workshop keeps your previous i3 configuration in its undo history and leaves
+global Rofi and Dunst configs alone. Log out and back into i3 to load the
+profile's session tools. XLibre is not required if X11 already works.
+
+```bash
+bash DarfinOSInstallScript.sh --only lab_i3_notebook
+python3 darfinos_control.py style i3-notebook
+python3 darfinos_control.py style i3-notebook --apply --all-files
+```
+
+| Shortcut | Action |
+| --- | --- |
+| Super+D / Super+Tab | Launch apps and switch windows in Rofi. dmenu is the app-launch fallback. |
+| Super+F1 | Open the shortcut list, also available as the **Atalhos do i3** tab in Rofi. |
+| Super+B | Writing mode. Hold Super or receive an urgent window hint to reveal the hidden bar. |
+| Super+Grave / Super+R | Pocket terminal and arrow-key resizing (Esc to exit). |
+| Brightness and audio keys | Adjust brightness, volume and mute using your existing PipeWire or PulseAudio setup. |
+| Super+L / Print | Lock the screen or capture an area. xss-lock handles locking before suspend. |
+| Super+N / Super+Shift+N / Super+Ctrl+N | Redisplay the last notification, toggle Do Not Disturb, and dismiss visible pop-ups. |
+
+The bar shows battery, network, volume and time. Dunst shows up to three
+floating notifications in the top-right corner, with Rofi's graphite palette
+and accent color. The profile does not stop a notification daemon already
+running on the same D-Bus session. If needed, sign out of the other desktop
+before testing in i3. Run `dunstify "DarfinOS" "Notifications ready"` in the i3
+session to see the theme. Picom is neither installed nor started by this profile.

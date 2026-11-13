@@ -115,8 +115,9 @@ lab_aur_install nscde nscde
                                  '--check-modules'], capture_output=True, text=True, check=True)
         rows = result.stdout.splitlines()
         self.assertEqual(rows[0], 'module\tstatus\treason')
-        self.assertEqual(len(rows), 64)
+        self.assertEqual(len(rows), 65)
         self.assertTrue(any(x.startswith('lab_chicago95\t') for x in rows))
+        self.assertTrue(any(x.startswith('lab_i3_notebook\t') for x in rows))
         self.assertNotIn('Autenticando sudo', result.stdout)
 
     def test_modular_probe_reads_complete_partial_and_chicago_files(self):
@@ -137,6 +138,7 @@ lab_aur_install nscde nscde
             rows = {parts[0]: parts[1:] for line in result.stdout.splitlines()[1:]
                     if len(parts := line.split("\t", 2)) == 3}
             self.assertEqual(rows['i3'][0], 'installed')
+            self.assertEqual(rows['lab_i3_notebook'][0], 'partial')
             self.assertEqual(rows['xfce'][0], 'partial')
             self.assertEqual(rows['lab_chicago95'][0], 'missing')
             for directory in ('.themes/Chicago95', '.icons/Chicago95'):
