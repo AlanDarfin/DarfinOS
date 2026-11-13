@@ -4,13 +4,14 @@
 seguem caminhos menos convencionais no ecossistema Linux, sem instalar tudo
 automaticamente nem confundir demonstração com funcionamento validado.
 
-O catálogo traz **12 projetos**, com link para a origem, classificação de risco,
+O catálogo traz **13 projetos**, com link para a origem, classificação de risco,
 descrição e indicação exata do que o DarfinOS pode instalar. Nenhum é desenvolvido
 ou mantido pelo DarfinOS.
 
 ## Modos de integração
 
-- **Pacman oficial:** i3 pode ser instalado diretamente da distribuição.
+- **Pacman oficial:** i3 e Xfce podem ser instalados pelos repositórios do Arch.
+- **Assets com confirmação:** Chicago95 copia apenas os diretórios de temas/ícones upstream para o HOME, sem executar installer.py ou aplicar a aparência automaticamente.
 - **AUR, confirmação especial:** NsCDE, JuNest, Decman e Metapac podem ser
   instalados apenas quando selecionados individualmente. As etapas exigem digitar
   `LABS` e recusam `-y`. O usuário deve revisar o PKGBUILD e suas perguntas.
@@ -41,6 +42,7 @@ risco, modo e URL; Espaço marca somente as etapas instaláveis, sem executá-la
 | Projeto | Para quê? | Integração | Projeto original |
 | --- | --- | --- | --- |
 | **i3** | WM mosaico X11 | Pacman oficial, etapa `i3` | [i3](https://i3wm.org/) |
+| **Chicago95** | Tema retrô Windows 95 para Xfce | Etapas `xfce` + `lab_chicago95`, preset `retro` | [Chicago95](https://github.com/grassmunk/Chicago95) |
 | **NsCDE** | Desktop UNIX retrô sobre FVWM | AUR assistido | [NsCDE](https://github.com/NsCDE/NsCDE) |
 | **JuNest** | Ambiente Arch no espaço de usuário | AUR assistido; sem `setup` | [JuNest](https://github.com/fsquillace/junest) |
 | **Decman** | Configuração declarativa Python | AUR assistido, sem aplicar configs | [Decman](https://github.com/kiviktnm/decman) |
@@ -88,3 +90,18 @@ configure a sessão em `~/.xinitrc`; não há mudança automática do login mana
 
 Mais informações: [guia de segurança](SEGURANCA.md),
 [matriz de VM](VALIDACAO_VM.md) e [site Labs](https://darfinos.vercel.app/labs/).
+
+## Preset Retro: Xfce + Chicago95
+
+```bash
+python3 DarfinOSInstallScript-TUI.py --plan --preset retro
+bash DarfinOSInstallScript.sh --only xfce,lab_chicago95
+```
+
+O Xfce é instalado como sessão alternativa e não substitui SonicDE. O Chicago95
+usa um `git clone` da [fonte original](https://github.com/grassmunk/Chicago95),
+verifica as pastas `Theme/Chicago95` e `Icons/Chicago95` e as copia para o HOME.
+Ele não executa `installer.py`, não modifica o painel e recusa sobrescrever
+arquivos já existentes. O tema deve ser habilitado manualmente em Xfce.
+Confira a [instalação original](https://github.com/grassmunk/Chicago95/blob/master/INSTALL.md)
+e o [verificador de módulos](MODULOS.md).
