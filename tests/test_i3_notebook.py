@@ -65,6 +65,22 @@ class I3NotebookTests(unittest.TestCase):
         self.assertEqual(self.run_entry("mic-mute").stdout.strip(),
                          b"set-source-mute @DEFAULT_SOURCE@ toggle")
 
+    def test_bar_toggle_only_targets_the_notebook_dock_on_current_display(self):
+        self.stub("head", 'exec /usr/bin/head "$@"')
+        self.stub("xdotool", """
+case "$1" in
+    search) [ "$3" = '^darfinos-notebook-bar$' ] && printf '99\\n100\\n' ;;
+    getwindowpid) [ "$2" = 99 ] && echo 412 ;;
+esac
+""")
+        self.stub("polybar-msg", 'printf "%s\\n" "$*"')
+        self.assertEqual(self.run_entry("bar-toggle").stdout.strip(), b"-p 412 cmd toggle")
+
+    def test_missing_polybar_uses_i3bar_without_global_commands(self):
+        self.stub("i3-msg", 'printf "%s\\n" "$*"')
+        self.assertEqual(self.run_entry("bar-start").stdout.strip(), b"bar mode dock notebook")
+        self.assertEqual(self.run_entry("bar-toggle").stdout.strip(), b"bar mode toggle notebook")
+
     def test_installer_only_installs_packages_after_confirmation(self):
         setup = """
 info() { :; }
@@ -81,5 +97,6 @@ step_lab_i3_notebook
         packages = set(events[0].split(":", 2)[2].split())
         self.assertTrue({"i3-wm", "rofi", "dunst", "i3status-rust", "brightnessctl",
                          "xss-lock", "flameshot", "xterm", "chezmoi", "libnotify", "feh",
-                         "zenity", "xorg-xrandr", "xorg-xrdb", "xorg-xsetroot", "xsettingsd"} <= packages)
+                         "zenity", "xorg-xrandr", "xorg-xrdb", "xorg-xsetroot", "xsettingsd", "polybar",
+                         "ttf-jetbrains-mono", "xdotool", "powerline-fonts", "otf-font-awesome", "librsvg"} <= packages)
         self.assertFalse({"wireplumber", "pipewire", "picom", "sonicde"} & packages)

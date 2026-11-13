@@ -2,7 +2,7 @@
 [global]
     follow = keyboard
     origin = top-right
-    offset = (12, 44)
+    offset = (12, 38)
     width = (245, 340)
     height = (0, 140)
     notification_limit = 3
@@ -11,8 +11,8 @@
     separator_height = 2
     frame_width = 2
     frame_color = "{{ .accent }}"
-    corner_radius = 8
-    font = DejaVu Sans 11
+    corner_radius = 0
+    font = JetBrains Mono 11
     markup = strip
     format = "<b>%s</b>\n%b"
     word_wrap = yes
@@ -23,13 +23,13 @@
     mouse_right_click = close_all
 
 [urgency_low]
-    background = "#171a1f"
+    background = "#252930"
     foreground = "#f2f2f2"
     frame_color = "#535861"
     timeout = 4
 
 [urgency_normal]
-    background = "#171a1f"
+    background = "#252930"
     foreground = "#f2f2f2"
     timeout = 6
 

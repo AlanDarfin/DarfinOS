@@ -126,7 +126,7 @@ See [module verification details](docs/MODULOS.md) and the [TUI guide](docs/TUI_
 
 Use `python3 DarfinOSInstallScript-TUI.py --list-presets` to list them or `--compare-presets minimal gaming` to inspect the difference.
 
-The [i3 Notebook profile](docs/CUSTOMIZATION.md#i3-notebook-720p) adds a themed Rofi launcher, Dunst pop-ups, laptop controls and a writing mode without changing Compact i3.
+The [i3 Notebook profile](docs/CUSTOMIZATION.md#i3-notebook-720p) adds a Powerline-style Polybar, matching Rofi and Dunst, a wallpaper and laptop controls without changing Compact i3.
 
 ### DarfinOS Labs
 

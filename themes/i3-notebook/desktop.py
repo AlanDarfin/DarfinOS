@@ -58,6 +58,20 @@ def load_background(path):
                capture_output=True).returncode == 0
 
 
+def apply_background(path):
+    if load_background(path):
+        return
+    default = PROFILE / "wallpaper.svg"
+    if default.is_file() and shutil.which("rsvg-convert"):
+        with tempfile.TemporaryDirectory(prefix="darfinos-wallpaper-") as folder:
+            image = Path(folder) / "wallpaper.png"
+            rendered = run("rsvg-convert", "-o", str(image), str(default), capture_output=True)
+            if rendered.returncode == 0 and load_background(str(image)):
+                return
+    if shutil.which("xsetroot"):
+        run("xsetroot", "-solid", "#252930")
+
+
 def wallpaper_picker():
     if not shutil.which("zenity") or not shutil.which("feh"):
         notify("Instale as dependências atualizadas de i3 Notebook nos Labs.")
@@ -194,8 +208,7 @@ def desktop_start():
         panel = panel_for_720p(read_outputs())
         if panel and panel.current != MODE_720P:
             set_mode(panel, MODE_720P)
-    if not load_background(data.get("wallpaper")) and shutil.which("xsetroot"):
-        run("xsetroot", "-solid", "#252930")
+    apply_background(data.get("wallpaper"))
     apply_cursor()
 
 
@@ -241,15 +254,55 @@ def display_picker():
                 keep = False
             if keep:
                 save_settings(mode_720p=True)
-                load_background(read_settings().get("wallpaper"))
+                apply_background(read_settings().get("wallpaper"))
             elif not set_mode(panel, panel.current, panel.rate):
                 notify("Não consegui restaurar o modo anterior da tela.")
         else:
             notify("O X11 não aceitou o modo 1280×720 nesta tela.")
 
 
+def focused_title(node):
+    if node.get("focused") and node.get("window"):
+        return node.get("name") or ""
+    for child in node.get("nodes", []) + node.get("floating_nodes", []):
+        if title := focused_title(child):
+            return title
+    return ""
+
+
+def clean_title(title):
+    # Window titles come from applications. Never let them become Polybar formatting/actions.
+    title = " ".join("".join(c if c.isprintable() else " " for c in title).split())
+    title = title.replace("%{", "％{")
+    return (title[:27] + "…" if len(title) > 28 else title) or "Área de trabalho"
+
+
+def window_title():
+    def show():
+        try:
+            tree = json.loads(run("i3-msg", "-t", "get_tree", capture_output=True).stdout)
+            print(clean_title(focused_title(tree)), flush=True)
+        except (OSError, ValueError):
+            print("Área de trabalho", flush=True)
+
+    with subprocess.Popen(["i3-msg", "-m", "-t", "subscribe", '["window", "workspace"]'],
+                          stdout=subprocess.PIPE, text=True) as watcher:
+        try:
+            show()
+            for line in watcher.stdout:
+                try:
+                    event = json.loads(line)
+                except ValueError:
+                    continue
+                if isinstance(event, dict) and event.get("change") in {"focus", "title", "close", "new"}:
+                    show()
+        finally:
+            watcher.terminate()
+
+
 if __name__ == "__main__":
-    actions = {"desktop-start": desktop_start, "display": display_picker, "wallpaper": wallpaper_picker}
+    actions = {"desktop-start": desktop_start, "display": display_picker,
+               "wallpaper": wallpaper_picker, "window-title": window_title}
     if len(sys.argv) != 2 or sys.argv[1] not in actions:
         sys.exit(2)
     actions[sys.argv[1]]()

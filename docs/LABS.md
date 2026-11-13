@@ -47,7 +47,7 @@ The `lab_*` stages are interactive, reject `-y` and stay out of `--all`, `--skip
 | [etckeeper](https://etckeeper.branchable.com/) | `lab_etckeeper` | Local /etc history; separate initialization, with no remote uploads. |
 | [rustic](https://rustic.cli.rs/) | `lab_rustic` | Encrypted backups to a chosen destination; no repository is created automatically. |
 | [Kvantum](https://github.com/tsujan/Kvantum) | `lab_kvantum` | SVG Qt styles for SonicDE with optional Qt5 support. |
-| **i3 Notebook** | `lab_i3_notebook` | DarfinOS bundle with [Rofi](https://github.com/davatorium/rofi), [Dunst](https://dunst-project.org/) and [i3status-rust](https://github.com/greshake/i3status-rust). Activate separately in the [Theme Workshop](CUSTOMIZATION.md#i3-notebook-720p). |
+| **i3 Notebook** | `lab_i3_notebook` | DarfinOS bundle with [Rofi](https://github.com/davatorium/rofi), [Dunst](https://dunst-project.org/) and [Polybar](https://github.com/polybar/polybar). Activate separately in the [Theme Workshop](CUSTOMIZATION.md#i3-notebook-720p). |
 
 ### After installation
 

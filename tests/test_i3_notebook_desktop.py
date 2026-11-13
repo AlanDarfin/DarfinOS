@@ -77,7 +77,7 @@ class DesktopTests(unittest.TestCase):
         with patch.object(desktop, "read_outputs", return_value=desktop.parse_outputs(QUERY)), \
              patch.object(desktop.shutil, "which", return_value=True), \
              patch.object(desktop, "run", side_effect=[result(stdout="Usar 1280×720 na tela interna\n"),
-                                                       result(), result()]):
+                                                       result(), result(), result()]):
             desktop.display_picker()
         self.assertEqual(desktop.read_settings(), {"wallpaper": "/some image.png", "mode_720p": True})
 
@@ -91,6 +91,24 @@ class DesktopTests(unittest.TestCase):
             self.assertEqual(desktop.read_settings()["wallpaper"], str(image))
             desktop.desktop_start()
             self.assertEqual(command.call_args.args, ("feh", "--no-fehbg", "--bg-fill", "--", str(image)))
+
+    def test_default_wallpaper_renders_without_replacing_user_preference(self):
+        (self.profile / "wallpaper.svg").write_text("<svg/>")
+        with patch.object(desktop, "load_background", side_effect=[False, True]) as load, \
+             patch.object(desktop.shutil, "which", return_value=True), \
+             patch.object(desktop, "run", return_value=result()) as command:
+            desktop.apply_background("/removed/wallpaper.png")
+            self.assertEqual(command.call_args.args[:2], ("rsvg-convert", "-o"))
+            self.assertEqual(command.call_args.args[3], str(self.profile / "wallpaper.svg"))
+            self.assertEqual(load.call_args.args, (command.call_args.args[2],))
+        self.assertFalse(self.settings.exists())
+
+    def test_window_title_keeps_one_short_plain_text_line(self):
+        self.assertEqual(desktop.clean_title("  "), "Área de trabalho")
+        self.assertEqual(desktop.clean_title(" Editor\n%{A:x:}"), "Editor ％{A:x:}")
+        self.assertEqual(desktop.clean_title("á" * 40), "á" * 27 + "…")
+        self.assertEqual(desktop.focused_title({"floating_nodes": [
+            {"focused": True, "window": 99, "name": "Terminal de bolso"}]}), "Terminal de bolso")
 
     def test_sonicde_cursor_is_imported_without_overwriting_settings(self):
         config = self.home / ".config/kcminputrc"

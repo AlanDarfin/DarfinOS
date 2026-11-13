@@ -12,12 +12,13 @@ mkdir -m 700 "$HOME" "$XDG_RUNTIME_DIR"
 mkdir -p "$XDG_CONFIG_HOME" "$HOME/.icons/Bibata-NotebookTest/cursors"
 cp /usr/share/icons/Adwaita/cursors/left_ptr "$HOME/.icons/Bibata-NotebookTest/cursors/left_ptr"
 printf "[Mouse]\ncursorTheme=Bibata-NotebookTest\ncursorSize=32\n" >"$XDG_CONFIG_HOME/kcminputrc"
-x_pid= i3_pid=
+x_pid= i3_pid= status_pid=
 cleanup() {
   local status=$?
   if (( status )); then
-    tail -80 "$tmp/i3.log" "$tmp/xvfb.log" >&2 || :
+    tail -80 "$tmp/i3.log" "$tmp/xvfb.log" "$tmp/polybar.log" >&2 || :
   fi
+  [[ -z "$status_pid" ]] || kill "$status_pid" 2>/dev/null || :
   [[ -z "$i3_pid" ]] || kill "$i3_pid" 2>/dev/null || :
   [[ -z "$x_pid" ]] || kill "$x_pid" 2>/dev/null || :
   wait || :
@@ -47,39 +48,55 @@ i3_pid=$!
 wm_ready() { i3-msg -t get_workspaces >/dev/null 2>&1; }
 await_result wm_ready
 xrandr --current | grep -F '1280x720'
-bar_is_top() {
-  i3-msg -t get_bar_config notebook | python -c 'import json, sys; assert json.load(sys.stdin)["position"] == "top"'
-}
-await_result bar_is_top
+bar_mapped() { xdotool search --onlyvisible --name '^darfinos-notebook-bar$' >/dev/null 2>&1; }
+bar_hidden() { ! bar_mapped; }
+await_result bar_mapped
+bar_window=$(xdotool search --onlyvisible --name '^darfinos-notebook-bar$')
+bar_pid=$(xdotool getwindowpid "$bar_window")
+xwininfo -id "$bar_window" > "$tmp/bar-geometry"
+grep -Eq 'Absolute upper-left Y:[[:space:]]+0$' "$tmp/bar-geometry"
+grep -Eq 'Width:[[:space:]]+1280$' "$tmp/bar-geometry"
+grep -Eq 'Height:[[:space:]]+28$' "$tmp/bar-geometry"
+xprop -id "$bar_window" _NET_WM_WINDOW_TYPE | grep -Fq _NET_WM_WINDOW_TYPE_DOCK
+[[ "$(i3-msg -t get_bar_config notebook | python -c 'import json, sys; print(json.load(sys.stdin)["mode"])')" == invisible ]]
 cursor_loaded() { xrdb -query | grep -q 'Xcursor.theme:.*Bibata-NotebookTest'; }
 await_result cursor_loaded
 
-# Verify clickable launcher blocks are emitted by the real status process.
-python - "$profile/status.toml" <<'STATUS'
-import json
-import os
-import subprocess
-import sys
-from time import monotonic
-with subprocess.Popen(["i3status-rs", sys.argv[1]], stdin=subprocess.DEVNULL,
-                      stdout=subprocess.PIPE, text=True, env=dict(os.environ, SHELL="/bin/sh")) as status:
-    try:
-        header = json.loads(status.stdout.readline())
-        assert header["click_events"]
-        assert status.stdout.readline().strip() == "["
-        wanted = {"Apps", "Janelas", "Atalhos", "Fundo"}
-        deadline = monotonic() + 8
-        for line in status.stdout:
-            blocks = json.loads(line.strip().strip(","))
-            if wanted <= {b["full_text"].strip() for b in blocks}:
-                break
-            if monotonic() >= deadline:
-                raise AssertionError(f"Launcher blocks missing: {blocks}")
-        else:
-            raise AssertionError("i3status-rs ended before publishing the launcher")
-    finally:
-        status.terminate()
-STATUS
+# Default wallpaper is applied at login, before any user image is selected.
+wallpaper_loaded() { xprop -root _XROOTPMAP_ID | grep -q 'pixmap id #'; }
+await_result wallpaper_loaded
+
+# Check the actual Polybar payload, including loaded i3, fonts and launchers.
+status_ready() {
+  grep -Fq 'Atalhos' "$tmp/polybar.log" && grep -Fq 'Área de trabalho' "$tmp/polybar.log"
+}
+polybar -l info -s -c "$profile/polybar.ini" notebook >"$tmp/polybar.log" 2>&1 &
+status_pid=$!
+await_result status_ready
+for label in Apps Janelas Atalhos Fundo; do grep -Fq "$label" "$tmp/polybar.log"; done
+for font in 'JetBrains Mono' PowerlineSymbols 'Font Awesome'; do
+  grep -F "Loaded font" "$tmp/i3.log" | grep -Fq "$font"
+done
+if grep -Eq 'Ignoring unmatched character|Unrecognized tag|Unclosed action' "$tmp/i3.log"; then
+  cat "$tmp/i3.log" >&2
+  exit 1
+fi
+kill "$status_pid"
+wait "$status_pid" || :
+status_pid=
+
+# Click the Apps label, then close the actual Rofi launcher.
+xdotool mousemove 35 14 click 1
+rofi_visible() { xdotool search --onlyvisible --class rofi >/dev/null 2>&1; }
+await_result rofi_visible
+xdotool key Escape
+
+# Toggle via the configured keybinding, and verify that a hidden bar can return.
+xdotool key super+b
+await_result bar_hidden
+xdotool key super+b
+await_result bar_mapped
+[[ "$(xdotool getwindowpid "$(xdotool search --onlyvisible --name '^darfinos-notebook-bar$')")" == "$bar_pid" ]]
 
 python - "$profile" <<'WALLPAPER'
 import base64
@@ -91,14 +108,16 @@ image = profile / "test wallpaper.png"
 image.write_bytes(base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jXioAAAAASUVORK5CYII="))
 (profile / "desktop.json").write_text(json.dumps({"wallpaper": str(image)}))
 WALLPAPER
-sh "$profile/session.sh" desktop-start
+python "$profile/desktop.py" desktop-start
 xprop -root _XROOTPMAP_ID | grep -q 'pixmap id #'
 
-bar_has_mode() { i3-msg -t get_bar_config notebook | python -c 'import json, sys; assert json.load(sys.stdin)["mode"] == sys.argv[1]' "$1" 2>/dev/null; }
-i3-msg 'bar mode toggle notebook' >/dev/null
-await_result bar_has_mode hide
-i3-msg 'bar mode toggle notebook' >/dev/null
-await_result bar_has_mode dock
+i3-msg reload >/dev/null
+bar_reloaded() {
+  local window
+  window=$(xdotool search --onlyvisible --name '^darfinos-notebook-bar$') || return 1
+  [[ "$window" != "$bar_window" && "$window" != *$'\n'* ]]
+}
+await_result bar_reloaded
 
 pocket_visible() {
   i3-msg -t get_tree | python -c '
@@ -131,4 +150,4 @@ dunstctl close-all
 dunstctl set-paused true
 [[ "$(dunstctl is-paused)" == true ]]
 dunstctl set-paused false
-echo 'i3 Notebook: X11 720p, cursor, wallpaper, top bar, launchers, scratchpad, Rofi and Dunst verified.'
+echo 'i3 Notebook: X11 720p, Polybar geometry and toggling, cursor, wallpaper, Rofi click, scratchpad and Dunst verified.'

@@ -3,9 +3,47 @@
 set -eu
 profile_dir="$HOME/.config/darfinos/i3-notebook"
 
+# Look up only the named Notebook dock on this X display, never broadcast IPC.
+bar_pid() {
+    command -v xdotool >/dev/null || return 1
+    window=$(xdotool search --name '^darfinos-notebook-bar$' 2>/dev/null | head -n 1)
+    [ -n "$window" ] || return 1
+    pid=$(xdotool getwindowpid "$window" 2>/dev/null) || return 1
+    case "$pid" in ''|*[!0-9]*) return 1 ;; esac
+    printf '%s\n' "$pid"
+}
+
 case "${1:-}" in
-    desktop-start|display|wallpaper)
+    desktop-start)
+        python3 "$profile_dir/desktop.py" "$@"
+        exec sh "$0" bar-start
+        ;;
+    display|wallpaper|window-title)
         exec python3 "$profile_dir/desktop.py" "$@"
+        ;;
+    bar-start)
+        if command -v polybar >/dev/null && command -v polybar-msg >/dev/null &&
+           command -v xdotool >/dev/null && [ -r "$profile_dir/polybar.ini" ]; then
+            if pid=$(bar_pid); then
+                exec polybar-msg -p "$pid" cmd restart
+            fi
+            # Only this profile uses the discovered laptop battery; no BAT0 assumption.
+            for supply in /sys/class/power_supply/*; do
+                if [ -r "$supply/type" ] && [ "$(cat "$supply/type")" = Battery ]; then
+                    export DARFINOS_BAR_BATTERY="${supply##*/}"
+                    break
+                fi
+            done
+            # A clean exit (including logout) shouldn't start a new bar.
+            polybar -c "$profile_dir/polybar.ini" notebook && exit 0
+        fi
+        exec i3-msg 'bar mode dock notebook'
+        ;;
+    bar-toggle)
+        if command -v polybar-msg >/dev/null && pid=$(bar_pid); then
+            exec polybar-msg -p "$pid" cmd toggle
+        fi
+        exec i3-msg 'bar mode toggle notebook'
         ;;
     start)
         # Don't take the D-Bus name from a notification daemon already in use.
@@ -45,7 +83,7 @@ case "${1:-}" in
             'Super+setas · Focar outra janela' \
             'Super+Shift+setas · Mover janela' \
             'Super+R · Redimensionar com as setas (Esc para sair)' \
-            'Super+B · Mostrar/ocultar a barra (segure Super para revelar)' \
+            'Super+B · Mostrar ou ocultar a barra' \
             'Super+N · Recuperar última notificação' \
             'Super+Shift+N · Silenciar/reativar notificações' \
             'Super+Ctrl+N · Dispensar notificações' \
@@ -63,7 +101,7 @@ case "${1:-}" in
             exec i3-msg '[con_mark="^darfinos-pocket$"] scratchpad show'
         fi
         xterm -name darfinos-pocket -title 'DarfinOS · Terminal de bolso' \
-            -bg '#171a1f' -fg '#f2f2f2' -fa 'DejaVu Sans Mono' -fs 11 9>&- &
+            -bg '#171a1f' -fg '#f2f2f2' -fa 'JetBrains Mono' -fs 11 9>&- &
         if [ -n "${XDG_RUNTIME_DIR:-}" ]; then
             for tick in 1 2 3 4 5 6 7 8 9 10; do
                 i3-msg -t get_marks | grep -Fq '"darfinos-pocket"' && break

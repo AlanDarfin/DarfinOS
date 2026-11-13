@@ -1,7 +1,7 @@
 # DarfinOS · i3 Notebook (720p)
 set $mod Mod4
 set $profile $HOME/.config/darfinos/i3-notebook
-font pango:DejaVu Sans 10
+font pango:JetBrains Mono 10
 default_border pixel 2
 default_floating_border pixel 2
 gaps inner 4
@@ -30,7 +30,7 @@ bindsym $mod+Shift+r restart
 bindsym $mod+Shift+e exec i3-nagbar -t warning -m 'Encerrar a sessão i3?' -B 'Sair' 'i3-msg exit'
 bindsym $mod+l exec --no-startup-id i3lock -c 171a1f
 bindsym --release Print exec --no-startup-id flameshot gui
-bindsym $mod+b bar mode toggle notebook
+bindsym $mod+b exec --no-startup-id sh "$profile/session.sh" bar-toggle
 
 bindsym XF86MonBrightnessUp exec --no-startup-id brightnessctl -c backlight set +5%
 bindsym XF86MonBrightnessDown exec --no-startup-id brightnessctl -c backlight --min-value=1 set 5%-
@@ -85,7 +85,7 @@ bar {
     position top
     font pango:DejaVu Sans Bold 10
     padding 3px 5px
-    mode dock
+    mode invisible
     hidden_state hide
     modifier $mod
     strip_workspace_numbers yes

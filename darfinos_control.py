@@ -407,13 +407,13 @@ STYLE_PROFILES = {
     "i3-compacto": "i3 compacto para telas de 720p",
     "workstation-1995": "Window Maker grafite e amarelo",
     "sonicde-kvantum": "Kvantum com KvDark em grafite e amarelo, sem mudar o painel",
-    "i3-notebook": "DarfinOS Notebook 720p · tela, fundo, Rofi, Dunst e atalhos",
+    "i3-notebook": "DarfinOS Notebook 720p · Polybar, Rofi, Dunst, tela e fundo",
 }
 STYLE_ROOT = ".local/state/darfinos-customization"
 DEFAULT_ACCENT = "#ffcb2e"
 NOTEBOOK_I3_CONFIG = ".config/i3/config"
 NOTEBOOK_STYLE_DIR = ".config/darfinos/i3-notebook"
-NOTEBOOK_STYLE_FILES = ("session.sh", "desktop.py", "rofi.rasi", "dunstrc", "status.toml")
+NOTEBOOK_STYLE_FILES = ("session.sh", "desktop.py", "rofi.rasi", "dunstrc", "status.toml", "polybar.ini", "wallpaper.svg")
 
 
 def _style_path(root: Path, relative: str) -> Path:
