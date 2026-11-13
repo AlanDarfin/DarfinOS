@@ -40,8 +40,9 @@ STEPS=(
   flatpak apps gaming browser
   # Manutenção
   maintenance firewall cleanup bobagens bedrock terminal_extras
-  # DarfinOS Labs (AUR opcional; fora de TODOS os presets, inclusive full)
+  # DarfinOS Labs (seleção individual; somente Retro inclui Chicago95)
   lab_nscde lab_junest lab_decman lab_metapac lab_chicago95
+  lab_conty lab_nix_portable lab_trinity lab_yserver lab_xomposite lab_wayback lab_booster
 )
 
 declare -A STEP_DESC=(
@@ -85,7 +86,14 @@ declare -A STEP_DESC=(
   [lab_junest]="Labs · JuNest (AUR, ambientes Arch em usuário)"
   [lab_decman]="Labs · Decman (AUR, configuração declarativa; sem aplicar)"
   [lab_metapac]="Labs · Metapac (AUR, pacotes declarativos; sem aplicar)"
-  [lab_chicago95]="Labs · Chicago95: tema Windows 95 no Xfce, sem sobrescrever preferências"
+  [lab_chicago95]="Labs · Chicago95: tema, ícones, cursores e fontes para Xfce"
+  [lab_conty]="Labs · Conty: ambiente Linux portátil no HOME"
+  [lab_nix_portable]="Labs · nix-portable: Nix em espaço de usuário"
+  [lab_trinity]="Labs · Trinity Desktop: repositório assinado e ambiente completo"
+  [lab_yserver]="Labs · yserver: servidor X11 alternativo com Vulkan (AUR)"
+  [lab_xomposite]="Labs · Xomposite: compositor X11 compilado no HOME"
+  [lab_wayback]="Labs · Wayback: camada experimental de X11 sobre Wayland (AUR)"
+  [lab_booster]="Labs · Booster: gerador alternativo de initramfs"
 )
 
 # Explicações para a TUI: informações gerais, sem prometer instalações condicionais.
@@ -127,16 +135,22 @@ declare -A STEP_INFO=(
   [bedrock]="Executa processo avançado e opcional do Bedrock Linux com avisos."
   [terminal_extras]="Adiciona ferramentas e personalizações avançadas do terminal."
   [lab_nscde]="Requer confirmação LABS para instalar pacote nscde do AUR. Sessão gráfica separada; revise o PKGBUILD."
-  [lab_junest]="Requer confirmação LABS para instalar junest do AUR. Não executa junest setup nem altera namespaces."
+  [lab_junest]="Instala junest-git do AUR e prepara o ambiente Arch com junest setup no HOME. Não altera namespaces do host."
   [lab_decman]="Requer confirmação LABS para instalar decman do AUR. NÃO executa configurações Python ou sincroniza pacotes."
   [lab_metapac]="Requer confirmação LABS para instalar metapac do AUR. NÃO executa sync nem clean."
-  [lab_chicago95]="Baixa apenas arquivos Theme/Icons oficiais para o HOME; não executa installer.py nem ativa o tema."
+  [lab_chicago95]="Instala Xfce, tema GTK/XFWM, ícones, cursor e fontes VGA. Preserva o painel, a sessão e o tema ativo."
+  [lab_conty]="Instala conty_lite.sh (x86_64) com SHA-256 fixo e FUSE, sem executar o contêiner."
+  [lab_nix_portable]="Instala o binário x86_64 com SHA-256 fixo, sem daemon ou alterações em /nix."
+  [lab_trinity]="Confere a chave completa, configura o repositório Trinity e instala tde-meta com pacman -Syu. Mantém o gerenciador de login."
+  [lab_yserver]="Instala yserver pelo AUR e oferece driver Vulkan Intel/AMD. Não troca X.Org/XLibre, login ou permissões de dispositivos."
+  [lab_xomposite]="Instala dependências Arch e compila um commit fixo com Cargo. Não inicia o compositor nem edita o i3."
+  [lab_wayback]="Instala wayback-x11 pelo AUR, sem substituir o X padrão ou editar o login."
+  [lab_booster]="Instala Booster em paralelo. O hook do pacote gera imagens alternativas, sem trocar o initramfs padrão ou configurar o bootloader."
 )
 
 # ----------------------------------------------------------
 # DarfinOS Labs · catálogo estático auditável, sem execução automática.
-# Os 13 projetos têm link upstream; sete têm etapa opcional (pacman, AUR ou assets).
-# O padrão full NÃO seleciona lab_* nem o catálogo.
+# Cada projeto tem uma etapa; full não seleciona lab_*.
 # ----------------------------------------------------------
 LABS=(
   i3 chicago95 nscde junest decman metapac conty nix_portable trinity
@@ -153,24 +167,24 @@ declare -A LABS_URL=(
   [nix_portable]="https://github.com/DavHau/nix-portable"
   [trinity]="https://www.trinitydesktop.org/"
   [yserver]="https://github.com/joske/yserver"
-  [xomposite]="https://github.com/demostenex/xlibre-compositor-poc"
+  [xomposite]="https://github.com/demostenex/xomposite"
   [wayback]="https://gitlab.freedesktop.org/wayback/wayback"
   [booster]="https://github.com/anatol/booster"
 )
 declare -A LABS_INFO=(
   [i3]="WM tiling para X11: janela alternativa, sem remover SonicDE."
-  [chicago95]="Tema GTK e ícones Windows 95 para Xfce; aplicações opcionais dependem de configuração manual."
+  [chicago95]="Tema GTK/XFWM, ícones, cursor e fontes Windows 95 para Xfce; aplicação opcional."
   [nscde]="Desktop retro UNIX com FVWM; pacote AUR e login alternativo."
-  [junest]="Ambiente Arch no HOME; namespaces/proot exigem verificacao."
+  [junest]="Instala junest-git e inicializa um ambiente Arch no HOME, sem alterar o host."
   [decman]="Estado declarativo em Python; aplicar perfis pode remover pacotes."
   [metapac]="Gerenciador declarativo; sync/clean podem alterar ou remover pacotes."
-  [conty]="Container portatil com jogos e Wine; download manual dos releases."
-  [nix_portable]="Nix sem instalacao tradicional; binario upstream manual."
-  [trinity]="Desktop KDE 3 independente; exige repositorio e chaves externas."
-  [yserver]="Servidor X11 escrito em Rust; testar somente em VM/TTY."
-  [xomposite]="Compositor experimental para XLibre; pode conflitar com KWin."
-  [wayback]="Camada experimental X11 sobre Wayland; somente laboratorio."
-  [booster]="Gerador de initramfs; alteracoes no boot exigem snapshot."
+  [conty]="Baixa Conty Lite oficial com SHA-256 e instala FUSE; não abre o contêiner."
+  [nix_portable]="Instala o binário Nix portátil no HOME; cache inicializado no primeiro uso."
+  [trinity]="Instala tde-meta com repositório e chave Trinity; sessão X11 paralela."
+  [yserver]="Instala o servidor X11 Rust e seu lançador starty; teste em um TTY separado."
+  [xomposite]="Compila compositor X11 para sessão separada; não roda junto do KWin."
+  [wayback]="Instala Wayback pelo AUR sem alterar o servidor gráfico padrão."
+  [booster]="Instala Booster e suas imagens alternativas, sem trocar a entrada de boot."
 )
 declare -A LABS_RISK=(
   [i3]="opcional"
@@ -179,8 +193,8 @@ declare -A LABS_RISK=(
   [junest]="avancado"
   [decman]="avancado"
   [metapac]="avancado"
-  [conty]="manual"
-  [nix_portable]="manual"
+  [conty]="avancado"
+  [nix_portable]="avancado"
   [trinity]="critico"
   [yserver]="critico"
   [xomposite]="critico"
@@ -194,13 +208,13 @@ declare -A LABS_MODE=(
   [junest]="aur"
   [decman]="aur"
   [metapac]="aur"
-  [conty]="documentacao"
-  [nix_portable]="documentacao"
-  [trinity]="documentacao"
-  [yserver]="documentacao"
-  [xomposite]="documentacao"
-  [wayback]="documentacao"
-  [booster]="documentacao"
+  [conty]="binario"
+  [nix_portable]="binario"
+  [trinity]="repositorio"
+  [yserver]="aur"
+  [xomposite]="compilacao"
+  [wayback]="aur"
+  [booster]="pacman"
 )
 declare -A LABS_STEP=(
   [i3]="i3"
@@ -209,6 +223,13 @@ declare -A LABS_STEP=(
   [junest]="lab_junest"
   [decman]="lab_decman"
   [metapac]="lab_metapac"
+  [conty]="lab_conty"
+  [nix_portable]="lab_nix_portable"
+  [trinity]="lab_trinity"
+  [yserver]="lab_yserver"
+  [xomposite]="lab_xomposite"
+  [wayback]="lab_wayback"
+  [booster]="lab_booster"
 )
 
 # ----------------------------------------------------------
@@ -226,6 +247,13 @@ readonly SONIC_HOME="https://sonicde.org"
 readonly CHAOTIC_KEY_ID="3056513887B78AEB"
 readonly CHAOTIC_KEYSERVER="keyserver.ubuntu.com"
 readonly CHAOTIC_PKG_URL="https://cdn-mirror.chaotic.cx/chaotic-aur"
+
+readonly TRINITY_FINGERPRINT="D6D6FAA25E9A3E4ECD9FBDBEC93AF1698685AD8B"
+readonly TRINITY_SERVER='https://mirror.ppa.trinitydesktop.org/trinity/archlinux/$arch'
+readonly CHICAGO95_REV="5da19b8b1e2a886ebf6628403023d5fac3acc3ee"
+readonly XOMPOSITE_REV="44e2dc8e1f843509871b956d9ad4ae4ffc0cfcc2"
+readonly CONTY_SHA256="9bb53bdf1bf72b9358a34e5bfe19bebf81fe27ef3ac5f3cd0b15152a59e1be34"
+readonly NIX_PORTABLE_SHA256="b409c55904c909ac3aeda3fb1253319f86a89ddd1ba31a5dec33d4a06414c72a"
 
 readonly KNOWN_LMS="emptty gdm greetd lemurs lightdm lxdm ly plasmalogin sddm slim soniclogin xdm"
 
@@ -255,8 +283,8 @@ Uso: bash DarfinOSInstallScript.sh [opções]
   --check-modules        Inspeciona módulos e mostra TSV, sem sudo.
   --reinstall            Força repetir módulos já detectados como instalados.
   --only a,b,c           Executa apenas as etapas informadas.
-  --skip a,b,c           Executa etapas convencionais, exceto as listadas; exclui Labs AUR.
-  --all                  Executa as etapas convencionais, inclusive Bedrock; exclui Labs AUR.
+  --skip a,b,c           Executa etapas convencionais, exceto as listadas; exclui etapas lab_*.
+  --all                  Executa as etapas convencionais, inclusive Bedrock; exclui etapas lab_*.
   -y, --yes              Usa valores padrão apenas em perguntas elegíveis.
   -h, --help             Exibe esta ajuda.
 É obrigatório escolher --only, --skip ou --all antes de instalar.
@@ -291,6 +319,8 @@ declare -A STEP_DEPS=(
   [lab_junest]="aur_helper"
   [lab_decman]="aur_helper"
   [lab_metapac]="aur_helper"
+  [lab_yserver]="aur_helper"
+  [lab_wayback]="aur_helper"
   [lab_chicago95]="xfce"
 )
 
@@ -332,6 +362,49 @@ module_any_package() {
   done
   return 1
 }
+junest_environment_ready() {
+  local root="${JUNEST_HOME:-$HOME/.junest}"
+  [[ -x "$root/usr/bin/pacman" && -r "$root/etc/junest/info" ]]
+}
+
+chicago95_ready() {
+  module_packages_ready xfce4-session &&
+    [[ -f "$HOME/.themes/Chicago95/index.theme" &&
+       -f "$HOME/.themes/Chicago95/gtk-3.0/gtk.css" &&
+       -f "$HOME/.themes/Chicago95/xfwm4/themerc" &&
+       -f "$HOME/.icons/Chicago95/index.theme" &&
+       -d "$HOME/.icons/Chicago95_Standard_Cursors/cursors" &&
+       -f "$HOME/.local/share/fonts/Chicago95/LessPerfectDOSVGA.ttf" &&
+       -f "$HOME/.local/share/fonts/Chicago95/MorePerfectDOSVGA.ttf" ]]
+}
+
+trinity_configured() {
+  # pacman-conf segue Includes e aplica a mesma sintaxe e precedência do pacman.
+  pacman-conf --repo-list 2>/dev/null | grep -Fx trinity >/dev/null
+}
+
+trinity_repo_valid() {
+  local servers levels
+  servers=$(pacman-conf --repo trinity Server 2>/dev/null) || return 1
+  levels=$(pacman-conf --repo trinity SigLevel 2>/dev/null) || return 1
+  [[ "$servers" == "$TRINITY_SERVER" || "$servers" == "${TRINITY_SERVER%/\$arch}/$(uname -m)" ]] || return 1
+  # Exige assinatura de pacote confiável, inclusive em configurações existentes.
+  [[ "$levels" =~ (^|[[:space:]])(PackageRequired|Required)($|[[:space:]]) &&
+     ! "$levels" =~ (^|[[:space:]])(PackageNever|Never|PackageOptional|Optional|PackageTrustAll|TrustAll)($|[[:space:]]) ]]
+}
+
+trinity_session_ready() {
+  [[ -x /opt/trinity/bin/starttde && -r /usr/share/xsessions/trinity.desktop ]]
+}
+
+yserver_vulkan_ready() {
+  pacman -T vulkan-driver >/dev/null 2>&1
+}
+
+yserver_ready() {
+  command -v yserver >/dev/null && command -v starty >/dev/null && yserver_vulkan_ready
+}
+
 module_probe() {
   local name="$1"
   local -a required=()
@@ -341,18 +414,87 @@ module_probe() {
     base) required=(base-devel git curl wget unzip p7zip rsync htop fastfetch man-db man-pages rclone fuse2 pacman-contrib bash-completion pciutils usbutils) ;;
     i3) required=(i3-wm i3status i3lock dmenu xorg-xinit) ;;
     xfce) required=(exo garcon thunar thunar-volman tumbler xfce4-appfinder xfce4-panel xfce4-power-manager xfce4-session xfce4-settings xfce4-terminal xfconf xfdesktop xfwm4 xorg-xinit) ;;
-    lab_nscde) required=(nscde) ;;
-    lab_junest) required=(junest) ;;
-    lab_decman) required=(decman) ;;
-    lab_metapac) required=(metapac) ;;
-    lab_chicago95)
-      if [[ -f "$HOME/.themes/Chicago95/index.theme" && -f "$HOME/.themes/Chicago95/gtk-3.0/gtk.css" && -f "$HOME/.icons/Chicago95/index.theme" ]]; then
+    lab_nscde)
+      if module_any_package nscde-git; then required=(nscde-git); else required=(nscde); fi ;;
+    lab_junest)
+      if (( MODULE_PACMAN_AVAILABLE )); then
+        if module_any_package junest junest-git; then
+          if junest_environment_ready; then
+            MODULE_STATUS=installed
+            MODULE_REASON="JuNest e ambiente Arch encontrados."
+          else
+            MODULE_STATUS=partial
+            MODULE_REASON="Pacote JuNest instalado; ambiente ainda não encontrado."
+          fi
+        else
+          MODULE_STATUS=missing
+          MODULE_REASON="Pacote JuNest não encontrado."
+        fi
+      fi
+      return 0 ;;
+    lab_trinity)
+      if (( MODULE_PACMAN_AVAILABLE )); then
+        if module_any_package tde-meta tde-tdebase || trinity_configured; then
+          if module_packages_ready tde-meta tde-tdebase && trinity_session_ready && trinity_repo_valid; then
+            MODULE_STATUS=installed
+            MODULE_REASON="Trinity completo, sessão X11 e repositório com assinaturas de pacote encontrados."
+          else
+            MODULE_STATUS=partial
+            MODULE_REASON="Faltam pacotes, sessão ou repositório válido do Trinity."
+          fi
+        else
+          MODULE_STATUS=missing
+          MODULE_REASON="Trinity não encontrado."
+        fi
+      fi
+      return 0 ;;
+    lab_conty|lab_nix_portable|lab_xomposite)
+      local executable
+      case "$name" in
+        lab_conty) executable="$HOME/.local/bin/conty" ;;
+        lab_nix_portable) executable="$HOME/.local/bin/nix-portable" ;;
+        lab_xomposite) executable="$HOME/.local/bin/xomposite" ;;
+      esac
+      if [[ -f "$executable" && -x "$executable" ]] &&
+         { [[ "$name" != lab_conty ]] || module_packages_ready fuse3; }; then
         MODULE_STATUS=installed
-        MODULE_REASON="Arquivos GTK e ícones Chicago95 encontrados no HOME; aplicação do tema é manual."
+        MODULE_REASON="Executável local e dependências declaradas encontrados."
+      elif [[ -e "$executable" || -L "$executable" ]]; then
+        MODULE_STATUS=partial
+        MODULE_REASON="Executável local incompleto ou dependência ausente."
+      else
+        MODULE_STATUS=missing
+        MODULE_REASON="Executável não encontrado em ~/.local/bin."
+      fi
+      return 0 ;;
+    lab_yserver)
+      if (( MODULE_PACMAN_AVAILABLE )); then
+        if ! module_any_package yserver yserver-git; then
+          MODULE_STATUS=missing
+          MODULE_REASON="Pacote yserver não encontrado."
+        elif yserver_ready; then
+          MODULE_STATUS=installed
+          MODULE_REASON="yserver, starty e um provedor Vulkan encontrados."
+        else
+          MODULE_STATUS=partial
+          MODULE_REASON="yserver instalado; falta o lançador ou um provedor Vulkan."
+        fi
+      fi
+      return 0 ;;
+    lab_wayback)
+      if module_any_package wayback-x11-git; then required=(wayback-x11-git); else required=(wayback-x11); fi ;;
+    lab_booster) required=(booster) ;;
+    lab_decman) required=(decman) ;;
+    lab_metapac)
+      if module_any_package metapac-bin; then required=(metapac-bin); else required=(metapac); fi ;;
+    lab_chicago95)
+      if chicago95_ready; then
+        MODULE_STATUS=installed
+        MODULE_REASON="Xfce, tema, ícones, cursor e fontes Chicago95 encontrados; aplicação do tema é opcional."
       elif [[ -e "$HOME/.themes/Chicago95" || -L "$HOME/.themes/Chicago95" ||
               -e "$HOME/.icons/Chicago95" || -L "$HOME/.icons/Chicago95" ]]; then
         MODULE_STATUS=partial
-        MODULE_REASON="Chicago95 parcial ou customizado; nunca sobrescrever automaticamente."
+        MODULE_REASON="Chicago95 parcial; os arquivos existentes serão preservados."
       else
         MODULE_STATUS=missing
         MODULE_REASON="Tema e ícones Chicago95 não encontrados no HOME."
@@ -470,7 +612,7 @@ list_labs() {
     printf '%-15s %-14s %-12s %s\n' "$name" "${LABS_RISK[$name]}" "${LABS_MODE[$name]}" "${LABS_URL[$name]}"
     printf '  %s\n' "${LABS_INFO[$name]}"
   done
-  printf 'Somente os modos pacman/AUR possuem etapa; os demais sao guias manuais.\n'
+  printf 'Selecione uma etapa com --only; nenhum lab_* entra em --all ou --skip.\n'
 }
 lab_info() {
   local name="${1:-}"
@@ -480,7 +622,7 @@ lab_info() {
   printf 'Projeto: %s\nOrigem: %s\nNivel: %s\nModo: %s\nEtapa: %s\n\n%s\n' \
     "$name" "${LABS_URL[$name]}" "${LABS_RISK[$name]}" "${LABS_MODE[$name]}" \
     "${LABS_STEP[$name]:-manual}" "${LABS_INFO[$name]}"
-  echo 'A TUI e o instalador nao executam projetos documentados como manuais.'
+  echo 'Consulte o link original para opções de uso e ativação depois da instalação.'
 }
 
 validate_steps() {
@@ -521,6 +663,10 @@ if [[ -z "$ONLY" && -z "$SKIP" && "$EXPLICIT_ALL" -ne 1 ]]; then
   usage
   warn "Nenhuma seleção informada. Use a TUI ou escolha explicitamente --only, --skip ou --all."
   exit 2
+fi
+
+if (( ASSUME_YES )) && [[ ",$ONLY," == *,lab_* ]]; then
+  die "Labs não permite -y. Use modo interativo para instalar etapas lab_*."
 fi
 
 # ----------------------------------------------------------
@@ -782,7 +928,7 @@ step_enabled() {
   if [[ -n "$ONLY" ]]; then
     [[ ",$ONLY," == *",$name,"* ]]
   else
-    # --all / --skip nunca fazem instalação do AUR Labs sem --only explícito.
+    # --all / --skip nunca selecionam lab_* sem --only explícito.
     [[ "$name" != lab_* ]] && [[ ",$SKIP," != *",$name,"* ]]
   fi
 }
@@ -1045,10 +1191,6 @@ lab_aur_install() {
     return 0
   fi
   helper=$(detect_aur_helper)
-  if [[ -z "$helper" ]]; then
-    warn "Labs: instale primeiro aur_helper; pacote AUR não foi instalado."
-    return 1
-  fi
   info "Upstream oficial: ${LABS_URL[$project]}"
   warn "PKGBUILD do AUR é de terceiros. Revise alterações, fontes e dependências no helper."
   # Usa o protocolo de prompts da TUI para que o modal aceite a confirmação.
@@ -1058,6 +1200,13 @@ lab_aur_install() {
     warn "Instalação Labs cancelada; etapa não concluída."
     return 1
   fi
+  if [[ -z "$helper" ]]; then
+    info "Nenhum AUR helper encontrado. Escolha yay ou paru para continuar."
+    install_pkgs base-devel git || return 1
+    step_aur_helper || return 1
+    helper=$(detect_aur_helper)
+    [[ -n "$helper" ]] || { warn "Sem AUR helper; $package não foi instalado."; return 1; }
+  fi
   aur_install "$package" || return 1
   if ! pacman -Qq "$package" >/dev/null 2>&1; then
     warn "Labs: o pacote $package não foi detectado após a transação."
@@ -1066,10 +1215,236 @@ lab_aur_install() {
   ok "Pacote $package instalado; execução/configuração ficam a seu critério."
 }
 
-step_lab_nscde() { lab_aur_install nscde nscde; }
-step_lab_junest() { lab_aur_install junest junest; }
-step_lab_decman() { lab_aur_install decman decman; }
-step_lab_metapac() { lab_aur_install metapac metapac; }
+step_lab_nscde() {
+  if ! pacman -Qq nscde-git >/dev/null 2>&1; then
+    lab_aur_install nscde nscde || return 1
+  fi
+  info "Selecione NsCDE na tela de login. O assistente upstream configura as preferências no primeiro login."
+}
+
+step_lab_junest() {
+  local root="${JUNEST_HOME:-$HOME/.junest}"
+  if ! pacman -Qq junest-git >/dev/null 2>&1 && ! pacman -Qq junest >/dev/null 2>&1; then
+    lab_aur_install junest junest-git || return 1
+  fi
+  if ! junest_environment_ready; then
+    lab_confirm junest "Baixa e extrai o ambiente Arch upstream em $root, como usuário comum." || return 1
+    junest setup || return 1
+    junest_environment_ready || { warn "O JuNest não criou um ambiente completo em $root."; return 1; }
+  fi
+  info "Use junest ns ou, se os namespaces estiverem indisponíveis, junest proot."
+}
+
+step_lab_decman() {
+  lab_aur_install decman decman
+}
+step_lab_metapac() {
+  if ! pacman -Qq metapac-bin >/dev/null 2>&1; then
+    lab_aur_install metapac metapac || return 1
+  fi
+}
+
+# Todos os módulos lab_* exigem consentimento individual antes de alterações.
+lab_confirm() {
+  local project="$1" message="$2" reply
+  if (( ASSUME_YES )); then
+    warn "Labs não permite -y. Use modo interativo."
+    return 1
+  fi
+  info "Projeto original: ${LABS_URL[$project]}"
+  info "$message"
+  reply=$(choose "Digite LABS para instalar $project" "labs/n" "n") || return 1
+  [[ "$reply" == labs ]] || { warn "Instalação Labs cancelada."; return 1; }
+}
+
+# Não troca o shell/PATH do usuário. A instalação só publica um executável
+# completo e não sobrescreve uma instalação existente, mesmo com --reinstall.
+lab_publish_binary() {
+  local source="$1" name="$2" dest="$HOME/.local/bin/$2" staged
+  mkdir -p -- "$HOME/.local/bin" || return 1
+  staged=$(mktemp "$HOME/.local/bin/.$name.XXXXXXXX") || return 1
+  if ! install -m 755 -- "$source" "$staged" || ! ln -T -- "$staged" "$dest"; then
+    rm -f -- "$staged"
+    warn "Não consegui instalar $dest. Nenhum arquivo existente foi substituído."
+    return 1
+  fi
+  rm -f -- "$staged"
+}
+
+lab_download_binary() {
+  local name="$1" url="$2" checksum="$3" file="$TMP_DIR/$1.download" dest="$HOME/.local/bin/$1"
+  if [[ -f "$dest" && -x "$dest" ]]; then
+    info "Mantendo executável existente: $dest"
+    return 0
+  fi
+  if [[ -e "$dest" || -L "$dest" ]]; then
+    warn "Destino existente não executável: $dest. Revise antes de tentar novamente."
+    return 1
+  fi
+  curl --proto '=https' --proto-redir '=https' -fsSL --retry 2 --connect-timeout 15 --max-time 1800 \
+    -o "$file" "$url" || return 1
+  if ! printf '%s  %s\n' "$checksum" "$file" | sha256sum --check --status; then
+    warn "SHA-256 não corresponde ao arquivo esperado de $name. Não foi instalado."
+    return 1
+  fi
+  lab_publish_binary "$file" "$name"
+}
+
+lab_source_checkout() {
+  local url="$1" revision="$2" dest="$3"
+  git init -q "$dest" || return 1
+  git -C "$dest" fetch --depth 1 --quiet -- "$url" "$revision" || return 1
+  git -C "$dest" checkout --detach --quiet FETCH_HEAD || return 1
+  [[ "$(git -C "$dest" rev-parse HEAD)" == "$revision" ]]
+}
+
+step_lab_conty() {
+  require_x86_64
+  lab_confirm conty "Instala FUSE e baixa Conty Lite 1.29.4 (SHA-256 fixo) para ~/.local/bin/conty." || return 1
+  install_pkgs fuse3 || return 1
+  lab_download_binary conty "https://github.com/Kron4ek/Conty/releases/download/1.29.4/conty_lite.sh" "$CONTY_SHA256" || return 1
+  if ! unshare --user true 2>/dev/null; then
+    warn "Namespaces de usuário indisponíveis; consulte os requisitos upstream para executar o Conty. O host não foi reconfigurado."
+  fi
+  info 'Para usar: ~/.local/bin/conty <comando> [argumentos]'
+}
+
+step_lab_nix_portable() {
+  require_x86_64
+  lab_confirm nix_portable "Instala Nix portátil v012 (SHA-256 fixo) para ~/.local/bin/nix-portable, sem daemon." || return 1
+  lab_download_binary nix-portable "https://github.com/DavHau/nix-portable/releases/download/v012/nix-portable-x86_64" "$NIX_PORTABLE_SHA256" || return 1
+  info 'Para inicializar o cache do usuário: ~/.local/bin/nix-portable nix --version'
+}
+
+trinity_key() {
+  local file="$TMP_DIR/trinity.asc" primary
+  if ! sudo pacman-key --list-keys "$TRINITY_FINGERPRINT" >/dev/null 2>&1; then
+    curl --proto '=https' --proto-redir '=https' -fsSL --retry 2 --connect-timeout 10 --max-time 45 \
+      "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x$TRINITY_FINGERPRINT" -o "$file" || return 1
+    # Compara todas as chaves primárias presentes: rejeita chaves extras ou parciais.
+    primary=$(gpg --batch --show-keys --with-colons "$file" 2>/dev/null | awk -F: '
+      $1=="pub" { want=1; next }
+      want && $1=="fpr" { print toupper($10); want=0 }
+    ') || return 1
+    if [[ "$primary" != "$TRINITY_FINGERPRINT" ]]; then
+      warn "A chave baixada não corresponde à impressão digital oficial do Trinity."
+      return 1
+    fi
+    sudo pacman-key --add "$file" || return 1
+  fi
+  sudo pacman-key --lsign-key "$TRINITY_FINGERPRINT"
+}
+
+trinity_repo_stanza() {
+  printf '\n[trinity]\nSigLevel = PackageRequired PackageTrustedOnly DatabaseOptional DatabaseTrustedOnly\nServer = %s\n' "$TRINITY_SERVER"
+}
+
+trinity_install() {
+  local config="$1" previous="$TMP_DIR/trinity-pacman.original" candidate="$TMP_DIR/trinity-pacman.conf"
+  local needs_repo=0 arch repos
+  arch=$(uname -m)
+  case "$arch" in x86_64|aarch64|armv7h) ;; *) warn "Trinity indisponível para $arch."; return 1 ;; esac
+  info "Instruções do Trinity: https://wiki.trinitydesktop.org/Arch_Trinity_Repository_Installation_Instructions"
+  info "Servidor: $TRINITY_SERVER · impressão digital: $TRINITY_FINGERPRINT"
+  lab_confirm trinity "Instala tde-meta com atualização completa e registra o repositório assinado. Não ativa o TDM." || return 1
+  command -v pacman-conf >/dev/null || { warn "pacman-conf indisponível."; return 1; }
+  repos=$(pacman-conf --repo-list) || return 1
+  if grep -Fx trinity >/dev/null <<< "$repos"; then
+    trinity_repo_valid || { warn "[trinity] existente usa outro servidor ou assinatura incompatível. Nenhuma configuração foi sobrescrita."; return 1; }
+  else
+    needs_repo=1
+    cp -p -- "$config" "$previous" || return 1
+    {
+      cat -- "$previous" &&
+      trinity_repo_stanza
+    } > "$candidate" || return 1
+    pacman-conf --config "$candidate" --repo trinity Server >/dev/null || return 1
+  fi
+  trinity_key || return 1
+  darfinos_event "PKG:pacman:tde-meta"
+  if (( needs_repo )); then
+    # Valida e usa a nova configuração só nesta transação. Um espelho ou
+    # pacote indisponível não deixa o pacman.conf permanente quebrado.
+    sudo pacman --config "$candidate" -Syu --needed trinity/tde-meta || return 1
+    if ! cmp -s -- "$config" "$previous"; then
+      warn "O pacman.conf mudou durante a instalação. Preserve as alterações e adicione [trinity] manualmente."
+      return 1
+    fi
+    sudo cp -p --backup=numbered -- "$previous" "$config.darfinos-trinity.bak" || return 1
+    # Grava a seção que já foi usada e validada pelo pacman, sem reescrever a configuração.
+    trinity_repo_stanza | sudo tee -a "$config" >/dev/null || return 1
+  else
+    sudo pacman -Syu --needed trinity/tde-meta || return 1
+  fi
+  trinity_repo_valid && pacman -Qq tde-meta tde-tdebase >/dev/null 2>&1 && trinity_session_ready || {
+    warn "Trinity não passou na verificação de pacotes, repositório e sessão X11."
+    return 1
+  }
+  ok "Trinity instalado. Escolha Trinity na tela de login X11 atual."
+  info "Se você usa startx, o iniciador da sessão é /opt/trinity/bin/starttde."
+}
+
+step_lab_trinity() {
+  trinity_install /etc/pacman.conf
+}
+
+step_lab_yserver() {
+  local driver
+  if ! pacman -Qq yserver-git >/dev/null 2>&1; then
+    lab_aur_install yserver yserver || return 1
+  fi
+  if ! yserver_vulkan_ready; then
+    driver=$(choose "Driver Vulkan para sua GPU? NVIDIA ou outra GPU: instale o driver apropriado à parte" "intel/amd/n" "n")
+    case "$driver" in
+      intel) install_pkgs vulkan-intel || return 1 ;;
+      amd) install_pkgs vulkan-radeon || return 1 ;;
+      *) warn "Falta um provedor vulkan-driver. Instale o driver da sua GPU e rode a etapa novamente."; return 1 ;;
+    esac
+  fi
+  yserver_ready || { warn "yserver, starty ou driver Vulkan não encontrados."; return 1; }
+  info "Em VM ou TTY livre, confira KMS, Vulkan e acesso aos dispositivos antes de executar starty."
+  info "Guia: https://github.com/joske/yserver/blob/master/docs/setup.md"
+}
+
+step_lab_xomposite() {
+  local source="$TMP_DIR/xomposite-source"
+  if [[ -f "$HOME/.local/bin/xomposite" && -x "$HOME/.local/bin/xomposite" ]]; then
+    info "Mantendo Xomposite existente em ~/.local/bin/xomposite."
+    return 0
+  fi
+  lab_confirm xomposite "Instala dependências do Arch e compila o commit $XOMPOSITE_REV sem sudo no Cargo." || return 1
+  install_pkgs base-devel git libxcb libx11 mesa || return 1
+  if ! command -v cargo >/dev/null || ! command -v rustc >/dev/null; then
+    install_pkgs rust || return 1
+  fi
+  lab_source_checkout "${LABS_URL[xomposite]}.git" "$XOMPOSITE_REV" "$source" || return 1
+  (cd -- "$source" && CARGO_TARGET_DIR="$source/target" cargo build --release --locked) || return 1
+  lab_publish_binary "$source/target/release/xlibre-compositor-poc" xomposite || return 1
+  info "Execute ~/.local/bin/xomposite em uma sessão X11 sem outro compositor ativo (por exemplo i3)."
+}
+
+step_lab_wayback() {
+  if ! pacman -Qq wayback-x11-git >/dev/null 2>&1; then
+    lab_aur_install wayback wayback-x11 || return 1
+  fi
+  info "O Wayback não foi configurado como servidor gráfico padrão; consulte ${LABS_URL[wayback]} para testar uma sessão separada."
+}
+
+step_lab_booster() {
+  local path
+  lab_confirm booster "O hook do pacote gera imagens alternativas de boot. O DarfinOS não muda o initramfs padrão, o bootloader ou a entrada ativa." || return 1
+  for path in /boot /efi /boot/efi; do
+    if findmnt --fstab --mountpoint "$path" >/dev/null && ! mountpoint -q -- "$path"; then
+      warn "Monte $path antes de instalar Booster."
+      return 1
+    fi
+  done
+  install_pkgs extra/booster || return 1
+  command -v booster >/dev/null || { warn "Booster não foi encontrado após a instalação."; return 1; }
+  info "O hook do pacote informa o caminho das imagens. Para testar, mantenha a entrada de boot original e siga https://wiki.archlinux.org/title/Booster"
+}
+
+
 
 
 step_xfce() {
@@ -1077,91 +1452,72 @@ step_xfce() {
   # Grupo xfce4 com nomes explícitos: sem prompt de escolha de grupo.
   install_pkgs exo garcon thunar thunar-volman tumbler xfce4-appfinder \
     xfce4-panel xfce4-power-manager xfce4-session xfce4-settings \
-    xfce4-terminal xfconf xfdesktop xfwm4 xorg-xinit
+    xfce4-terminal xfconf xfdesktop xfwm4 xorg-xinit || return 1
   ok "Xfce instalado. Selecione a sessão Xfce no gerenciador de login."
   info "O DarfinOS não altera a sessão padrão nem ~/.config/xfce4."
 }
 
+# Links relativos fazem parte dos temas. Valide o destino canônico, inclusive
+# através de outros links, em vez de rejeitar todos os ícones legítimos.
+chicago95_links_safe() {
+  local root="$1" link target canonical
+  while IFS= read -r -d '' link; do
+    target=$(readlink -- "$link") || return 1
+    [[ "$target" != /* ]] || return 1
+    canonical=$(realpath -e -- "$link") || return 1
+    [[ "$canonical" == "$root/"* ]] || return 1
+  done < <(find "$root" -type l -print0)
+}
+
+chicago95_copy_component() {
+  local src="$1" dest="$2" marker="$3" parent staged
+  if [[ -e "$dest" || -L "$dest" ]]; then
+    if [[ -e "$dest/$marker" ]]; then
+      info "Preservando componente Chicago95 existente: $dest"
+      return 0
+    fi
+    warn "Componente Chicago95 incompleto em $dest. Mova-o para um backup antes de tentar novamente."
+    return 1
+  fi
+  [[ -e "$src/$marker" ]] && chicago95_links_safe "$src" || {
+    warn "Componente Chicago95 inesperado ou com link inválido: $src"
+    return 1
+  }
+  parent=$(dirname -- "$dest")
+  mkdir -p -- "$parent" || return 1
+  staged=$(mktemp -d "$parent/.chicago95-stage.XXXXXXXX") || return 1
+  if ! cp -a -- "$src/." "$staged/" || ! chmod 755 "$staged" ||
+     ! mv -nT -- "$staged" "$dest" || [[ -e "$staged" ]]; then
+    rm -rf -- "$staged"
+    return 1
+  fi
+}
+
 step_lab_chicago95() {
-  local source theme icon_theme staged_theme staged_icons upstream
-  theme="$HOME/.themes/Chicago95"
-  icon_theme="$HOME/.icons/Chicago95"
-
-  if [[ -e "$theme" || -L "$theme" || -e "$icon_theme" || -L "$icon_theme" ]]; then
-    warn "Chicago95 detectado parcialmente ou customizado: preserve os arquivos e faça a revisão manual."
-    return 1
+  local source="$TMP_DIR/chicago95-upstream"
+  lab_confirm chicago95 "Instala Xfce, tema, ícones, cursores e fontes no HOME. Não executa installer.py nem altera painel ou tema ativo." || return 1
+  modules_refresh
+  module_probe xfce
+  if [[ "$MODULE_STATUS" != installed ]]; then
+    step_xfce || return 1
   fi
-  if ! command -v git >/dev/null 2>&1; then
-    warn "Chicago95 precisa do git para consultar o repositório original."
-    return 1
-  fi
-  if ! pacman -Qq xfce4-session >/dev/null 2>&1; then
-    warn "Xfce não instalado. Execute o módulo xfce primeiro."
-    return 1
-  fi
-  if (( ASSUME_YES )); then
-    warn "Chicago95 exige confirmação individual e não aceita -y."
-    return 1
-  fi
-  info "Upstream: ${LABS_URL[chicago95]}"
-  info "Serão copiadas apenas as pastas Theme/Chicago95 e Icons/Chicago95 para o HOME."
-  info "Nenhum installer.py remoto será executado; painéis e tema ativos serão mantidos."
-  if ! confirm "Baixar e instalar os arquivos Chicago95 para este usuário (sem sobrescrever)?" n; then
-    warn "Chicago95 cancelado; etapa não concluída."
-    return 1
-  fi
-
-  source="$TMP_DIR/chicago95-upstream"
-  git clone --depth 1 --quiet -- https://github.com/grassmunk/Chicago95.git "$source" || return 1
-  if [[ ! -f "$source/Theme/Chicago95/index.theme" ||
-        ! -f "$source/Icons/Chicago95/index.theme" ]]; then
-    warn "Chicago95: estrutura inesperada do projeto oficial; abortando."
-    return 1
-  fi
-  if find "$source/Theme/Chicago95" "$source/Icons/Chicago95" -type l -print -quit | grep -q .; then
-    warn "Chicago95: upstream contém links simbólicos; cópia não autorizada."
-    return 1
-  fi
-  upstream=$(git -C "$source" rev-parse --short=12 HEAD) || return 1
-  [[ ! -L "$HOME/.themes" && ! -L "$HOME/.icons" ]] || {
-    warn "Diretório de temas/ícones é link simbólico; instale manualmente."
-    return 1
-  }
-  mkdir -p -- "$HOME/.themes" "$HOME/.icons" || return 1
-  staged_theme=$(mktemp -d "$HOME/.themes/.chicago95-stage.XXXXXXXX") || return 1
-  staged_icons=$(mktemp -d "$HOME/.icons/.chicago95-stage.XXXXXXXX") || {
-    rmdir "$staged_theme"
-    return 1
-  }
-  if ! cp -a -- "$source/Theme/Chicago95/." "$staged_theme/" ||
-     ! cp -a -- "$source/Icons/Chicago95/." "$staged_icons/"; then
-    rm -rf -- "$staged_theme" "$staged_icons"
-    return 1
-  fi
-  if [[ -e "$theme" || -L "$theme" || -e "$icon_theme" || -L "$icon_theme" ]]; then
-    warn "Chicago95: destino criado enquanto baixava; não sobrescrevo."
-    rm -rf -- "$staged_theme" "$staged_icons"
-    return 1
-  fi
-  if ! mv -nT -- "$staged_theme" "$theme" || [[ -e "$staged_theme" ]]; then
-    rm -rf -- "$staged_theme" "$staged_icons"
-    return 1
-  fi
-  if ! mv -nT -- "$staged_icons" "$icon_theme" || [[ -e "$staged_icons" ]]; then
-    warn "Chicago95 parcial: tema copiado, ícones pendentes. Revise manualmente."
-    rm -rf -- "$staged_icons"
-    return 1
-  fi
-  ok "Chicago95 upstream $upstream copiado sem modificar configurações existentes."
-  info "Abra Xfce > Aparência > Estilo e Ícones; escolha Chicago95."
-  info "No Gerenciador de Janelas, selecione Chicago95 manualmente."
-  info "Leia: https://github.com/grassmunk/Chicago95/blob/master/INSTALL.md"
+  install_pkgs git fontconfig || return 1
+  lab_source_checkout "${LABS_URL[chicago95]}.git" "$CHICAGO95_REV" "$source" || return 1
+  chicago95_copy_component "$source/Theme/Chicago95" "$HOME/.themes/Chicago95" "index.theme" || return 1
+  chicago95_copy_component "$source/Icons/Chicago95" "$HOME/.icons/Chicago95" "index.theme" || return 1
+  chicago95_copy_component "$source/Cursors/Chicago95_Standard_Cursors" "$HOME/.icons/Chicago95_Standard_Cursors" "index.theme" || return 1
+  chicago95_copy_component "$source/Fonts/vga_font" "$HOME/.local/share/fonts/Chicago95" "LessPerfectDOSVGA.ttf" || return 1
+  fc-cache -f "$HOME/.local/share/fonts/Chicago95" || return 1
+  modules_refresh
+  chicago95_ready || { warn "Chicago95 não passou na checagem final dos arquivos."; return 1; }
+  ok "Chicago95 instalado. Selecione Chicago95 em Aparência e no Gerenciador de Janelas do Xfce."
+  info "O cursor aparece em Mouse e Touchpad. Para GTK4, painel e outros extras: ${LABS_URL[chicago95]}/blob/$CHICAGO95_REV/INSTALL.md"
 }
 
 step_i3() {
   info "Instalando i3 como window manager alternativo, sem substituir SonicDE."
   info "Fonte: ${LABS_URL[i3]}"
-  install_pkgs i3-wm i3status i3lock dmenu xorg-xinit
+  install_pkgs i3-wm i3status i3lock dmenu xorg-xinit || return 1
   ok "i3 instalado. Selecione a sessão i3 no login ou configure ~/.xinitrc para startx."
   info "O DarfinOS não altera seu login manager, tema ou arquivos ~/.config/i3."
 }
@@ -1194,7 +1550,7 @@ step_aur_helper() {
         return
       fi
       # Senão: versões -bin do AUR evitam compilar
-      git clone "https://aur.archlinux.org/${choice}-bin.git" "$TMP_DIR/$choice"
+      git clone "https://aur.archlinux.org/${choice}-bin.git" "$TMP_DIR/$choice" || return 1
       (cd "$TMP_DIR/$choice" && makepkg -si)
       ;;
     *) echo "Nenhum AUR helper será instalado." ;;
@@ -2294,9 +2650,14 @@ if step_enabled xlibre || step_enabled sonicde; then
   info "Próximos passos: reinicie, escolha a sessão X11 do SonicDE e rode: xdpyinfo | grep vendor"
 fi
 
-if confirm "Reiniciar agora?" n; then
-  sudo reboot
-fi
+for s in "${STEPS[@]}"; do
+  if [[ "$s" != lab_* ]] && step_enabled "$s"; then
+    if confirm "Reiniciar agora?" n; then
+      sudo reboot
+    fi
+    break
+  fi
+done
 
 # Uma execução parcial com falhas não deve ser reportada como sucesso ao CI/TUI.
 if (( ${#FAILED_STEPS[@]} || ${#SKIPPED_STEPS[@]} )); then

@@ -38,7 +38,7 @@ shellcheck -S warning DarfinOSInstallScript.sh
 
 ## O que é testado
 
-- Parser de `STEPS`, `STEP_DESC` e `STEP_DEPS`; ordem e nomes únicos das 41 etapas.
+- Parser de `STEPS`, `STEP_DESC` e `STEP_DEPS`; ordem e nomes únicos das 48 etapas.
 - Dependências, seleção, comando `--only` e proteção contra execução vazia.
 - Prévia estática de pacotes, sem instalação.
 - Perfis salvos e carregados, validação dos nomes.
@@ -113,7 +113,7 @@ pendentes do roteiro em [VALIDACAO_VM.md](VALIDACAO_VM.md).
 
 ## Checagens conservadoras de módulos
 
-A suíte testa os estados de módulos detectáveis, a consulta de 41 módulos sem
+A suíte testa os estados de módulos detectáveis, a consulta de 48 módulos sem
 sudo, a opção `--reinstall`, a omissão automática com `STEP_ALREADY` e a
 retomada que entende `ALREADY`. O preset `retro` acrescenta Xfce e Chicago95.
 O smoke em contêiner Arch não executa a instalação gráfica ou o clone upstream;

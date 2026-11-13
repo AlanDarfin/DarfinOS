@@ -2,7 +2,7 @@
 
 **🇺🇸 English (default) · [🇧🇷 Português (Brasil)](pt-BR/MANIFESTO_PRESETS.md)**
 
-DarfinOS uses a versioned list of **41 Bash stages**, with names, descriptions and known dependencies. The Python TUI parses that structure for inspection and offers six curated selections.
+DarfinOS uses a versioned list of **48 Bash stages**, with names, descriptions and known dependencies. The Python TUI parses that structure for inspection and offers six curated selections.
 
 ```bash
 python3 DarfinOSInstallScript-TUI.py --manifest

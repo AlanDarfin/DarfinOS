@@ -102,7 +102,7 @@ de pacotes locais, sem tomá-la como prova de que uma etapa foi concluída.
 
 ## DarfinOS Labs e o novo preset i3
 
-A TUI agora apresenta **41 etapas**, seis presets (minimal, desktop, i3, retro,
+A TUI agora apresenta **48 etapas**, seis presets (minimal, desktop, i3, retro,
 gaming e full) e a tecla **L** para abrir o catálogo de 13 projetos
 independentes. O catálogo lê links, modos e riscos diretamente do Bash sem
 executar nada. Enter mostra os detalhes e o endereço original; Espaço apenas

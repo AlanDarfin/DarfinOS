@@ -34,7 +34,7 @@
 - [ ] Verify `--all`, `--skip` and `full` do not silently select Labs modules.
 - [ ] Review NsCDE, JuNest, Decman and Metapac AUR PKGBUILDs before any individual installation.
 - [ ] Confirm the special AUR confirmation and rejection of unattended `-y`.
-- [ ] Do not run Decman/Metapac synchronization or JuNest setup automatically.
+- [ ] Verify JuNest creates its Arch environment after confirmation and does not modify the host. Do not run Decman/Metapac synchronization.
 - [ ] Keep yserver, xomposite, Wayback, Trinity and Booster in isolated sessions/VMs with an explicit recovery procedure.
 
 ## 5. Backup and recovery

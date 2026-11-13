@@ -21,7 +21,7 @@ class ManifestPresetTests(unittest.TestCase):
 
     def test_manifest_has_all_steps_and_sha(self):
         manifest = TUI.build_manifest(BASH)
-        self.assertEqual(len(manifest['steps']), 41)
+        self.assertEqual(len(manifest['steps']), 48)
         self.assertEqual(manifest['script_sha256'], TUI.sha(BASH))
         self.assertEqual(manifest['accuracy'], 'partial_static')
 
@@ -83,7 +83,7 @@ class ManifestPresetTests(unittest.TestCase):
     def test_manifest_cli_no_tty_required(self):
         result = subprocess.run([sys.executable, str(ROOT / 'DarfinOSInstallScript-TUI.py'), '--manifest'],
                                 capture_output=True, text=True, check=True)
-        self.assertEqual(len(json.loads(result.stdout)['steps']), 41)
+        self.assertEqual(len(json.loads(result.stdout)['steps']), 48)
 
     def test_list_presets_cli_no_tty_required(self):
         result = subprocess.run([sys.executable, str(ROOT / 'DarfinOSInstallScript-TUI.py'), '--list-presets'],

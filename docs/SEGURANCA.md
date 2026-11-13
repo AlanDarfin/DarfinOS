@@ -18,7 +18,7 @@ DarfinOS is a post-install configuration tool. Selected stages can modify packag
 - Pacman uses `--needed`; potentially destructive transactions still require review.
 - `--check-modules` uses read-only package and HOME-file checks. It skips only verified complete stages. Partial and unknown stages are not falsely marked complete.
 - `--reinstall` re-executes a stage but does not disable overwrite protection or confirmation.
-- Labs AUR stages require explicit selection and individual confirmation. They reject unattended `-y`.
+- Advanced Labs stages require explicit selection and individual confirmation. They reject unattended `-y`.
 - Chicago95 downloads selected files from [grassmunk/Chicago95](https://github.com/grassmunk/Chicago95) and copies themes/icons to HOME after confirmation. It does not execute the project's remote `installer.py`, overwrite existing folders or activate a new session.
 
 ## Backups are limited
