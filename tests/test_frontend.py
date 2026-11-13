@@ -21,7 +21,7 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(len(steps), 41)
         self.assertEqual(len({s.name for s in steps}), 41)
         self.assertEqual(steps[0].name, 'pacman_conf')
-        self.assertEqual(steps[-1].name, 'lab_metapac')
+        self.assertEqual(steps[-1].name, 'lab_chicago95')
 
     def test_new_retro_modules(self):
         steps = TUI.parse_script(BASH)
