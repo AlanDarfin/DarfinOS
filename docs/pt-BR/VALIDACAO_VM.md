@@ -79,15 +79,15 @@ exato da execução e o commit SHA antes de considerar o resultado válido.
 ## 5. Validar Labs e i3 em VMs separadas
 
 - [ ] Conferir 13 URLs no catálogo Bash/TUI e confirmar que listar não pede sudo.
-- [ ] Verificar que `full`, `--all`, `--skip` e tecla A excluem Labs AUR.
+- [ ] Verificar que `full`, `--all`, `--skip` e tecla A excluem etapas `lab_*`.
 - [ ] Instalar `i3` no Arch com `--only i3` e verificar sessão alternativa,
   arquivos pessoais intactos e saída para o SonicDE.
 - [ ] Testar o preset `i3` com XLibre a partir de TTY e login após reinicialização.
 - [ ] Revisar PKGBUILDs NsCDE, JuNest, Decman e Metapac antes de instalar
   individualmente; confirmar que o `-y` é rejeitado e que cancelamentos não
   declaram sucesso.
-- [ ] Conferir que nenhuma etapa executa `junest setup`, `decman` ou
-  `metapac clean` automaticamente.
+- [ ] Conferir que o JuNest prepara o ambiente somente após confirmação e
+  que o DarfinOS não aplica perfis Decman nem sincroniza com Metapac.
 - [ ] Projetos gráficos yserver, xomposite, Wayback e Trinity: somente em
   sessão separada, com snapshot funcional e sem afetar a instalação principal.
 - [ ] Booster: documentar configurações, imagens initramfs e procedimento de
@@ -98,6 +98,6 @@ exato da execução e o commit SHA antes de considerar o resultado válido.
 - [ ] Simular pacotes completos e parciais: só `installed` pode registrar `STEP_ALREADY`.
 - [ ] Testar TUI `I`, `X`, status `ALREADY` e retomada sem reinstalar o que já está completo.
 - [ ] Validar preset `retro` na VM: Xfce instalado e sessão SonicDE preservada.
-- [ ] Confirmar tema/ícones Chicago95 no HOME, preservando painel e configurações antigas.
+- [ ] Confirmar temas, ícones, cursores e fontes Chicago95 no HOME, preservando painel e configurações antigas.
 - [ ] Repetir Chicago95: não sobrescrever arquivos, nem executar `installer.py` remoto.
 - [ ] Confirmar que `--reinstall` não remove `--needed` e exige confirmação das operações.

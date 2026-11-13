@@ -875,6 +875,8 @@ def draw_v3(win, st: State, visible: list[int], cursor: int, top: int,
         if missing:
             rows += ['', 'DEPENDÊNCIAS PENDENTES']
             rows += [f' ! {name}: {", ".join(deps)}' for name, deps in missing.items()]
+        if st.yes and any(name.startswith('lab_') for name in st.selected):
+            rows += ['', 'Labs exige modo interativo. Pressione Y para desligar -y.']
         rows += ['', 'D: incluir dependências   Y: alternar -y   X: forçar reinstalação   B: aplicativos',
                  'ATENÇÃO: o instalador pode executar comandos com sudo.']
         wrapped = []
@@ -911,7 +913,7 @@ def labs_screen(win, st: State, script: Path) -> None:
         if cursor >= top+height: top = cursor-height+1
         put(win, 0, 2, '◆ DARFINOS LABS · PROJETOS ORIGINAIS', curses.A_BOLD | colors('pink'))
         line(win, 1)
-        put(win, 2, 2, 'AUR: revisão obrigatória. Guias não instalam nada.', colors('yellow'))
+        put(win, 2, 2, 'Instalações Labs são opcionais e interativas.', colors('yellow'))
         for idx in range(top, min(len(projects), top+height)):
             project = projects[idx]
             step = project['step']
@@ -941,8 +943,10 @@ def labs_screen(win, st: State, script: Path) -> None:
                 'NÍVEL: ' + current['risk'],
                 'MÉTODO: ' + current['mode'],
                 'ETAPA: ' + (current['step'] or 'guia manual'), '',
-                current['description'], '', 'LINK UPSTREAM:', current['url'], '',
-                'Projetos independentes. O catálogo não executa links remotos.'
+                current['description'],
+                st.lookup[current['step']].detail if current['step'] in st.lookup else '', '',
+                'LINK UPSTREAM:', current['url'], '',
+                'Projetos independentes. O catálogo não instala nada ao abrir.'
             ])
             scroll_screen(win, 'DARFINOS LABS · '+current['id'], detail)
         elif key == ord(' '):
@@ -1031,7 +1035,11 @@ def ui_v3(win, st: State, digest: str, allow_updates: bool = True) -> str:
             elif key in (ord('y'), ord('Y')): st.yes = not st.yes
             elif key in (ord('x'), ord('X')): st.force_modules = not st.force_modules
             elif key in (ord('b'), ord('B')): apps_screen(win, st, CURRENT_SCRIPT)
-            elif key in (10, 13) and st.selected: return 'run'
+            elif key in (10, 13) and st.selected:
+                if st.yes and any(name.startswith('lab_') for name in st.selected):
+                    st.message = 'Labs exige modo interativo. Pressione Y para desligar -y.'
+                else:
+                    return 'run'
             continue
         if key in (curses.KEY_DOWN, ord('j')): current += 1
         elif key in (curses.KEY_UP, ord('k')): current -= 1
@@ -1052,7 +1060,7 @@ def ui_v3(win, st: State, digest: str, allow_updates: bool = True) -> str:
             else: st.selected |= names
         elif key in (ord('a'), ord('A')):
             st.selected = {name for name in st.lookup if not name.startswith('lab_')}
-            st.message = 'Marcadas etapas tradicionais. Labs AUR requer seleção individual.'
+            st.message = 'Marcadas etapas tradicionais. Labs requer seleção individual.'
         elif key in (ord('n'), ord('N')): st.selected.clear()
         elif key in (ord('f'), ord('F')): st.show_selected = not st.show_selected; current = top = 0
         elif key == ord('/'):
@@ -1237,7 +1245,7 @@ PRESETS = {
     'i3': ('i3 + XLibre, sem SonicDE', ('pacman_conf', 'mirrors', 'repo_xlibre', 'sysupgrade', 'base', 'aur_helper', 'fonts', 'hardware', 'xlibre', 'i3', 'cli_tools', 'maintenance')),
     'retro': ('Xfce + Chicago95, tema opcional no HOME', ('base', 'xfce', 'lab_chicago95')),
     'gaming': ('Desktop e jogos', ('pacman_conf', 'mirrors', 'repo_xlibre', 'repo_sonicde', 'sysupgrade', 'base', 'aur_helper', 'fonts', 'hardware', 'xlibre', 'sonicde', 'desktop_extras', 'bluetooth', 'cli_tools', 'flatpak', 'gaming', 'maintenance')),
-    'full': ('Etapas convencionais, inclusive Bedrock; Labs AUR fora', tuple()),
+    'full': ('Etapas convencionais, inclusive Bedrock; módulos Labs fora', tuple()),
 }
 
 
@@ -1342,11 +1350,12 @@ def diagnose_script(script: Path) -> dict:
     for name in graph:
         visit(name)
     # Um link upstream faltante/sem HTTPS é um erro no manifesto, não um detalhe visual.
+    projects = []
     try:
         projects = labs_catalog(script)
         for project in projects:
-            if project['step'] and project['step'] not in known:
-                errors.append('Etapa Labs ausente: ' + project['step'])
+            if project['step'] not in known:
+                errors.append('Etapa Labs ausente: ' + (project['step'] or project['id']))
     except ValueError as exc:
         errors.append('Catálogo Labs inválido: ' + str(exc))
     if shutil.which('bash'):
@@ -1362,7 +1371,7 @@ def diagnose_script(script: Path) -> dict:
         warnings.append('Este ambiente não parece ser Arch Linux.')
     return {
         'script': str(script), 'script_sha256': sha(script), 'steps': len(steps),
-        'presets': list(PRESETS), 'labs': 12, 'errors': errors, 'warnings': warnings,
+        'presets': list(PRESETS), 'labs': len(projects), 'errors': errors, 'warnings': warnings,
         'ready': not errors,
     }
 
@@ -1575,7 +1584,7 @@ def inventory(script: Path, selected: set[str]):
     """Extrai somente argumentos literais de chamadas de instalação completas."""
     source = script.read_text(encoding='utf-8')
     result = []
-    call = re.compile(r'^\s*(install_pkgs_replace|install_pkgs|aur_install|flatpak_install)(?=\s|$)')
+    call = re.compile(r'^\s*(install_pkgs_replace|install_pkgs|aur_install|lab_aur_install|flatpak_install)(?=\s|$)')
     package = re.compile(r'[a-zA-Z0-9][a-zA-Z0-9_.+@/-]*\Z')
     for step in sorted(selected):
         m = re.search(r'^step_' + re.escape(step) + r'\(\)\s*\{', source, re.M)
@@ -1611,14 +1620,19 @@ def inventory(script: Path, selected: set[str]):
                 args = shlex.split(statement, comments=True)
             except ValueError:
                 continue
+            if kind == 'lab_aur_install':
+                args = args[1:]  # Primeiro argumento é o ID do projeto.
             if not args or any(not package.fullmatch(arg) or arg in {
                 'if', 'then', 'fi', 'else', 'local', 'return', 'confirm',
                 'info', 'printf', 'chmod', 'enable_service', 'aur_install',
                 'install_pkgs', 'flatpak_install',
             } for arg in args):
                 continue
-            origin = 'flatpak' if kind == 'flatpak_install' else 'aur' if kind == 'aur_install' else 'pacman'
-            result.extend((step, origin, arg) for arg in args)
+            origin = 'flatpak' if kind == 'flatpak_install' else 'aur' if kind in ('aur_install', 'lab_aur_install') else 'pacman'
+            result.extend((step, origin, arg.rsplit('/', 1)[-1] if origin == 'pacman' else arg) for arg in args)
+    # Trinity só fica disponível após validar o repositório e usar -Syu.
+    if 'lab_trinity' in selected and re.search(r'(?m)^step_lab_trinity\(\)\s*\{', source):
+        result.append(('lab_trinity', 'pacman', 'tde-meta'))
     # Opções de cliente Discord selecionadas dinamicamente em step_apps.
     if 'apps' in selected and re.search(r'(?m)^step_apps\(\)\s*\{', source):
         for client in ('dev.vencord.Vesktop', 'io.github.Legcord.Legcord',

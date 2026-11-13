@@ -66,7 +66,7 @@ possa instalar Topgrade e Arch-Update, sujeitos às perguntas do helper e às
 permissões do AUR. Se os executáveis ainda estiverem ausentes no final, a etapa
 é considerada incompleta. Isso não equivale a uma instalação já testada em VM.
 
-O manifesto agora inclui 41 etapas; as cinco etapas novas são `i3` e
+Na rodada anterior, o manifesto passou a incluir 41 etapas; as cinco etapas novas eram `i3` e
 `lab_nscde`, `lab_junest`, `lab_decman`, `lab_metapac`. Os demais projetos
 do [catálogo Labs](LABS.md) não são etapas automáticas; seus links e riscos
 podem ser consultados com `--labs` ou a tecla L. O `full` contém as 35 etapas
@@ -74,5 +74,5 @@ convencionais e exclui todos os `lab_*`.
 
 O sexto preset, `retro`, adiciona `xfce` e `lab_chicago95` com confirmação
 e cópia de tema/ícones para o HOME. O catálogo Labs soma 13 projetos e o Bash
-41 etapas; o `full` continua excluindo `lab_*`.
+48 etapas; o `full` continua excluindo `lab_*`.
 Ver [MODULOS.md](MODULOS.md) para a checagem automática de instalações.

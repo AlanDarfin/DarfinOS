@@ -18,8 +18,8 @@ DarfinOS is a post-install configuration tool. Selected stages can modify packag
 - Pacman uses `--needed`; potentially destructive transactions still require review.
 - `--check-modules` uses read-only package and HOME-file checks. It skips only verified complete stages. Partial and unknown stages are not falsely marked complete.
 - `--reinstall` re-executes a stage but does not disable overwrite protection or confirmation.
-- Labs AUR stages require explicit selection and individual confirmation. They reject unattended `-y`.
-- Chicago95 downloads selected files from [grassmunk/Chicago95](https://github.com/grassmunk/Chicago95) and copies themes/icons to HOME after confirmation. It does not execute the project's remote `installer.py`, overwrite existing folders or activate a new session.
+- Advanced Labs stages require explicit selection and individual confirmation. They reject unattended `-y`.
+- Chicago95 downloads selected files from [grassmunk/Chicago95](https://github.com/grassmunk/Chicago95) and copies themes, icons, cursors and fonts to HOME after confirmation. It does not execute the project's remote `installer.py`, overwrite existing folders or activate a new session.
 
 ## Backups are limited
 
@@ -31,7 +31,7 @@ This feature cannot restore packages, `/etc`, arbitrary HOME files, service stat
 
 AUR PKGBUILDs and upstream binaries can change independently of DarfinOS. Inspect sources and dependencies. Do not execute destructive declarative synchronization with Decman or Metapac without a reviewed plan.
 
-yserver, xomposite, Wayback, Trinity and Booster remain manual/research integrations because they can affect the desktop, compositor, trust chain or boot process.
+yserver, Xomposite, Wayback, Trinity and Booster have opt-in installer stages. They do not switch the active desktop, default X server or boot entry. Trinity verifies the full upstream fingerprint before trusting its repository.
 
 **No stable release or ISO is advertised** until the graphical VM/recovery checklist is completed. Automated Python/Bash tests and an Arch container smoke check are not substitutes.
 

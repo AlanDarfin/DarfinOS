@@ -52,7 +52,8 @@ Módulos atualmente com prova de conclusão automática:
 - **i3** e **Xfce** (todos os pacotes previstos na etapa).
 - **AUR helper** (yay ou paru presente no PATH).
 - **NsCDE**, **JuNest**, **Decman**, **Metapac** (pacote instalado, sem prometer configuração adicional).
-- **Chicago95** (arquivos de tema e ícones presentes no HOME).
+- **Trinity e JuNest** (pacotes e, respectivamente, repositório/sessão e ambiente local).
+- **Chicago95** (temas, ícones, cursores e fontes presentes no HOME, com Xfce instalado).
 
 A lista evolui conforme criamos testes e validações específicas para cada módulo.
 O comando `--audit` continua sendo uma prévia de pacotes, não um substituto para
@@ -78,9 +79,7 @@ bash DarfinOSInstallScript.sh --only xfce,lab_chicago95
 
 O preset `retro` seleciona `base`, `xfce` e `lab_chicago95`. O Xfce usa
 pacotes oficiais do Arch, sem substituir SonicDE ou o login manager.
-O Chicago95 baixa o repositório original da grassmunk, verifica as pastas
-`Theme/Chicago95` e `Icons/Chicago95` e copia esses **assets** para
-`~/.themes/Chicago95` e `~/.icons/Chicago95`.
+O Chicago95 busca uma revisão fixa do repositório original, valida os links internos e copia temas, ícones, cursores e fontes para o HOME.
 
 O instalador **não executa `installer.py`** do upstream, não aplica temas
 GTK4, fontes, cursores, painéis ou configurações do Xfce automaticamente e

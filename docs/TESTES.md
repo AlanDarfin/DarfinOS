@@ -25,7 +25,7 @@ The development preview workflow does not create stable releases or ISO images. 
 
 ## What the tests cover
 
-- Correct and unique list of all 41 stage names and six presets.
+- Correct and unique list of all 48 stage names and six presets.
 - Installer refuses accidental implicit full installations.
 - Module checks show complete/partial/missing/unknown without sudo.
 - Only verified complete modules generate `STEP_ALREADY`; `--reinstall` allows manual re-execution.

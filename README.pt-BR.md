@@ -80,7 +80,7 @@ O DarfinOS oferece uma **etapa opcional** relacionada ao Bedrock. Ela não é ne
 
 ## 🛠 O que o DarfinOS configura
 
-O instalador Bash organiza **41 etapas** em grupos. A seleção pode ser feita pela linha de comando ou pela TUI.
+O instalador Bash organiza **48 etapas** em grupos. A seleção pode ser feita pela linha de comando ou pela TUI.
 
 | Área | Exemplos de etapas | O que faz |
 | --- | --- | --- |
@@ -150,7 +150,7 @@ python3 DarfinOSInstallScript-TUI.py --resume
 O instalador continua independente da interface:
 
 ```bash
-# Consultar as 41 etapas
+# Consultar as 48 etapas
 bash DarfinOSInstallScript.sh --list
 
 # Para uma instalação interativa e seleção segura, use a TUI
@@ -190,33 +190,24 @@ O parâmetro `--reinstall` não remove `--needed` do pacman e não autoriza
 sobrescrever arquivos de tema. Saiba como interpretar os estados:
 **[docs/MODULOS.md](docs/MODULOS.md)**.
 
-## ⚡ DarfinOS Labs · 13 projetos independentes, i3 e Chicago95
+## ⚡ DarfinOS Labs · 13 projetos independentes
 
-**Minha cara, minhas ideias.** O DarfinOS passa a incluir uma seleção de
-projetos independentes e menos convencionais, sem configurar automaticamente
-aqueles que exigem substituir o sistema gráfico, o boot ou repositórios de
-terceiros.
-
-- **i3**: WM X11 oficial do Arch, como etapa `i3` e novo preset `i3` (com XLibre; sem SonicDE).
-- **Xfce + Chicago95**: preset `retro` instala Xfce oficial e copia temas/ícones Chicago95 upstream para o HOME, após confirmação, sem modificar a sessão atual.
-- **NsCDE, JuNest, Decman e Metapac**: etapas AUR individuais com confirmação
-  obrigatória `LABS` e sem suporte a `-y`.
-- **Conty, nix-portable, Trinity, yserver, xomposite, Wayback e Booster**:
-  guias com links originais e avisos, **sem instalação automática**.
+Os 13 projetos têm etapas de instalação no Bash e na TUI. O Trinity configura
+o repositório assinado e instala `tde-meta`. O JuNest monta o ambiente Arch no
+HOME, e o Retro instala Xfce e os temas, ícones, cursores e fontes do Chicago95.
+Instalar um experimento não troca sua sessão gráfica nem sua entrada de boot.
 
 ```bash
 bash DarfinOSInstallScript.sh --labs
-bash DarfinOSInstallScript.sh --lab-info yserver
-python3 DarfinOSInstallScript-TUI.py --labs
-python3 DarfinOSInstallScript-TUI.py --plan --preset i3
+bash DarfinOSInstallScript.sh --lab-info trinity
+bash DarfinOSInstallScript.sh --only lab_trinity
 ```
 
-Na TUI, pressione **L** para navegar pelo catálogo. Enter revela o link e os
-riscos; Espaço marca somente etapas disponíveis. Os módulos AUR Labs **não**
-entram no `full`, `--all` ou `--skip`, e a tecla `A` não os marca.
+Na TUI, pressione **L** para abrir o catálogo e **Espaço** para selecionar.
+As etapas `lab_*` pedem confirmação e não entram no `full`, `--all` ou `--skip`.
 
-**[Catálogo e avisos completos](docs/LABS.md)** ·
-**[Vitrine do site](https://darfinos.vercel.app/labs/)**.
+**[Catálogo e links originais](docs/pt-BR/LABS.md)** ·
+**[Vitrine do site](https://darfinos.vercel.app/pt-br/labs/)**.
 
 ## 🖥 DarfinOS TUI V5 — Control Center
 
@@ -388,7 +379,7 @@ O DarfinOS possui testes automatizados com **`unittest`**, sem dependências Pyt
 
 Os testes cobrem, entre outros pontos:
 
-- Parser das **41 etapas** e resolução de dependências.
+- Parser das **48 etapas** e resolução de dependências.
 - Perfis, presets e exportação do manifesto.
 - Registros de execução, recuperação e proteção contra Bash diferente.
 - Eventos de progresso e confirmações do Bash em cenários isolados.

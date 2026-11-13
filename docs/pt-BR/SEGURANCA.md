@@ -78,16 +78,16 @@ use `-y` como substituto para essa revisão.
 
 ## DarfinOS Labs
 
-A categoria [Labs](LABS.md) reúne 13 projetos externos. Somente i3 possui
-pacotes do Arch oficial no fluxo padrão; NsCDE, JuNest, Decman e Metapac são
-instalações AUR individuais com confirmação literal **LABS**. Eles recusam
-`-y` e nunca entram em seleções automáticas `--all`, `--skip` ou `full`.
+A categoria [Labs](LABS.md) reúne 13 projetos externos com etapas de
+instalação. As etapas avançadas `lab_*` exigem seleção individual, confirmação
+`LABS` e não aceitam `-y`. Revise os PKGBUILDs do AUR e teste os
+experimentos gráficos e de boot numa VM. Trinity usa um repositório assinado
+e não muda o gerenciador de login.
 
-Conty, nix-portable, Trinity, yserver, xomposite, Wayback e Booster são
-**documentais**. Não automatizamos inserção de repositórios de terceiros,
-execução de binários baixados, mudanças de sessão gráfica ou initramfs.
-Decman e Metapac não são executados após instalação: regras declarativas e
-comandos de limpeza podem remover pacotes e arquivos do sistema.
+Conty e nix-portable são baixados com verificação de SHA-256. Os experimentos
+gráficos não substituem o servidor padrão, e o Booster não troca sua entrada
+de boot. Decman e Metapac são instalados sem aplicar regras que possam alterar
+pacotes ou arquivos do sistema.
 
 ## Chicago95 e detecção de módulos
 

@@ -115,7 +115,7 @@ lab_aur_install nscde nscde
                                  '--check-modules'], capture_output=True, text=True, check=True)
         rows = result.stdout.splitlines()
         self.assertEqual(rows[0], 'module\tstatus\treason')
-        self.assertEqual(len(rows), 42)
+        self.assertEqual(len(rows), 49)
         self.assertTrue(any(x.startswith('lab_chicago95\t') for x in rows))
         self.assertNotIn('Autenticando sudo', result.stdout)
 
@@ -146,6 +146,17 @@ lab_aur_install nscde nscde
             css = home / '.themes/Chicago95/gtk-3.0/gtk.css'
             css.parent.mkdir(parents=True)
             css.write_text('/* Chicago95 */')
+            result = subprocess.run(cmd, env=env, capture_output=True, text=True, check=True)
+            self.assertIn('lab_chicago95\tpartial\t', result.stdout)
+            for asset in (
+                '.themes/Chicago95/xfwm4/themerc',
+                '.icons/Chicago95_Standard_Cursors/cursors/left_ptr',
+                '.local/share/fonts/Chicago95/LessPerfectDOSVGA.ttf',
+                '.local/share/fonts/Chicago95/MorePerfectDOSVGA.ttf',
+            ):
+                file = home / asset
+                file.parent.mkdir(parents=True, exist_ok=True)
+                file.touch()
             result = subprocess.run(cmd, env=env, capture_output=True, text=True, check=True)
             rows = {parts[0]: parts[1:] for line in result.stdout.splitlines()[1:]
                     if len(parts := line.split("\t", 2)) == 3}

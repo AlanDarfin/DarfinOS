@@ -35,7 +35,7 @@ GitHub Markdown cannot detect a reader's browser locale or automatically render 
 
 ## What you can customize
 
-DarfinOS currently describes **41 modular stages**, **six presets**, and **13 independent projects in Labs**.
+DarfinOS currently describes **48 modular stages**, **six presets**, and **13 independent projects in Labs**.
 
 | Area | Modules and examples |
 | --- | --- |
@@ -45,7 +45,7 @@ DarfinOS currently describes **41 modular stages**, **six presets**, and **13 in
 | Network and services | ZeroTier, Hamachi, Syncthing, Docker/Podman |
 | Applications and games | Flatpak, selected desktop apps, browser, Steam, Wine, GameMode and MangoHud |
 | Maintenance | Topgrade, Arch-Update/tray, service timers, firewall, cleanup and optional advanced steps |
-| DarfinOS Labs | Optional NsCDE, JuNest, Decman, Metapac and Chicago95 stages; links to yserver, Conty, Wayback, Trinity, Booster and more |
+| DarfinOS Labs | 13 projects with optional installer stages and original project links |
 
 Features are conditional. A module is not guaranteed to install every named program on all hardware or configurations.
 
@@ -54,7 +54,7 @@ Features are conditional. A module is not guaranteed to install every named prog
 - [SonicDE](https://sonicde.org/) is a KDE-derived desktop focused on X11, used as a primary design reference.
 - [XLibre](https://xlibre.net/) continues the X11 server family and can require high-impact package replacements.
 - [i3](https://i3wm.org/) is an optional keyboard-driven X11 tiling window manager.
-- [Xfce](https://www.xfce.org/) and [Chicago95](https://github.com/grassmunk/Chicago95) power the optional Retro preset. The installer copies theme/icon assets to the user's HOME but does not apply the theme automatically.
+- [Xfce](https://www.xfce.org/) and [Chicago95](https://github.com/grassmunk/Chicago95) power the optional Retro preset. The installer copies themes, icons, cursors and fonts to the user's HOME but does not apply the theme automatically.
 - [Bedrock Linux](https://bedrocklinux.org/) is an advanced, high-risk cross-distribution experiment, not a normal prerequisite.
 
 These projects are independent and are not owned, maintained or endorsed by DarfinOS.
@@ -119,7 +119,7 @@ See [module verification details](docs/MODULOS.md) and the [TUI guide](docs/TUI_
 | `minimal` | Foundation and essential tooling |
 | `desktop` | SonicDE and XLibre desktop |
 | `i3` | Alternative i3 + XLibre session without SonicDE |
-| `retro` | Xfce plus optional Chicago95 theme and icons |
+| `retro` | Xfce plus optional Chicago95 themes, icons, cursors and fonts |
 | `gaming` | Desktop and gaming utilities |
 | `full` | All conventional stages, including potentially destructive ones, excluding opt-in Labs stages |
 
@@ -127,7 +127,7 @@ Use `python3 DarfinOSInstallScript-TUI.py --list-presets` to list them or `--com
 
 ### DarfinOS Labs
 
-Labs catalogs 13 independent projects. Bash `--labs` and TUI `--labs` only list them. The **L** key opens the catalog in the terminal UI. AUR modules require a specific confirmation and reject unattended `-y`. Most high-risk graphical and boot experiments remain documentation-only.
+Labs catalogs 13 independent projects. Bash `--labs` and TUI `--labs` only list them. The **L** key opens the catalog in the terminal UI. All 13 projects can be installed. The advanced Labs stages require confirmation and reject `-y`. Trinity installs the signed repository and `tde-meta` without switching your login manager.
 
 Full descriptions, integration limits and **original upstream links**: [DarfinOS Labs](docs/LABS.md) and the [Labs website](https://darfinos.vercel.app/labs/).
 

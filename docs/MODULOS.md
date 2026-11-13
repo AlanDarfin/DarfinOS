@@ -20,7 +20,7 @@ bash DarfinOSInstallScript.sh --only i3 --reinstall    # explicitly rerun a stag
 | `missing` | Expected primary packages or files are not detected | No |
 | `unknown` | A safe local check cannot certify the full configuration | No |
 
-The checker currently recognizes complete sets of packages for Base, i3 and Xfce; the presence of the AUR helper and optional independent AUR packages; and Chicago95 theme/icon assets in HOME. It deliberately does **not** mark SonicDE, XLibre, Docker, timers, firewall, repositories or boot changes complete just because one package is installed.
+The checker currently recognizes complete sets of packages for Base, i3 and Xfce; the presence of the AUR helper and optional independent AUR packages; Chicago95 themes, icons, cursors and fonts in HOME; and Trinity and JuNest prerequisites and local setup. It deliberately does **not** mark SonicDE, XLibre, Docker, timers, firewall, repositories or boot changes complete just because one package is installed.
 
 `--reinstall` overrides the *stage-level skip*, but retains the package manager's `--needed`, all interactive confirmations and safeguards against overwriting user themes. It is not a request to remove and reinstall everything.
 
@@ -30,7 +30,7 @@ A verified skipped stage emits `STEP_ALREADY`. The TUI displays `ALREADY` separa
 
 ### Xfce and Chicago95
 
-The optional `retro` preset selects `base`, `xfce`, and `lab_chicago95`. Xfce is installed from Arch repositories as an alternative desktop session. Chicago95 is fetched from [grassmunk/Chicago95](https://github.com/grassmunk/Chicago95) with confirmation and copies only the theme and icons into `~/.themes/Chicago95` and `~/.icons/Chicago95`. The upstream `installer.py` is **not** run. No desktop panel, login manager, sound pack or active theme is changed automatically. Existing destination folders are not overwritten.
+The optional `retro` preset selects `base`, `xfce`, and `lab_chicago95`. Xfce is installed from Arch repositories as an alternative desktop session. Chicago95 is fetched from [grassmunk/Chicago95](https://github.com/grassmunk/Chicago95) with confirmation and copies the themes, icons, cursors and fonts into HOME. The upstream `installer.py` is **not** run. No desktop panel, login manager, sound pack or active theme is changed automatically. Existing destination folders are not overwritten.
 
 For optional further customization, consult the [Chicago95 original installation guide](https://github.com/grassmunk/Chicago95/blob/master/INSTALL.md). The automated checker does not prove that the theme has been activated or the desktop starts correctly.
 
