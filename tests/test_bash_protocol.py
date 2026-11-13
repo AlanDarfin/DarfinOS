@@ -110,6 +110,48 @@ lab_aur_install nscde nscde
         self.assertEqual(result.returncode, 1)
         self.assertEqual(events, [])
 
+    def test_modules_checker_is_read_only(self):
+        result = subprocess.run(['bash', str(ROOT / 'DarfinOSInstallScript.sh'),
+                                 '--check-modules'], capture_output=True, text=True, check=True)
+        rows = result.stdout.splitlines()
+        self.assertEqual(rows[0], 'module\tstatus\treason')
+        self.assertEqual(len(rows), 42)
+        self.assertTrue(any(x.startswith('lab_chicago95\t') for x in rows))
+        self.assertNotIn('Autenticando sudo', result.stdout)
+
+    def test_skip_verified_module_before_installing(self):
+        codes = '''
+STEPS=(i3)
+declare -A STEP_DESC=([i3]="i3")
+declare -A STEP_DEPS=()
+FAILED_STEPS=(); SKIPPED_STEPS=()
+step_enabled() { return 0; }
+modules_refresh() { :; }
+module_probe() { MODULE_STATUS=installed; MODULE_REASON="pacotes presentes"; }
+info() { :; }; warn() { :; }
+step_i3() { exit 11; }
+run_step i3
+'''
+        result, events = bash_harness(codes)
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(events, ['STEP_ALREADY:i3'])
+
+    def test_force_reinstall_executes_step(self):
+        codes = '''
+STEPS=(i3)
+declare -A STEP_DESC=([i3]="i3")
+declare -A STEP_DEPS=()
+FAILED_STEPS=(); SKIPPED_STEPS=()
+FORCE_MODULES=1
+step_enabled() { return 0; }
+info() { :; }; warn() { :; }
+step_i3() { :; }
+run_step i3
+'''
+        result, events = bash_harness(codes)
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(events, ['STEP_START:i3', 'STEP_DONE:i3'])
+
     def test_event_success_failure_skip_and_dependency(self):
         result, events = bash_harness('''
 STEPS=(ok bad dependent disabled)
@@ -117,6 +159,7 @@ declare -A STEP_DESC=([ok]="OK" [bad]="Bad" [dependent]="Dependent")
 declare -A STEP_DEPS=([dependent]="bad")
 FAILED_STEPS=(); SKIPPED_STEPS=()
 step_enabled() { [[ "$1" != disabled ]]; }
+modules_refresh() { :; }; module_probe() { MODULE_STATUS=unknown; }
 info() { :; }; warn() { :; }
 step_ok() { :; }; step_bad() { return 7; }; step_dependent() { :; }
 run_step ok
