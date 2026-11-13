@@ -16,12 +16,39 @@ SPEC.loader.exec_module(TUI)
 BASH = ROOT / 'DarfinOSInstallScript.sh'
 
 class ParserTests(unittest.TestCase):
-    def test_39_steps_and_unique_names(self):
+    def test_41_steps_and_unique_names(self):
         steps = TUI.parse_script(BASH)
-        self.assertEqual(len(steps), 39)
-        self.assertEqual(len({s.name for s in steps}), 39)
+        self.assertEqual(len(steps), 41)
+        self.assertEqual(len({s.name for s in steps}), 41)
         self.assertEqual(steps[0].name, 'pacman_conf')
         self.assertEqual(steps[-1].name, 'lab_metapac')
+
+    def test_new_retro_modules(self):
+        steps = TUI.parse_script(BASH)
+        self.assertIn('lab_chicago95', {step.name for step in steps})
+        self.assertIn('xfce', TUI.preset_selection('retro', steps))
+        self.assertIn('lab_chicago95', TUI.preset_selection('retro', steps))
+        self.assertNotIn('lab_chicago95', TUI.preset_selection('full', steps))
+        catalog = {project['id']: project for project in TUI.labs_catalog(BASH)}
+        self.assertEqual(catalog['chicago95']['step'], 'lab_chicago95')
+        self.assertEqual(catalog['chicago95']['url'], 'https://github.com/grassmunk/Chicago95')
+
+    def test_modules_json_matches_bash_checker(self):
+        report = TUI.module_checks(BASH)
+        self.assertEqual(len(report), 41)
+        self.assertEqual(set(report), {x.name for x in TUI.parse_script(BASH)})
+        self.assertIn(report['xfce']['status'], ('installed','partial','missing','unknown'))
+        import subprocess
+        out = subprocess.run([sys.executable, str(ROOT / 'DarfinOSInstallScript-TUI.py'),
+                             '--check-modules'], capture_output=True, text=True, check=True)
+        self.assertEqual(len(json.loads(out.stdout)['modules']), 41)
+
+    def test_force_reinstall_option(self):
+        st = TUI.State(TUI.parse_script(BASH), 'test', selected={'i3'})
+        st.force_modules = True
+        self.assertIn('--reinstall', TUI.command(BASH, st))
+        st.force_modules = False
+        self.assertNotIn('--reinstall', TUI.command(BASH, st))
 
     def test_i3_and_labs_group_are_distinct(self):
         steps = TUI.parse_script(BASH)
@@ -35,8 +62,8 @@ class ParserTests(unittest.TestCase):
 
     def test_labs_catalog_links_and_modes(self):
         projects = TUI.labs_catalog(BASH)
-        self.assertEqual(len(projects), 12)
-        self.assertEqual(len({x['id'] for x in projects}), 12)
+        self.assertEqual(len(projects), 13)
+        self.assertEqual(len({x['id'] for x in projects}), 13)
         by_id = {x['id']: x for x in projects}
         self.assertEqual(by_id['i3']['step'], 'i3')
         self.assertEqual(by_id['yserver']['mode'], 'documentacao')
@@ -48,7 +75,7 @@ class ParserTests(unittest.TestCase):
         import subprocess
         out = subprocess.run([sys.executable, str(ROOT / 'DarfinOSInstallScript-TUI.py'), '--labs'],
                              capture_output=True, text=True, check=True)
-        self.assertEqual(len(json.loads(out.stdout)['projects']), 12)
+        self.assertEqual(len(json.loads(out.stdout)['projects']), 13)
         result = subprocess.run([sys.executable, str(ROOT / 'DarfinOSInstallScript-TUI.py'),
                                  '--lab-info', 'nscde'], capture_output=True, text=True, check=True)
         self.assertEqual(json.loads(result.stdout)['step'], 'lab_nscde')
@@ -62,7 +89,7 @@ class ParserTests(unittest.TestCase):
 
     def test_doctor_is_read_only_and_checks_all_functions(self):
         report = TUI.diagnose_script(BASH)
-        self.assertEqual(report['steps'], 39)
+        self.assertEqual(report['steps'], 41)
         self.assertTrue(report['ready'], report['errors'])
         self.assertEqual(report['errors'], [])
 
@@ -281,4 +308,4 @@ class CliTests(unittest.TestCase):
         proc = subprocess.run(['bash', str(BASH), '--list'], capture_output=True,
                               text=True, timeout=10)
         self.assertEqual(proc.returncode, 0, proc.stderr)
-        self.assertEqual(len([line for line in proc.stdout.splitlines() if line.strip()]), 39)
+        self.assertEqual(len([line for line in proc.stdout.splitlines() if line.strip()]), 41)
