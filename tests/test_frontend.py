@@ -223,6 +223,17 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual(stored['exit_code'], 0)
         self.assertEqual(len(stored['events']), 4)
 
+    def test_already_installed_is_success_and_not_retried(self):
+        path, data = TUI.prepare_run(BASH, ['base', 'i3'], self.folder / 'run.log')
+        TUI.update_run(path, data, 'STEP_ALREADY:base')
+        TUI.update_run(path, data, 'STEP_DONE:i3', code=0)
+        self.assertEqual(data['state'], 'DONE')
+        self.assertEqual(data['statuses']['base'], 'ALREADY')
+        record = {'script_sha256': TUI.sha(BASH), 'selected': ['base', 'i3'],
+                  'statuses': {'base': 'ALREADY', 'i3': 'FAIL'}}
+        retry, _ = TUI.recovery_selection(self.st, BASH, record)
+        self.assertEqual(retry, {'i3'})
+
     def test_successful_journal(self):
         path, data = TUI.prepare_run(BASH, ['base'], self.folder / 'run.log')
         TUI.update_run(path, data, 'STEP_DONE:base', code=0)
