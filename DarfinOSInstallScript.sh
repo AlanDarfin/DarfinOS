@@ -294,6 +294,138 @@ declare -A STEP_DEPS=(
   [lab_chicago95]="xfce"
 )
 
+
+# ------------------------------------------------------------------
+# Conservador: somente "installed" permite pular toda a etapa. Estados
+# "partial", "missing" ou "unknown" NUNCA significam conclusão.
+# Sem sudo, escrita, downloads ou execução de ferramentas externas ao Arch.
+# ------------------------------------------------------------------
+declare -A MODULE_PACKAGES=()
+MODULE_PACMAN_AVAILABLE=0
+MODULE_STATUS=unknown
+MODULE_REASON="Configuração condicional não certificada pelo inventário."
+
+modules_refresh() {
+  local pkg catalog
+  MODULE_PACKAGES=()
+  MODULE_PACMAN_AVAILABLE=0
+  command -v pacman >/dev/null 2>&1 || return 0
+  catalog=$(pacman -Qq 2>/dev/null) || return 0
+  MODULE_PACMAN_AVAILABLE=1
+  while IFS= read -r pkg; do
+    [[ "$pkg" =~ ^[a-zA-Z0-9@_.+:-]+$ ]] || continue
+    MODULE_PACKAGES["$pkg"]=1
+  done <<< "$catalog"
+}
+module_packages_ready() {
+  (( MODULE_PACMAN_AVAILABLE )) || return 2
+  local pkg
+  for pkg in "$@"; do
+    [[ -n "${MODULE_PACKAGES[$pkg]:-}" ]] || return 1
+  done
+}
+module_any_package() {
+  (( MODULE_PACMAN_AVAILABLE )) || return 1
+  local pkg
+  for pkg in "$@"; do
+    [[ -n "${MODULE_PACKAGES[$pkg]:-}" ]] && return 0
+  done
+  return 1
+}
+module_probe() {
+  local name="$1"
+  local -a required=()
+  MODULE_STATUS=unknown
+  MODULE_REASON="Etapa configura serviços, repositórios ou escolhas; checagem manual necessária."
+  case "$name" in
+    base) required=(base-devel git curl wget unzip p7zip rsync htop fastfetch man-db man-pages rclone fuse2 pacman-contrib bash-completion pciutils usbutils) ;;
+    i3) required=(i3-wm i3status i3lock dmenu xorg-xinit) ;;
+    xfce) required=(exo garcon thunar thunar-volman tumbler xfce4-appfinder xfce4-panel xfce4-power-manager xfce4-session xfce4-settings xfce4-terminal xfconf xfdesktop xfwm4 xorg-xinit) ;;
+    lab_nscde) required=(nscde) ;;
+    lab_junest) required=(junest) ;;
+    lab_decman) required=(decman) ;;
+    lab_metapac) required=(metapac) ;;
+    lab_chicago95)
+      if [[ -f "$HOME/.themes/Chicago95/index.theme" && -f "$HOME/.icons/Chicago95/index.theme" ]]; then
+        MODULE_STATUS=installed
+        MODULE_REASON="Arquivos GTK e ícones Chicago95 encontrados no HOME; aplicação do tema é manual."
+      elif [[ -e "$HOME/.themes/Chicago95" || -L "$HOME/.themes/Chicago95" ||
+              -e "$HOME/.icons/Chicago95" || -L "$HOME/.icons/Chicago95" ]]; then
+        MODULE_STATUS=partial
+        MODULE_REASON="Chicago95 parcial ou customizado; nunca sobrescrever automaticamente."
+      else
+        MODULE_STATUS=missing
+        MODULE_REASON="Tema e ícones Chicago95 não encontrados no HOME."
+      fi
+      return 0 ;;
+    aur_helper)
+      if command -v paru >/dev/null 2>&1 || command -v yay >/dev/null 2>&1; then
+        MODULE_STATUS=installed
+        MODULE_REASON="yay/paru disponível no PATH."
+      else
+        MODULE_STATUS=missing
+        MODULE_REASON="Nenhum AUR helper encontrado."
+      fi
+      return 0 ;;
+    xlibre)
+      if module_any_package xlibre-server xlibre-xserver xlibre; then
+        MODULE_STATUS=partial
+        MODULE_REASON="Componente XLibre detectado, mas sessão e repositório não verificados."
+      fi
+      return 0 ;;
+    sonicde)
+      if module_any_package sonicde-meta; then
+        MODULE_STATUS=partial
+        MODULE_REASON="Pacote SonicDE presente, mas serviços, login e áudio não verificados."
+      fi
+      return 0 ;;
+    maintenance)
+      if module_any_package topgrade-bin topgrade arch-update-bin arch-update; then
+        MODULE_STATUS=partial
+        MODULE_REASON="Atualizadores detectados; timers, applet e serviços não certificados."
+      fi
+      return 0 ;;
+    docker)
+      if module_any_package docker podman; then
+        MODULE_STATUS=partial
+        MODULE_REASON="Contêineres detectados; serviços e configuração não certificados."
+      fi
+      return 0 ;;
+    syncthing|zerotier|bluetooth|gaming)
+      local candidate="$name"
+      [[ "$name" == bluetooth ]] && candidate=bluez
+      [[ "$name" == gaming ]] && candidate=gamemode
+      if module_any_package "$candidate"; then
+        MODULE_STATUS=partial
+        MODULE_REASON="Pacote detectado; configurações e outras ações não verificadas."
+      fi
+      return 0 ;;
+    *) return 0 ;;
+  esac
+  if (( ! MODULE_PACMAN_AVAILABLE )); then
+    MODULE_STATUS=unknown
+    MODULE_REASON="pacman -Qq indisponível; não pular por precaução."
+  elif module_packages_ready "${required[@]}"; then
+    MODULE_STATUS=installed
+    MODULE_REASON="Todos os ${#required[@]} pacotes esperados já instalados; etapa somente de pacotes."
+  elif module_any_package "${required[@]}"; then
+    MODULE_STATUS=partial
+    MODULE_REASON="Alguns pacotes presentes; etapa ainda não está completa."
+  else
+    MODULE_STATUS=missing
+    MODULE_REASON="Pacotes principais não detectados."
+  fi
+}
+list_module_status() {
+  local step
+  modules_refresh
+  printf 'module\tstatus\treason\n'
+  for step in "${STEPS[@]}"; do
+    module_probe "$step"
+    printf '%s\t%s\t%s\n' "$step" "$MODULE_STATUS" "$MODULE_REASON"
+  done
+}
+
 preflight() {
   local errors=0 tool
   echo "DarfinOS · Pré-verificação (somente leitura)"
@@ -687,6 +819,16 @@ run_step() {
     SKIPPED_STEPS+=("$name")
     darfinos_event "STEP_SKIP:$name:dependencia:$failed_dep"
     return 0
+  fi
+
+  if (( ! ${FORCE_MODULES:-0} )); then
+    modules_refresh
+    module_probe "$name"
+    if [[ "$MODULE_STATUS" == installed ]]; then
+      info "Módulo '$name' já instalado: $MODULE_REASON"
+      darfinos_event "STEP_ALREADY:$name"
+      return 0
+    fi
   fi
 
   echo
