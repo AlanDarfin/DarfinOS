@@ -1341,7 +1341,7 @@ trinity_repo_stanza() {
 
 trinity_install() {
   local config="$1" previous="$TMP_DIR/trinity-pacman.original" candidate="$TMP_DIR/trinity-pacman.conf"
-  local needs_repo=0 arch repos
+  local needs_repo=0 arch repos original_hash current_hash
   arch=$(uname -m)
   case "$arch" in x86_64|aarch64|armv7h) ;; *) warn "Trinity indisponível para $arch."; return 1 ;; esac
   info "Instruções do Trinity: https://wiki.trinitydesktop.org/Arch_Trinity_Repository_Installation_Instructions"
@@ -1354,6 +1354,7 @@ trinity_install() {
   else
     needs_repo=1
     cp -p -- "$config" "$previous" || return 1
+    original_hash=$(sha256sum < "$previous") || return 1
     {
       cat -- "$previous" &&
       trinity_repo_stanza
@@ -1366,7 +1367,8 @@ trinity_install() {
     # Valida e usa a nova configuração só nesta transação. Um espelho ou
     # pacote indisponível não deixa o pacman.conf permanente quebrado.
     sudo pacman --config "$candidate" -Syu --needed trinity/tde-meta || return 1
-    if ! cmp -s -- "$config" "$previous"; then
+    current_hash=$(sha256sum < "$config") || return 1
+    if [[ "$current_hash" != "$original_hash" ]]; then
       warn "O pacman.conf mudou durante a instalação. Preserve as alterações e adicione [trinity] manualmente."
       return 1
     fi
