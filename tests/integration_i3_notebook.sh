@@ -138,12 +138,18 @@ popup_y() {
 xdotool key super+F3
 await_result popup_visible
 await_result popup_y
-# Test the actual GTK slider by clicking its upper track, then read the simulated backend.
-audio_window=$(xdotool search --onlyvisible --class '^DarfinOSNotebookPopup$')
-audio_changed() { [[ "$(cat "$tmp/sink")" != 0.55 ]]; }
-xdotool mousemove --window "$audio_window" 260 89 click 1
-await_result audio_changed
+# The first available slider gets keyboard focus after the audio backend responds.
+# End moves it to 100%; tab to the mic and use Home to verify independence.
+audio_output_changed() {
+  xdotool key End
+  [[ "$(cat "$tmp/sink")" == 1.00 ]]
+}
+await_result audio_output_changed
 [[ "$(cat "$tmp/source")" == 0.35 ]]
+xdotool key Tab Tab Home
+audio_input_changed() { [[ "$(cat "$tmp/source")" == 0.00 ]]; }
+await_result audio_input_changed
+[[ "$(cat "$tmp/sink")" == 1.00 ]]
 if [[ -n "${DARFINOS_PREVIEW_DIR:-}" ]]; then
   magick import -window root "$DARFINOS_PREVIEW_DIR/audio-720p.png"
 fi

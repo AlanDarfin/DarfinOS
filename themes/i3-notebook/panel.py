@@ -69,6 +69,7 @@ def popup(page):
     try:
         import gi
         gi.require_version("Gtk", "3.0")
+        gi.require_version("Gdk", "3.0")
         from gi.repository import Gdk, GLib, Gtk
     except (ImportError, ValueError):
         command("notify-send", "DarfinOS", "Atualize as dependências do i3 Notebook nos Labs.")
@@ -160,9 +161,10 @@ def popup(page):
         hint = Gtk.Label(xalign=0)
         hint.get_style_context().add_class("hint")
         busy = False
+        initial_focus = True
 
         def paint(states):
-            nonlocal busy
+            nonlocal busy, initial_focus
             busy = False
             for kind, state in states.items():
                 row = rows[kind]
@@ -177,6 +179,11 @@ def popup(page):
                     row["scale"].set_value(state.volume)
                     row["scale"].handler_unblock(row["handler"])
                 row["level"].set_text(f"{state.volume}%" if state else "—")
+            if initial_focus:
+                initial_focus = False
+                first = next((rows[kind]["scale"] for kind, state in states.items() if state), None)
+                if first is not None and window.get_focus() in (None, close):
+                    first.grab_focus()
             hint.set_text("Sem áudio disponível. Confira PipeWire ou PulseAudio."
                           if not any(states.values()) else "Dispositivos padrão da sessão.")
             return False
