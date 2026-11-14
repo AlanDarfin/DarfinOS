@@ -51,6 +51,49 @@ class I3NotebookTests(unittest.TestCase):
                 for shortcut in (b"Super+Enter", b"Super+B ", b"Super+E ", b"Super+Shift+B", b"Super+Shift+N"):
                     self.assertIn(shortcut, choices.stdout)
 
+    def test_themed_qt_launch_preserves_application_config_home(self):
+        appearance = self.installed_entry.parent / "appearance"
+        appearance.mkdir()
+        self.stub("printenv", 'printf "%s\\n" "$XDG_CONFIG_HOME" "$XDG_CONFIG_DIRS"')
+        config = str(self.home / "custom config")
+        for action in ("themed", "qt-themed", "qt4"):
+            with self.subTest(action=action):
+                run = subprocess.run(["/bin/sh", str(self.entry), action, "printenv"],
+                                     capture_output=True, check=True, timeout=5,
+                                     env=dict(os.environ, HOME=str(self.home), PATH=str(self.bin),
+                                              XDG_CONFIG_HOME=config, XDG_CONFIG_DIRS="/etc/xdg"))
+                self.assertEqual(run.stdout.decode().splitlines(),
+                                 [config, str(appearance) + ":/etc/xdg"])
+
+    def test_rofi_routes_flatpak_and_user_desktop_overrides_through_scoped_helper(self):
+        helper = self.installed_entry.with_name("flatpak.py")
+        helper.write_bytes((ROOT / "themes/i3-notebook/flatpak.py").read_bytes())
+        self.stub("flatpak", 'exit 0')
+        self.stub("rofi", 'printf "%s\\n" "$XDG_DATA_DIRS" "$@"')
+        args = self.run_entry("apps").stdout.decode().splitlines()
+        self.assertEqual(args[0].split(":")[0], str(helper.parent / "flatpak/share"))
+        command = args[args.index("-run-command") + 1]
+        self.assertEqual(shlex.split(command), ["/usr/bin/python3", str(helper), "dispatch", "{cmd}"])
+        self.assertIn("gio-launch: false", args[args.index("-theme-str") + 1])
+        self.assertEqual(args[-2:], ["-show", "drun"])
+
+    def test_cursor_resource_change_restarts_wm_once_and_reload_prepares_resources(self):
+        self.installed_entry.with_name("desktop.py").write_text("""
+from pathlib import Path
+import os, sys
+if sys.argv[1] == 'desktop-start':
+    (Path(os.environ['HOME']) / 'resources').write_text('Xcursor.theme: Bibata-Modern-Ice\\nXcursor.size: 32\\n')
+""")
+        self.stub("python3", 'exec /usr/bin/python3 "$@"')
+        self.stub("sed", 'exec /usr/bin/sed "$@"')
+        self.stub("xrdb", '[ ! -f "$HOME/resources" ] || /usr/bin/cat "$HOME/resources"')
+        self.stub("i3-msg", 'printf "%s\\n" "$*"')
+        self.assertEqual(self.run_entry("desktop-start").stdout.strip(), b"restart")
+        self.assertEqual(self.run_entry("desktop-start").stdout.strip(), b"bar mode dock notebook")
+        (self.home / "resources").unlink()
+        self.assertEqual(self.run_entry("reload").stdout.strip(), b"restart")
+        self.assertIn("Xcursor.size: 32", (self.home / "resources").read_text())
+
     def test_dmenu_fallback_hides_rofi_control_record(self):
         self.stub("dmenu_run", 'echo fallback')
         self.stub("dmenu", '/usr/bin/cat > "$HOME/menu"')

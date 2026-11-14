@@ -37,9 +37,17 @@ if [ -r "$appearance_dir/share/color-schemes/DarfinOSNotebook.colors" ]; then
         *) export XDG_DATA_DIRS="$appearance_dir/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}" ;;
     esac
 fi
-if [ -r "$appearance_dir/Kvantum/kvantum.kvconfig" ]; then
-    # Qt needs a profile-specific Kvantum selector even when SonicDE has
-    # a different user selector. Qt's other settings still use normal XDG.
+# Flatpak desktop copies are visible only to Notebook launchers. The original
+# exported entries and persistent Flatpak overrides remain unchanged.
+flatpak_data_dir="$profile_dir/flatpak/share"
+if [ -d "$flatpak_data_dir/applications" ]; then
+    case ":${XDG_DATA_DIRS:-/usr/local/share:/usr/share}:" in
+        *":$flatpak_data_dir:"*) ;;
+        *) export XDG_DATA_DIRS="$flatpak_data_dir:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}" ;;
+    esac
+fi
+if [ -d "$appearance_dir" ]; then
+    # Share colors, fonts and icons without changing application config homes.
     case ":${XDG_CONFIG_DIRS:-/etc/xdg}:" in
         *":$appearance_dir:"*) ;;
         *) export XDG_CONFIG_DIRS="$appearance_dir:${XDG_CONFIG_DIRS:-/etc/xdg}" ;;
@@ -84,7 +92,14 @@ bar_pid() {
 launch_desktop() {
     case "$1" in
         -*|*/*) return 1 ;;
-        *.desktop) gtk-launch -- "$@" ;;
+        *.desktop)
+            if [ -r "$profile_dir/flatpak.py" ] &&
+               [ -r "$flatpak_data_dir/applications/$1" ]; then
+                /usr/bin/python3 "$profile_dir/flatpak.py" desktop "$@"
+            else
+                gtk-launch -- "$@"
+            fi
+            ;;
         *) return 1 ;;
     esac
 }
@@ -119,11 +134,29 @@ network_running() {
 
 case "${1:-}" in
     reload)
-        i3-msg reload >/dev/null
-        exec sh "$0" desktop-start
+        # i3 caches its frame cursor. Prepare Xresources before restarting the
+        # WM so GTK windows inherit the same cursor as the root and Qt apps.
+        # Restart keeps applications open and reruns exec_always desktop-start.
+        python3 "$profile_dir/desktop.py" desktop-start
+        exec i3-msg restart
         ;;
     desktop-start)
+        before_cursor=
+        if command -v xrdb >/dev/null; then
+            before_cursor=$(xrdb -query 2>/dev/null | sed -n '/^Xcursor\.\(theme\|size\):/p')
+        fi
         python3 "$profile_dir/desktop.py" "$@"
+        if command -v xrdb >/dev/null; then
+            after_cursor=$(xrdb -query 2>/dev/null | sed -n '/^Xcursor\.\(theme\|size\):/p')
+            if [ -n "$after_cursor" ] && [ "$before_cursor" != "$after_cursor" ]; then
+                # Initial login also needs one restart after a cursor change.
+                # The next run sees the same resources and starts the helpers.
+                exec i3-msg restart
+            fi
+        fi
+        if command -v flatpak >/dev/null && [ -r "$profile_dir/flatpak.py" ]; then
+            /usr/bin/python3 "$profile_dir/flatpak.py" refresh || :
+        fi
         # Existing switcher instances retain the X11 grabs across i3 reloads.
         /usr/bin/python3 "$profile_dir/switcher.py" &
         /usr/bin/python3 "$profile_dir/mouse.py" &
@@ -276,13 +309,16 @@ case "${1:-}" in
         mode=$1
         shift
         [ "$#" -gt 0 ] || exit 2
-        # Explicit fallbacks when the user's existing Qt config takes priority.
-        # The application sees a separate config directory in these modes.
-        export XDG_CONFIG_HOME="$appearance_dir"
+        # The Workshop changes only Kvantum's theme key with undo support.
+        # Keep the application's real configuration directory and saved state.
         if [ "$mode" = qt4 ]; then
             unset QT_STYLE_OVERRIDE QT_QPA_PLATFORMTHEME
         fi
         exec "$@"
+        ;;
+    flatpak)
+        shift
+        exec /usr/bin/python3 "$profile_dir/flatpak.py" "$@"
         ;;
     themed)
         shift
@@ -299,6 +335,14 @@ case "${1:-}" in
         launch_desktop "$app" "$HOME" || shortcut_notice 'Defina um gerenciador de arquivos padrão para abrir pastas.'
         ;;
     apps|windows|shortcuts)
+        if [ "$1" = apps ] && command -v flatpak >/dev/null && [ -r "$profile_dir/flatpak.py" ]; then
+            /usr/bin/python3 "$profile_dir/flatpak.py" refresh >/dev/null || :
+            # This process was started before a first refresh created the path.
+            case ":${XDG_DATA_DIRS:-/usr/local/share:/usr/share}:" in
+                *":$flatpak_data_dir:"*) ;;
+                *) export XDG_DATA_DIRS="$flatpak_data_dir:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}" ;;
+            esac
+        fi
         if command -v rofi >/dev/null; then
             case "$1" in
                 apps) mode=drun ;;
@@ -308,9 +352,15 @@ case "${1:-}" in
             shortcut_mode='Atalhos do i3:sh -c '"'"'exec sh "$HOME/.config/darfinos/i3-notebook/session.sh" shortcuts-list "$@"'"'"' sh'
             icons=Adwaita
             if [ -r "$HOME/.icons/Papirus-Yellow/index.theme" ]; then icons=Papirus-Yellow; fi
+            if [ -r "$profile_dir/flatpak.py" ]; then
+                run_command=$(/usr/bin/python3 "$profile_dir/flatpak.py" rofi-command)
+            else
+                run_command='{cmd}'
+            fi
             exec rofi -no-config -theme "$profile_dir/rofi.rasi" -show-icons -icon-theme "$icons" \
+                -run-command "$run_command" -theme-str 'configuration { drun { gio-launch: false; } }' \
                 -display-drun Apps -display-window Janelas \
-                -modes "drun,window,$shortcut_mode" -show "$mode"
+                -drun-reload-desktop-cache -modes "drun,window,$shortcut_mode" -show "$mode"
         elif [ "$1" = apps ]; then
             exec dmenu_run
         elif [ "$1" = shortcuts ]; then

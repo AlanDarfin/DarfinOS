@@ -239,7 +239,11 @@ HDMI-1 connected 1920x1080+1440+0
              patch.object(desktop.subprocess, "Popen") as start:
             start.return_value.pid = 1122
             desktop.apply_cursor()
-        self.assertIn('Net/ThemeName "DarfinOS-Notebook"', (self.profile / "cursor.xsettings").read_text())
+        settings = (self.profile / "cursor.xsettings").read_text()
+        self.assertIn('Net/ThemeName "DarfinOS-Notebook"', settings)
+        self.assertIn('Gtk/FontName "DejaVu Sans 10"', settings)
+        self.assertIn('Gtk/ApplicationPreferDarkTheme 1', settings)
+        self.assertIn('Xft/HintStyle "hintslight"', settings)
 
     def test_cursor_reload_updates_our_xsettings_provider_without_replacing_others(self):
         pointer = self.home / "pointer"

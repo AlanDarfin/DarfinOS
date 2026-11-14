@@ -65,7 +65,7 @@ class CustomizationTests(unittest.TestCase):
         dunst.write_bytes(b"my global dunst\n")
         with self.fake_chezmoi():
             plan, preview = control.style_preview("i3-notebook", "#aacc33", self.home)
-            self.assertEqual(len(plan), 1 + len(control.NOTEBOOK_STYLE_FILES) + len(control.NOTEBOOK_APPEARANCE) + len(control.NOTEBOOK_KDE_PATHS) + 2 + int((control.KVANTUM_BASE / "KvDark.svg").is_file()))
+            self.assertEqual(len(plan), 1 + len(control.NOTEBOOK_STYLE_FILES) + len(control.NOTEBOOK_APPEARANCE) + len(control.NOTEBOOK_KDE_PATHS) + 3 + int((control.KVANTUM_BASE / "KvDark.svg").is_file()))
             self.assertIn(f"{control.NOTEBOOK_STYLE_DIR}/polybar.ini", plan)
             self.assertIn(f"{control.NOTEBOOK_STYLE_DIR}/wallpaper.svg", plan)
             self.assertIn(control.NOTEBOOK_FILES_THEME, plan)
@@ -77,8 +77,8 @@ class CustomizationTests(unittest.TestCase):
                     self.assertIn(b"170,204,51", content)
                 elif name == control.NOTEBOOK_DOLPHIN_CONFIG:
                     self.assertIn(b"DarfinOSNotebook", content)
-                elif not name.endswith(("session.sh", "desktop.py", "media.py", "switcher.py", "settings.py", "mouse.py", ".png",
-                                        "/Kvantum/kvantum.kvconfig", "DarfinOS-Notebook.svg")):
+                elif not name.endswith(("session.sh", "desktop.py", "media.py", "switcher.py", "settings.py", "mouse.py", "flatpak.py", ".png",
+                                        "/Kvantum/kvantum.kvconfig", "DarfinOS-Notebook.svg", "/index.theme", "/settings.ini")):
                     self.assertIn(b"#aacc33", content)
                 self.assertNotIn(b"{{ .accent }}", content)
                 if name != control.NOTEBOOK_I3_CONFIG:
@@ -107,18 +107,74 @@ class CustomizationTests(unittest.TestCase):
         self.assertIn(b'ACCENT = "#aacc33"', data)
         compile(data, "windows.py", "exec")
 
-    def test_i3_notebook_app_themes_leave_global_qt_and_gtk_preferences_alone(self):
+    def test_i3_notebook_updates_only_kvantum_theme_and_undo_preserves_other_preferences(self):
         user_config = self.home / ".config/Kvantum/kvantum.kvconfig"
         user_config.parent.mkdir(parents=True)
-        user_config.write_text("[General]\ntheme=UserOwnTheme\n")
+        original = "[General]\ntheme=UserOwnTheme\nother_setting=true\n[Applications]\nUserSpecial=krita\n"
+        user_config.write_text(original)
         with self.fake_chezmoi():
             plan, _ = control.style_preview("i3-notebook", "#aacc33", self.home)
-            self.assertNotIn(".config/Kvantum/kvantum.kvconfig", plan)
+            self.assertIn(control.NOTEBOOK_KVANTUM_SELECTOR, plan)
             self.assertNotIn(".config/gtk-3.0/settings.ini", plan)
             self.assertIn(b"#aacc33", plan[control.NOTEBOOK_THEME_HOME + "/gtk-4.0/gtk.css"][1])
             self.assertIn(b"#aacc33", plan[control.NOTEBOOK_THEME_HOME + "/gtk-2.0/gtkrc"][1])
             control.style_apply("i3-notebook", plan, list(plan), self.home)
-        self.assertEqual(user_config.read_text(), "[General]\ntheme=UserOwnTheme\n")
+            self.assertIn("theme=DarfinOS-Notebook", user_config.read_text())
+            self.assertIn("other_setting=true", user_config.read_text())
+            self.assertIn("UserSpecial=krita", user_config.read_text())
+            control.style_undo(control.style_history(self.home)[0], True, self.home)
+        self.assertEqual(user_config.read_text(), original)
+
+    def test_notebook_fonts_icons_and_dark_defaults_are_profile_scoped_and_reversible(self):
+        unrelated = {
+            ".config/gtk-3.0/settings.ini": "[Settings]\ngtk-font-name=User Font 14\n",
+            ".config/gtk-4.0/settings.ini": "[Settings]\ngtk-icon-theme-name=UserIcons\n",
+            ".config/kdeglobals": "[General]\nfont=User Font,14\n",
+            ".gtkrc-2.0": 'gtk-font-name="User Font 14"\n',
+        }
+        for name, content in unrelated.items():
+            path = self.home / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content)
+        with self.fake_chezmoi():
+            plan, _ = control.style_preview("i3-notebook", home=self.home)
+            for name in unrelated:
+                self.assertNotIn(name, plan)
+            # GTK theme-level settings.ini can recursively reload the theme.
+            # Session XSettings supplies fonts/icons/cursors instead.
+            for version in (3, 4):
+                self.assertNotIn(f"{control.NOTEBOOK_THEME_HOME}/gtk-{version}.0/settings.ini", plan)
+            gtk2 = plan[f"{control.NOTEBOOK_THEME_HOME}/gtk-2.0/gtkrc"][1]
+            self.assertIn(b'gtk-font-name = "DejaVu Sans 10"', gtk2)
+            self.assertIn(b'gtk-icon-theme-name = "Papirus-Yellow"', gtk2)
+            for version in (3, 4):
+                defaults = plan[f"{control.NOTEBOOK_STYLE_DIR}/appearance/gtk-{version}.0/settings.ini"][1]
+                self.assertIn(b"gtk-font-name=DejaVu Sans 10", defaults)
+                self.assertIn(b"gtk-application-prefer-dark-theme=true", defaults)
+            kde = plan[control.NOTEBOOK_KDE_GLOBALS][1]
+            self.assertIn(b"font[$i]=DejaVu Sans,10,", kde)
+            self.assertIn(b"fixed[$i]=JetBrainsMono Nerd Font Mono,11,", kde)
+            self.assertIn(b"Theme[$i]=Papirus-Yellow", kde)
+            control.style_apply("i3-notebook", plan, list(plan), self.home)
+            control.style_undo(control.style_history(self.home)[0], True, self.home)
+        for name, content in unrelated.items():
+            self.assertEqual((self.home / name).read_text(), content)
+        for version in (3, 4):
+            self.assertFalse((self.home / control.NOTEBOOK_THEME_HOME / f"gtk-{version}.0/settings.ini").exists())
+
+    def test_notebook_reports_activation_for_changed_and_already_applied_files(self):
+        with self.fake_chezmoi(), mock.patch.object(control.subprocess, "run") as command:
+            plan, _ = control.style_preview("i3-notebook", home=self.home)
+            report = control.style_apply("i3-notebook", plan, list(plan), self.home)
+            self.assertIn("Perfil aplicado.", report)
+            self.assertIn("Super+Shift+C", report)
+            self.assertIn("Feche e reabra", report)
+            plan, _ = control.style_preview("i3-notebook", home=self.home)
+            report = control.style_apply("i3-notebook", plan, list(plan), self.home)
+            self.assertIn("Nada a mudar.", report)
+            self.assertIn("Super+Shift+C", report)
+            self.assertIn("notificações", report)
+            command.assert_not_called()
 
     def test_kvantum_tints_only_active_artwork(self):
         svg = b"""<svg xmlns="http://www.w3.org/2000/svg">
@@ -130,6 +186,8 @@ class CustomizationTests(unittest.TestCase):
         self.assertIn(b'fill:#ffcb2e;stroke:#555', recolored)
         self.assertIn(b'itemview-normal" style="fill:url(#old)', recolored)
         self.assertIn(b'fill:#ffcb2e;opacity:.4', recolored)
+        self.assertIn(b'id="slider-toggled"', recolored)
+        self.assertIn(b'fill="#ffcb2e"', recolored)
 
     def test_i3_notebook_preserves_existing_fastfetch_but_has_its_own_preset(self):
         global_config = self.home / ".config/fastfetch/config.jsonc"

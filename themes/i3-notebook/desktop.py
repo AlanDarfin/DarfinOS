@@ -228,6 +228,8 @@ def apply_cursor():
             if theme_installed:
                 icons = "Papirus-Yellow" if (HOME / ".icons/Papirus-Yellow/index.theme").is_file() else "Adwaita"
                 temp.write(f'Net/ThemeName "DarfinOS-Notebook"\nNet/IconThemeName "{icons}"\n')
+                temp.write('Gtk/FontName "DejaVu Sans 10"\nGtk/ApplicationPreferDarkTheme 1\n'
+                           'Xft/Antialias 1\nXft/Hinting 1\nXft/HintStyle "hintslight"\nXft/RGBA "none"\n')
             if preference:
                 temp.write(f'Gtk/CursorThemeName "{theme}"\nGtk/CursorThemeSize {size}\n')
         # xsettingsd reads this file at startup; keep it until the session ends or the next run.

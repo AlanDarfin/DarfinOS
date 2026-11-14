@@ -87,7 +87,7 @@ x_pid= i3_pid= status_pid= mpris_pid=
 cleanup() {
   local status=$?
   if (( status )); then
-    tail -n 80 "$tmp/i3.log" "$tmp/xvfb.log" "$tmp/polybar.log" "$tmp/dolphin.log" "$tmp"/gtk-*.log >&2 || :
+    tail -n 80 "$tmp/i3.log" "$tmp/xvfb.log" "$tmp/polybar.log" "$tmp/dolphin.log" "$tmp"/gtk-*.log "$tmp"/qt-*.log >&2 || :
     if [[ -f "$tmp/widgets.hist" ]]; then sort -nr "$tmp/widgets.hist" | head -20 >&2 || :; fi
   fi
   [[ -z "$mpris_pid" ]] || kill "$mpris_pid" 2>/dev/null || :
@@ -142,6 +142,8 @@ await_result cursor_loaded
 # through two different Qt ABIs. The tests share the real Notebook environment.
 dump_xsettings | grep -F 'Net/ThemeName "DarfinOS-Notebook"'
 dump_xsettings | grep -F 'Net/IconThemeName "Papirus-Yellow"'
+dump_xsettings | grep -F 'Gtk/FontName "DejaVu Sans 10"'
+dump_xsettings | grep -F 'Gtk/ApplicationPreferDarkTheme 1'
 dump_xsettings | grep -F 'Gtk/CursorThemeName "Bibata-NotebookTest"'
 dump_xsettings | grep -F 'Gtk/CursorThemeSize 32'
 sh "$profile/session.sh" themed sh -c '
@@ -150,7 +152,7 @@ sh "$profile/session.sh" themed sh -c '
   case "$XCURSOR_PATH" in "$XDG_DATA_HOME/icons:"*) true ;; *) false ;; esac
 '
 for gtk in 3 4; do
-  sh "$profile/session.sh" themed python - "$gtk" <<'GTK_THEME'
+  timeout 20 sh "$profile/session.sh" themed python - "$gtk" <<'GTK_THEME'
 import gi
 import sys
 major = int(sys.argv[1])
@@ -160,7 +162,13 @@ from gi.repository import Gdk, Gtk
 Gtk.init() if major == 4 else Gtk.init([])
 window = Gtk.Window()
 assert Gtk.Settings.get_default().get_property("gtk-theme-name") == "DarfinOS-Notebook"
-assert Gtk.Settings.get_default().get_property("gtk-icon-theme-name") == "Papirus-Yellow"
+settings = Gtk.Settings.get_default()
+assert settings.get_property("gtk-icon-theme-name") == "Papirus-Yellow"
+assert settings.get_property("gtk-font-name") == "DejaVu Sans 10", settings.get_property("gtk-font-name")
+assert settings.get_property("gtk-cursor-theme-name") == "Bibata-NotebookTest"
+assert settings.get_property("gtk-cursor-theme-size") == 32
+font = window.get_pango_context().get_font_description()
+assert font.get_family() == "DejaVu Sans", font.to_string()
 if major == 4:
     icons = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
     path = icons.lookup_icon("folder", None, 48, 1, Gtk.TextDirection.NONE,
@@ -177,36 +185,80 @@ window.destroy()
 GTK_THEME
 done
 for qt in 5 6; do
-  sh "$profile/session.sh" themed python - "$qt" <<'QT_THEME'
+  timeout 20 sh "$profile/session.sh" themed python - "$qt" <<'QT_THEME'
 import importlib
 import sys
 qt = importlib.import_module(f"PyQt{sys.argv[1]}.QtWidgets")
+gui = importlib.import_module(f"PyQt{sys.argv[1]}.QtGui")
 app = qt.QApplication(["notebook-theme-probe"])
 window = qt.QWidget()
+assert app.font().family() == "DejaVu Sans", app.font().toString()
+assert app.font().pointSize() == 10, app.font().toString()
+assert gui.QIcon.themeName() == "Papirus-Yellow", gui.QIcon.themeName()
+assert not gui.QIcon.fromTheme("folder").isNull()
 assert app.style().objectName().lower() == "kvantum", app.style().objectName()
-palette = app.style().standardPalette()
+palette = app.palette()
 assert palette.highlight().color().name() == "#ffcb2e", palette.highlight().color().name()
 assert palette.window().color().name() == "#20242b", palette.window().color().name()
 QT_THEME
 done
 
+# Compare the cursor's actual XFixes pixels in every toolkit, including libadwaita.
+xdotool mousemove 640 716
+toolkit_cursor=$(python tests/i3_notebook_mouse_fixture.py cursor)
+toolkit_cursor_matches() {
+  local cursor_x cursor_y actual
+  read -r cursor_x cursor_y < <(xwininfo -id "$1" | awk '
+    /Absolute upper-left X:/ {x=$NF}
+    /Absolute upper-left Y:/ {y=$NF}
+    /Width:/ {w=$NF}
+    /Height:/ {h=$NF}
+    END {print x+w-12, y+h-12}')
+  xdotool mousemove "$cursor_x" "$cursor_y"
+  actual=$(python tests/i3_notebook_mouse_fixture.py cursor)
+  [[ "$actual" == "$toolkit_cursor" ]] || {
+    printf 'Cursor em %s: %s (esperado %s)\n' "$2" "$actual" "$toolkit_cursor" >&2
+    return 1
+  }
+}
+
 # Use the actual preview-like widgets, not only a symbolic named color.
 if [[ -n "${DARFINOS_PREVIEW_DIR:-}" ]]; then mkdir -p "$DARFINOS_PREVIEW_DIR"; fi
-for gtk in 3 4; do
+for gtk in 3 4 adw; do
   sh "$profile/session.sh" themed python tests/i3_notebook_theme_fixture.py "$gtk" >"$tmp/gtk-$gtk.log" 2>&1 &
   status_pid=$!
-  gtk_visible() { xdotool search --onlyvisible --name "^Notebook GTK$gtk swatches$" >/dev/null 2>&1; }
+  gtk_title="Notebook GTK$gtk swatches"
+  if [[ "$gtk" == adw ]]; then gtk_title="Notebook Adw swatches"; fi
+  gtk_visible() { xdotool search --onlyvisible --name "^$gtk_title$" >/dev/null 2>&1; }
   await_result gtk_visible
-  gtk_window=$(xdotool search --onlyvisible --name "^Notebook GTK$gtk swatches$")
+  gtk_window=$(xdotool search --onlyvisible --name "^$gtk_title$")
   gold_visible() {
     magick import -window "$1" -depth 8 -format %c histogram:info:- >"$tmp/widgets.hist"
-    awk -v min="$2" '/#FFCB2E([[:space:]]|$)/ { total+=$1 } END {exit !(total >= min)}' "$tmp/widgets.hist"
+    python tests/i3_notebook_color_fixture.py "$tmp/widgets.hist" "$2" 100
   }
   await_result gold_visible "$gtk_window" 1500
+  await_result toolkit_cursor_matches "$gtk_window" "$gtk_title"
   if [[ -n "${DARFINOS_PREVIEW_DIR:-}" ]]; then
     magick import -window "$gtk_window" "$DARFINOS_PREVIEW_DIR/gtk-$gtk-gold.png"
   fi
   if grep -F 'Theme parsing error' "$tmp/gtk-$gtk.log"; then exit 1; fi
+  kill "$status_pid"
+  wait "$status_pid" || :
+  status_pid=
+done
+
+# Qt uses the real selection/progress/slider drawing, font and folder icon too.
+for qt in 5 6; do
+  sh "$profile/session.sh" themed python tests/i3_notebook_qt_fixture.py "$qt" >"$tmp/qt-$qt.log" 2>&1 &
+  status_pid=$!
+  qt_visible() { xdotool search --onlyvisible --name "^Notebook Qt$qt swatches$" >/dev/null 2>&1; }
+  await_result qt_visible
+  qt_window=$(xdotool search --onlyvisible --name "^Notebook Qt$qt swatches$")
+  await_result gold_visible "$qt_window" 1500
+  await_result toolkit_cursor_matches "$qt_window" "Qt$qt"
+  if [[ -n "${DARFINOS_PREVIEW_DIR:-}" ]]; then
+    magick import -window "$qt_window" "$DARFINOS_PREVIEW_DIR/qt-$qt-gold.png"
+  fi
   kill "$status_pid"
   wait "$status_pid" || :
   status_pid=
