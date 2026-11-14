@@ -3,6 +3,24 @@
 set -eu
 profile_dir="$HOME/.config/darfinos/i3-notebook"
 
+# Polybar calls itself on IPC restart, so rediscover the mapped dock.
+set_bar_cursor() {
+    expected_pid=${1:-}
+    attempts=0
+    while [ "$attempts" -lt 50 ]; do
+        win=$(xdotool search --onlyvisible --name '^darfinos-notebook-bar$' 2>/dev/null | head -n 1)
+        if [ -n "$win" ]; then
+            got=$(xdotool getwindowpid "$win" 2>/dev/null) || got=
+            if [ -z "$expected_pid" ] || [ "$got" = "$expected_pid" ]; then
+                /usr/bin/python3 "$profile_dir/desktop.py" bar-cursor "$win"
+                return
+            fi
+        fi
+        attempts=$((attempts + 1))
+        sleep 0.1
+    done
+}
+
 # Scoped to the Notebook launcher tree (Rofi, terminal, dock and shortcuts).
 # Do not publish these variables to systemd or the session D-Bus.
 theme_dir="$HOME/.themes/DarfinOS-Notebook"
@@ -118,7 +136,10 @@ case "${1:-}" in
         if command -v polybar >/dev/null && command -v polybar-msg >/dev/null &&
            command -v xdotool >/dev/null && [ -r "$profile_dir/polybar.ini" ]; then
             if pid=$(bar_pid); then
-                exec polybar-msg -p "$pid" cmd restart
+                polybar-msg -p "$pid" cmd restart || exit $?
+                sleep 0.5
+                set_bar_cursor
+                exit 0
             fi
             # Only this profile uses the discovered laptop battery; no BAT0 assumption.
             for supply in /sys/class/power_supply/*; do
@@ -128,7 +149,10 @@ case "${1:-}" in
                 fi
             done
             # A clean exit (including logout) shouldn't start a new bar.
-            polybar -c "$profile_dir/polybar.ini" notebook && exit 0
+            polybar -c "$profile_dir/polybar.ini" notebook &
+            pid=$!
+            set_bar_cursor "$pid" &
+            wait "$pid" && exit 0
         fi
         exec i3-msg 'bar mode dock notebook'
         ;;
