@@ -107,6 +107,39 @@ xprop -id "$bar_window" _NET_WM_WINDOW_TYPE | grep -Fq _NET_WM_WINDOW_TYPE_DOCK
 cursor_loaded() { xrdb -query | grep -q 'Xcursor.theme:.*Bibata-NotebookTest'; }
 await_result cursor_loaded
 
+# Test both GTK versions installed by the runner and the same Qt style
+# through two different Qt ABIs. The tests share the real Notebook environment.
+dump_xsettings | grep -F 'Net/ThemeName "DarfinOS-Notebook"'
+for gtk in 3 4; do
+  sh "$profile/session.sh" themed python - "$gtk" <<'GTK_THEME'
+import gi
+import sys
+major = int(sys.argv[1])
+gi.require_version("Gtk", f"{major}.0")
+from gi.repository import Gtk
+Gtk.init() if major == 4 else Gtk.init([])
+window = Gtk.Window()
+assert Gtk.Settings.get_default().get_property("gtk-theme-name") == "DarfinOS-Notebook"
+if major == 3:
+    valid, color = window.get_style_context().lookup_color("theme_selected_bg_color")
+    assert valid and tuple(round(component * 255) for component in (color.red, color.green, color.blue)) == (255, 203, 46)
+window.destroy()
+GTK_THEME
+done
+for qt in 5 6; do
+  sh "$profile/session.sh" themed python - "$qt" <<'QT_THEME'
+import importlib
+import sys
+qt = importlib.import_module(f"PyQt{sys.argv[1]}.QtWidgets")
+app = qt.QApplication(["notebook-theme-probe"])
+window = qt.QWidget()
+assert app.style().objectName().lower() == "kvantum", app.style().objectName()
+palette = app.style().standardPalette()
+assert palette.highlight().color().name() == "#ffcb2e", palette.highlight().color().name()
+assert palette.window().color().name() == "#20242b", palette.window().color().name()
+QT_THEME
+done
+
 # Default wallpaper is applied at login, before any user image is selected.
 wallpaper_loaded() { xprop -root _XROOTPMAP_ID | grep -q 'pixmap id #'; }
 await_result wallpaper_loaded
@@ -251,11 +284,24 @@ bluetooth_title() {
   [[ "$(xdotool getwindowname "$window")" == Bluetooth ]]
 }
 await_result bluetooth_title
+bluetooth_contained() {
+  local window
+  window=$(xdotool search --onlyvisible --class '^DarfinOSNotebookPopup$') || return 1
+  xwininfo -id "$window" | awk '
+    /Absolute upper-left X:/ {x=$NF}
+    /Absolute upper-left Y:/ {y=$NF}
+    /Width:/ {w=$NF}
+    /Height:/ {h=$NF}
+    END {exit !(x >= 0 && y >= 28 && w > 0 && w <= 370 && x+w <= 1280 && h > 0 && y+h <= 720)}
+  '
+}
+await_result bluetooth_contained
 if [[ -n "${DARFINOS_PREVIEW_DIR:-}" ]]; then
   magick import -window root "$DARFINOS_PREVIEW_DIR/bluetooth-off-720p.png"
 fi
 xdotool key Tab Return
 await_result test -f "$tmp/bt-enabled"
+await_result bluetooth_contained
 xdotool key Escape
 await_result popup_closed
 
@@ -298,8 +344,18 @@ FILES_APP
 sed -i "s|^Path=/$|Path=$HOME|" "$XDG_DATA_HOME"/applications/*.desktop
 xdotool key super+b
 await_result test -f "$HOME/browser-started"
-xdotool key super+e
+sh "$profile/session.sh" files
 await_result test -f "$HOME/files-started"
+xdotool key super+e
+thunar_visible() { xdotool search --onlyvisible --class '^Thunar$' >/dev/null 2>&1; }
+await_result thunar_visible
+thunar_window=$(xdotool search --onlyvisible --class '^Thunar$' | head -1)
+thunar_pid=$(xdotool getwindowpid "$thunar_window")
+tr '\0' '\n' <"/proc/$thunar_pid/environ" | grep -Fx 'GTK_THEME=DarfinOS-Notebook'
+if [[ -n "${DARFINOS_PREVIEW_DIR:-}" ]]; then
+  magick import -window root "$DARFINOS_PREVIEW_DIR/files-720p.png"
+fi
+i3-msg '[class="^Thunar$"] kill' >/dev/null
 bar_mapped
 
 terminal_visible() { xdotool search --onlyvisible --class '^XTerm$' >/dev/null 2>&1; }
@@ -469,4 +525,4 @@ dunstctl close-all
 dunstctl set-paused true
 [[ "$(dunstctl is-paused)" == true ]]
 dunstctl set-paused false
-echo 'i3 Notebook: X11 720p, Polybar geometry and toggling, cursor, wallpaper, Rofi click, audio sliders, calendar, session, Fastfetch, XDG launchers, workspace keys, Alt+Tab, media dock, Bluetooth popup, window dock, minimize/maximize, graphical preferences, scratchpad and Dunst verified.'
+echo 'i3 Notebook: X11 720p, Polybar geometry and toggling, cursor, wallpaper, Rofi click, audio sliders, calendar, session, Fastfetch, XDG launchers, workspace keys, Alt+Tab, media dock, GTK3/GTK4, Qt5/Qt6, themed Thunar, contained Bluetooth popup, window dock, minimize/maximize, graphical preferences, scratchpad and Dunst verified.'

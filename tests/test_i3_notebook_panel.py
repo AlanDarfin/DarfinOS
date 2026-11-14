@@ -1,6 +1,7 @@
 """No GUI or sound server is needed for these backend tests."""
 import importlib.util
 from pathlib import Path
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -12,6 +13,13 @@ spec.loader.exec_module(panel)
 
 
 class NotebookPanelTests(unittest.TestCase):
+    def test_popup_bounds_intersect_the_current_output_and_clear_top_bar(self):
+        screen = SimpleNamespace(x=-1280, y=0, width=1280, height=720)
+        shared = SimpleNamespace(x=-1280, y=0, width=3200, height=720)
+        local = SimpleNamespace(x=-1280, y=32, width=1280, height=660)
+        self.assertEqual(panel.popup_bounds(screen, shared), (-1280, 28, 1280, 692))
+        self.assertEqual(panel.popup_bounds(screen, local), (-1280, 32, 1280, 660))
+
     def test_bluetooth_state_distinguishes_service_adapter_and_power(self):
         for replies, expected in (
             ([None], "inactive"),

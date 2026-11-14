@@ -78,7 +78,7 @@ declare -A STEP_DESC=(
   [flatpak]="Flatpak + Flathub + ferramentas"
   [apps]="Aplicativos (Flatpak/AUR, Discord, Shelter e Spicetify)"
   [gaming]="Steam, Wine, GameMode, MangoHud"
-  [browser]="Navegador"
+  [browser]="Vivaldi e chaveiro entre ambientes (opcional)"
   [maintenance]="Topgrade, Arch-Update (bandeja) e timers de manutenção"
   [firewall]="Firewall (ufw)"
   [cleanup]="Limpeza de órfãos e caches"
@@ -146,7 +146,7 @@ declare -A STEP_INFO=(
   [flatpak]="Prepara o Flatpak, o Flathub e integração de apps."
   [apps]="Instala aplicativos selecionados; clientes e mods podem depender de escolhas."
   [gaming]="Instala ferramentas de jogos, compatibilidade e monitoramento de desempenho."
-  [browser]="Oferece a instalação de navegador e a revisão de opções existentes."
+  [browser]="Instala Vivaldi e permite fixar o chaveiro que já abre seu perfil, sem alterar senhas ou cookies."
   [maintenance]="Instala Topgrade e Arch-Update com tray; habilita notificações e timers quando possível."
   [firewall]="Configura regras de rede e firewall somente após consentimento."
   [cleanup]="Revisa pacotes órfãos e cache; remoções exigem confirmação."
@@ -626,7 +626,7 @@ module_probe() {
     lab_etckeeper) required=(etckeeper git) ;;
     lab_rustic) required=(rustic) ;;
     lab_kvantum) required=(kvantum) ;;
-    lab_i3_notebook) required=(i3-wm i3status i3lock dmenu xorg-xinit chezmoi rofi dunst i3status-rust brightnessctl xss-lock flameshot xterm ttf-dejavu libpulse libnotify feh zenity xorg-xrandr xorg-xrdb xorg-xsetroot xsettingsd polybar xdotool ttf-jetbrains-mono-nerd powerline-fonts librsvg xdg-utils gtk3 python-gobject pavucontrol network-manager-applet bluez-utils blueman polkit-gnome fastfetch chafa python-xlib playerctl arandr lxappearance curl tar xz) ;;
+    lab_i3_notebook) required=(i3-wm i3status i3lock dmenu xorg-xinit chezmoi rofi dunst i3status-rust brightnessctl xss-lock flameshot xterm ttf-dejavu libpulse libnotify feh zenity xorg-xrandr xorg-xrdb xorg-xsetroot xsettingsd polybar xdotool ttf-jetbrains-mono-nerd powerline-fonts librsvg xdg-utils gtk3 python-gobject pavucontrol network-manager-applet bluez-utils blueman polkit-gnome fastfetch chafa python-xlib playerctl arandr lxappearance thunar gvfs adwaita-icon-theme kvantum kvantum-qt5 curl tar xz) ;;
     lab_pkgsrc)
       if [[ -x "$HOME/.local/share/darfinos/pkgsrc-prefix/bin/bmake" && -x "$HOME/.local/share/darfinos/pkgsrc-prefix/sbin/pkg_info" && -d "$HOME/.local/share/darfinos/pkgsrc-tree/pkgtools" ]]; then
         MODULE_STATUS=installed; MODULE_REASON="Bootstrap pkgsrc e árvore de pacotes encontrados."
@@ -1878,7 +1878,7 @@ step_lab_i3_notebook() {
   install_pkgs i3-wm i3status i3lock dmenu xorg-xinit chezmoi rofi dunst i3status-rust \
     brightnessctl xss-lock flameshot xterm ttf-dejavu libpulse libnotify feh zenity xorg-xrandr xorg-xrdb xorg-xsetroot xsettingsd \
     polybar xdotool ttf-jetbrains-mono-nerd powerline-fonts librsvg xdg-utils gtk3 python-gobject \
-    pavucontrol network-manager-applet bluez-utils blueman polkit-gnome fastfetch chafa python-xlib playerctl arandr lxappearance curl tar xz || return 1
+    pavucontrol network-manager-applet bluez-utils blueman polkit-gnome fastfetch chafa python-xlib playerctl arandr lxappearance thunar gvfs adwaita-icon-theme kvantum kvantum-qt5 curl tar xz || return 1
   notebook_install_cursor || return 1
   info "Abra a Oficina de Temas (W) e selecione i3-notebook. Entre novamente na sessão i3 para ativar."
   info "O perfil usa o áudio existente (wpctl ou pactl); não troca o servidor de áudio."
@@ -2541,10 +2541,30 @@ step_gaming() {
 }
 
 step_browser() {
-  if has_pkg firefox && confirm "Remover o Firefox (pacman)?" n; then
-    sudo pacman -Rns firefox
+  local edition=flatpak backend script_dir
+  if command -v vivaldi >/dev/null || command -v vivaldi-stable >/dev/null; then
+    edition=$(choose "Qual Vivaldi você usa? n mantém o pacote nativo atual; f instala/usa o Flatpak" "n/f" n)
+    case "${edition,,}" in n) edition=native ;; f) edition=flatpak ;; *) warn "Edição não reconhecida."; return 1 ;; esac
   fi
-  flatpak_install com.vivaldi.Vivaldi
+  if [[ "$edition" == flatpak ]]; then
+    if ! flatpak info --user com.vivaldi.Vivaldi >/dev/null 2>&1; then
+      flatpak_install com.vivaldi.Vivaldi || return 1
+    fi
+  fi
+  info "Se o Vivaldi abrir normalmente em outro ambiente, descubra qual chaveiro ele usa ali antes de alterar."
+  backend=$(choose "Fixar o chaveiro atual do Vivaldi em todas as sessões? 6 KWallet 6; 5 KWallet 5; g GNOME/Secret Service; n manter como está" "6/5/g/n" n)
+  case "${backend,,}" in
+    6) backend=kwallet6 ;;
+    5) backend=kwallet5 ;;
+    g) backend=gnome-libsecret ;;
+    n|"") return 0 ;;
+    *) warn "Chaveiro não reconhecido. Nada foi alterado."; return 1 ;;
+  esac
+  if [[ "$backend" == kwallet6 ]] && ! command -v kwalletd6 >/dev/null; then
+    install_pkgs kwallet || return 1
+  fi
+  script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd) || return 1
+  python3 "$script_dir/scripts/vivaldi_keyring.py" "$edition" "$backend"
 }
 
 # ==========================================================

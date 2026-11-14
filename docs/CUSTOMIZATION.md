@@ -46,7 +46,7 @@ python3 darfinos_control.py style i3-notebook --apply --all-files
 | Super+F1 | Open the shortcut list, also available as the **Atalhos do i3** tab in Rofi. |
 | Super+F2 | Inspect each output’s current resolution and refresh rate. If the built-in panel advertises 1280×720, test it at a 1:1 pixel scale and confirm within 15 seconds to keep it. Rejecting or timing out restores the previous mode, refresh rate and transform. |
 | Super+Shift+P | Choose a wallpaper that is reapplied at login, or restore the DarfinOS default. Also available through **Fundo** on the bar. |
-| Super+Enter / Super+B / Super+E | Open the terminal, the default browser, or your home folder in the default file manager. |
+| Super+Enter / Super+B / Super+E | Open the terminal, the default browser, or your home folder in graphite-and-gold Thunar. The folder icon also opens Thunar. |
 | Super+Shift+B | Show or hide the bar to free up screen space. |
 | Super+1–9 / Super+0 | Switch to workspaces 1–10. Add Shift to move the current window. |
 | Alt+Tab / Alt+Shift+Tab | Cycle through recent windows, including minimized ones. Release Alt to select or press Esc to cancel. |
@@ -67,6 +67,26 @@ python3 darfinos_control.py style i3-notebook --apply --all-files
 The 28 px top bar uses JetBrainsMono Nerd Font Mono and keeps the workspace
 switcher, launchers and a shortened window title on the left. On the right,
 the tray and status controls fit the 720p layout.
+
+#### Application themes
+
+- **GTK 2, 3 and 4** have toolkit-specific graphite-and-gold styles. The
+  Notebook session selects them via XSETTINGS and the profile's shortcuts,
+  launcher and terminal. Legacy GTK 2 apps still require an existing GTK 2 runtime.
+- **Qt 5 and 6** use Kvantum from Labs with the Workshop accent. Existing user
+  Kvantum preferences are not overwritten and take priority. Select
+  **DarfinOS-Notebook** in Kvantum Manager if you want the same theme in your
+  other desktops, or try
+  `sh ~/.config/darfinos/i3-notebook/session.sh qt-themed application` to
+  launch just one app with a separate config.
+- **Qt 4** has an optional legacy palette through
+  `sh ~/.config/darfinos/i3-notebook/session.sh qt4 application`. This uses a
+  separate config directory and does not install Qt 4.
+
+GTK 1, Qt 1–3 and TQt do not receive the theme automatically. Apps with
+their own appearance, libadwaita, Qt Quick and sandboxed apps may ignore
+parts of the palette. No SonicDE or Trinity settings are edited. Restart open
+applications to pick up the change.
 
 The task dock next to the workspace buttons lists up to five windows from the
 current workspace. Click an icon to focus the window. The active window is
@@ -133,3 +153,18 @@ with Rofi's graphite palette and accent color. The profile does not stop a notif
 running on the same D-Bus session. If needed, sign out of the other desktop
 before testing in i3. Run `dunstify "DarfinOS" "Notifications ready"` in the i3
 session to see the theme. Picom is neither installed nor started by this profile.
+
+### Vivaldi across i3, SonicDE and Trinity
+
+If Vivaldi shows a decryption warning, return to the desktop where the existing
+profile opens normally. In the browser installer step
+(`bash DarfinOSInstallScript.sh --only browser`), choose your edition and pin the
+same password store. Do not select a different store just to dismiss the warning.
+The installer changes launch options only. It does not touch browser profiles,
+passwords, cookies or PAM. Close Vivaldi completely and reopen it from the menu
+to apply the change. The wallet may still require its password to unlock.
+
+For Arch's native package the option goes in `vivaldi-stable.conf`. For Flatpak
+it is added to the user launcher shared by desktops. When running
+`flatpak run com.vivaldi.Vivaldi` manually, pass the same
+`--password-store=...` option yourself.

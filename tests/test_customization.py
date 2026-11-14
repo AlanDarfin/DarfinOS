@@ -65,14 +65,16 @@ class CustomizationTests(unittest.TestCase):
         dunst.write_bytes(b"my global dunst\n")
         with self.fake_chezmoi():
             plan, preview = control.style_preview("i3-notebook", "#aacc33", self.home)
-            self.assertEqual(len(plan), 1 + len(control.NOTEBOOK_STYLE_FILES) + 2)
+            self.assertEqual(len(plan), 1 + len(control.NOTEBOOK_STYLE_FILES) + len(control.NOTEBOOK_APPEARANCE) + 2 + int((control.KVANTUM_BASE / "KvDark.svg").is_file()))
             self.assertIn(f"{control.NOTEBOOK_STYLE_DIR}/polybar.ini", plan)
             self.assertIn(f"{control.NOTEBOOK_STYLE_DIR}/wallpaper.svg", plan)
+            self.assertIn(control.NOTEBOOK_FILES_THEME, plan)
             self.assertIn("my old i3", preview)
             for name, (_, content) in plan.items():
                 if name.endswith(("fastfetch.jsonc", "config.jsonc")):
                     self.assertIn(b"38;2;170;204;51", content)
-                elif not name.endswith(("session.sh", "desktop.py", "media.py", "switcher.py", "settings.py", ".png")):
+                elif not name.endswith(("session.sh", "desktop.py", "media.py", "switcher.py", "settings.py", ".png",
+                                        "/Kvantum/kvantum.kvconfig", "DarfinOS-Notebook.svg")):
                     self.assertIn(b"#aacc33", content)
                 self.assertNotIn(b"{{ .accent }}", content)
                 if name != control.NOTEBOOK_I3_CONFIG:
@@ -86,6 +88,7 @@ class CustomizationTests(unittest.TestCase):
             control.style_undo(control.style_history(self.home)[0], True, self.home)
         self.assertEqual(target.read_bytes(), b"my old i3\n")
         self.assertEqual(dunst.read_bytes(), b"my global dunst\n")
+        self.assertFalse((self.home / control.NOTEBOOK_FILES_THEME).exists())
         for name in control.NOTEBOOK_STYLE_FILES:
             self.assertFalse((self.home / control.NOTEBOOK_STYLE_DIR / name).exists())
 
@@ -99,6 +102,19 @@ class CustomizationTests(unittest.TestCase):
         data = plan[f"{control.NOTEBOOK_STYLE_DIR}/windows.py"][1]
         self.assertIn(b'ACCENT = "#aacc33"', data)
         compile(data, "windows.py", "exec")
+
+    def test_i3_notebook_app_themes_leave_global_qt_and_gtk_preferences_alone(self):
+        user_config = self.home / ".config/Kvantum/kvantum.kvconfig"
+        user_config.parent.mkdir(parents=True)
+        user_config.write_text("[General]\ntheme=UserOwnTheme\n")
+        with self.fake_chezmoi():
+            plan, _ = control.style_preview("i3-notebook", "#aacc33", self.home)
+            self.assertNotIn(".config/Kvantum/kvantum.kvconfig", plan)
+            self.assertNotIn(".config/gtk-3.0/settings.ini", plan)
+            self.assertIn(b"#aacc33", plan[control.NOTEBOOK_THEME_HOME + "/gtk-4.0/gtk.css"][1])
+            self.assertIn(b"#aacc33", plan[control.NOTEBOOK_THEME_HOME + "/gtk-2.0/gtkrc"][1])
+            control.style_apply("i3-notebook", plan, list(plan), self.home)
+        self.assertEqual(user_config.read_text(), "[General]\ntheme=UserOwnTheme\n")
 
     def test_i3_notebook_preserves_existing_fastfetch_but_has_its_own_preset(self):
         global_config = self.home / ".config/fastfetch/config.jsonc"

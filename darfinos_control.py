@@ -416,6 +416,17 @@ NOTEBOOK_STYLE_DIR = ".config/darfinos/i3-notebook"
 NOTEBOOK_STYLE_FILES = ("session.sh", "desktop.py", "panel.py", "media.py", "windows.py", "switcher.py", "settings.py",
                         "rofi.rasi", "dunstrc", "status.toml",
                         "polybar.ini", "wallpaper.svg", "fastfetch.jsonc", "logo.png")
+NOTEBOOK_THEME_HOME = ".themes/DarfinOS-Notebook"
+NOTEBOOK_FILES_THEME = f"{NOTEBOOK_THEME_HOME}/gtk-3.0/gtk.css"
+NOTEBOOK_APPEARANCE = {
+    NOTEBOOK_FILES_THEME: "files.css",
+    f"{NOTEBOOK_THEME_HOME}/gtk-2.0/gtkrc": "gtk2.rc",
+    f"{NOTEBOOK_THEME_HOME}/gtk-4.0/gtk.css": "gtk4.css",
+    f"{NOTEBOOK_THEME_HOME}/Kvantum/DarfinOS-Notebook.kvconfig": "kvantum.ini",
+    f"{NOTEBOOK_STYLE_DIR}/appearance/Trolltech.conf": "qt4.conf",
+    f"{NOTEBOOK_STYLE_DIR}/appearance/Kvantum/kvantum.kvconfig": None,
+}
+NOTEBOOK_KVANTUM_SVG = f"{NOTEBOOK_THEME_HOME}/Kvantum/DarfinOS-Notebook.svg"
 NOTEBOOK_FASTFETCH_DEFAULTS = (".config/fastfetch/config.jsonc", ".config/fastfetch/logo.png")
 FASTFETCH_DEFAULT_ACCENT = "38;2;255;203;46"
 
@@ -500,7 +511,7 @@ def _style_paths(profile: str) -> tuple[str, ...]:
                      ".config/fastfetch/config.jsonc", ".config/fastfetch/logo.png"),
         "i3-compacto": (".config/i3/config",),
         "i3-notebook": (NOTEBOOK_I3_CONFIG, *(f"{NOTEBOOK_STYLE_DIR}/{name}" for name in NOTEBOOK_STYLE_FILES),
-                        *NOTEBOOK_FASTFETCH_DEFAULTS),
+                        *NOTEBOOK_APPEARANCE, NOTEBOOK_KVANTUM_SVG, *NOTEBOOK_FASTFETCH_DEFAULTS),
         "workstation-1995": ("GNUstep/Library/WindowMaker/Styles/DarfinOS-1995.style",),
         "sonicde-kvantum": (".config/kdeglobals", ".config/Kvantum/kvantum.kvconfig",
                            ".config/Kvantum/DarfinOSGold/DarfinOSGold.kvconfig",
@@ -526,6 +537,8 @@ def _style_plan(profile: str, root: Path, accent: str) -> dict[str, tuple[bytes 
         raise ValueError("Use uma cor hexadecimal #RRGGBB.")
     paths = _style_paths(profile)
     if profile == "i3-notebook":
+        if not (KVANTUM_BASE / "KvDark.svg").is_file():
+            paths = tuple(rel for rel in paths if rel != NOTEBOOK_KVANTUM_SVG)
         # Make plain fastfetch work on a fresh install, but never take over a
         # pre-existing Fastfetch config or logo (including symlinks).
         candidates = (*NOTEBOOK_FASTFETCH_DEFAULTS, ".config/fastfetch/config.json")
@@ -594,6 +607,11 @@ bar {
                       for text in templates)
         fetch_config, logo = _fastfetch_theme(source, accent)
         files += (fetch_config, logo)
+        for name in NOTEBOOK_APPEARANCE.values():
+            data = _render_style((theme / name).read_text(encoding="utf-8"), accent) if name else b"[General]\ntheme=DarfinOS-Notebook\n"
+            files += (data,)
+        if NOTEBOOK_KVANTUM_SVG in paths:
+            files += ((KVANTUM_BASE / "KvDark.svg").read_bytes(),)
         if len(paths) > len(files):
             files += (fetch_config, logo)
     elif profile == "workstation-1995":
@@ -655,7 +673,8 @@ def style_apply(profile: str, plan: dict, selected: list[str], home: Path | None
     if not selected or not set(selected) <= set(plan) <= allowed:
         raise ValueError("Selecione apenas arquivos do perfil.")
     if profile == "i3-notebook" and NOTEBOOK_I3_CONFIG in selected:
-        for rel in (f"{NOTEBOOK_STYLE_DIR}/{name}" for name in NOTEBOOK_STYLE_FILES):
+        required = (f"{NOTEBOOK_STYLE_DIR}/{name}" for name in NOTEBOOK_STYLE_FILES)
+        for rel in (*required, *NOTEBOOK_APPEARANCE):
             if rel not in selected and (rel not in plan or _style_read(_style_path(root, rel)) != plan[rel][1]):
                 raise ValueError("Para ativar o i3 Notebook, aplique também os arquivos do perfil.")
     if profile == "i3-notebook" and set(selected).intersection(NOTEBOOK_FASTFETCH_DEFAULTS):
