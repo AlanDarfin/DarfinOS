@@ -28,7 +28,10 @@ idle_bg = "#252930"
 idle_fg = "{{ .accent }}"
 [[block.click]]
 button = "left"
-cmd = 'sh "$HOME/.config/darfinos/i3-notebook/session.sh" windows'
+cmd = 'sh "$HOME/.config/darfinos/i3-notebook/session.sh" window-list'
+[[block.click]]
+button = "right"
+cmd = 'sh "$HOME/.config/darfinos/i3-notebook/session.sh" window-list-minimized'
 
 [[block]]
 block = "custom"

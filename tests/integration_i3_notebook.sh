@@ -99,13 +99,15 @@ fi
 
 # Check the actual Polybar payload, including loaded i3, fonts and launchers.
 status_ready() {
-  grep -Fq 'Atalhos' "$tmp/polybar.log" && grep -Fq 'Área de trabalho' "$tmp/polybar.log" &&
+  grep -Fq 'session.sh" shortcuts' "$tmp/polybar.log" && grep -Fq 'Área de trabalho' "$tmp/polybar.log" &&
     grep -Fq '󰕾 55%' "$tmp/polybar.log" && grep -Fq '󰍬 35%' "$tmp/polybar.log"
 }
 polybar -l info -s -c "$profile/polybar.ini" notebook >"$tmp/polybar.log" 2>&1 &
 status_pid=$!
 await_result status_ready
-for label in Apps Janelas Atalhos Fundo; do grep -Fq "$label" "$tmp/polybar.log"; done
+for action in apps window-list shortcuts wallpaper; do
+  grep -Fq "session.sh\" $action:" "$tmp/polybar.log"
+done
 for font in 'JetBrainsMono Nerd Font Mono' PowerlineSymbols; do
   grep -F "Loaded font" "$tmp/i3.log" | grep -Fq "$font"
 done
@@ -231,6 +233,90 @@ xdotool key super+shift+q
 xdotool key super+1
 await_result workspace_focused 1
 
+# Verify task actions and Alt+Tab using separate, ordinary i3 windows.
+xterm -T 'Teste A' -name task-a -e sleep 50 &
+xterm -T 'Teste B' -name task-b -e sleep 50 &
+focused_title() { [[ "$(xdotool getactivewindow getwindowname)" == "$1" ]]; }
+task_state() {
+  python - "$profile" "$@" <<'STATE'
+import sys
+sys.path.insert(0, sys.argv[1])
+from windows import snapshot
+title, key, value = sys.argv[2:]
+assert any(w.title == title and bool(getattr(w, key)) == (value == "yes") for w in snapshot())
+STATE
+}
+await_result task_state 'Teste A' hidden no
+await_result task_state 'Teste B' hidden no
+i3-msg '[instance="^task-a$"] focus' >/dev/null
+await_result focused_title 'Teste A'
+xdotool keydown Alt_L key Tab
+switcher_visible() { xdotool search --onlyvisible --class '^DarfinOSAltTab$' >/dev/null 2>&1; }
+await_result switcher_visible
+if [[ -n "${DARFINOS_PREVIEW_DIR:-}" ]]; then
+  magick import -window root "$DARFINOS_PREVIEW_DIR/alt-tab-720p.png"
+fi
+xdotool keyup Alt_L
+await_result focused_title 'Teste B'
+xdotool keydown Alt_L key Tab
+await_result switcher_visible
+xdotool key Escape keyup Alt_L
+await_result focused_title 'Teste B'
+xdotool keydown Alt_L key Tab key Shift+Tab keyup Alt_L
+await_result focused_title 'Teste B'
+xdotool key super+m
+await_result task_state 'Teste B' hidden yes
+await_result focused_title 'Teste A'
+xdotool key super+shift+m
+await_result task_state 'Teste B' hidden no
+await_result task_state 'Teste B' floating no
+await_result focused_title 'Teste B'
+xdotool key super+ctrl+m
+await_result task_state 'Teste B' maximized yes
+await_result task_state 'Teste B' floating yes
+bar_mapped
+xdotool key super+ctrl+m
+await_result task_state 'Teste B' maximized no
+await_result task_state 'Teste B' floating no
+xdotool key super+shift+space
+await_result task_state 'Teste B' floating yes
+xdotool key super+m
+await_result task_state 'Teste B' hidden yes
+xdotool key super+shift+m
+await_result task_state 'Teste B' hidden no
+await_result task_state 'Teste B' floating yes
+
+# The streamed module exposes only IDs, no titles or shell code from apps.
+task_dock_ready() {
+  grep -Fq 'session.sh" window-focus ' "$tmp/tasks.log" &&
+    grep -Fq 'session.sh" window-list-minimized:' "$tmp/tasks.log"
+}
+sh "$profile/session.sh" window-dock > "$tmp/tasks.log" &
+status_pid=$!
+xdotool key super+m
+await_result task_dock_ready
+i3-msg '[instance="^task-(a|b)$"] kill' >/dev/null
+kill "$status_pid"
+wait "$status_pid" || :
+status_pid=
+
+xdotool key super+F7
+settings_visible() { xdotool search --onlyvisible --class '^DarfinOSNotebookSettings$' >/dev/null 2>&1; }
+await_result settings_visible
+if [[ -n "${DARFINOS_PREVIEW_DIR:-}" ]]; then
+  magick import -window root "$DARFINOS_PREVIEW_DIR/settings-720p.png"
+fi
+xdotool key Escape
+python - "$profile" <<'PREFERENCES'
+import sys
+sys.path.insert(0, sys.argv[1])
+from settings import DEFAULTS, OVERRIDES, render, write_preferences
+data = render(dict(DEFAULTS, inner=12, mouse=False))
+write_preferences(data)
+assert OVERRIDES.read_text() == data
+PREFERENCES
+i3 -C -c "$XDG_CONFIG_HOME/i3/config"
+
 # Toggle via the configured keybinding, and verify that a hidden bar can return.
 xdotool key super+shift+b
 await_result bar_hidden
@@ -296,4 +382,4 @@ dunstctl close-all
 dunstctl set-paused true
 [[ "$(dunstctl is-paused)" == true ]]
 dunstctl set-paused false
-echo 'i3 Notebook: X11 720p, Polybar geometry and toggling, cursor, wallpaper, Rofi click, audio sliders, calendar, session, Fastfetch, XDG launchers, workspace keys, scratchpad and Dunst verified.'
+echo 'i3 Notebook: X11 720p, Polybar geometry and toggling, cursor, wallpaper, Rofi click, audio sliders, calendar, session, Fastfetch, XDG launchers, workspace keys, Alt+Tab, window dock, minimize/maximize, graphical preferences, scratchpad and Dunst verified.'

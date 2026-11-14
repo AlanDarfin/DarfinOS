@@ -49,6 +49,11 @@ python3 darfinos_control.py style i3-notebook --apply --all-files
 | Super+Enter / Super+B / Super+E | Open the terminal, the default browser, or your home folder in the default file manager. |
 | Super+Shift+B | Show or hide the bar to free up screen space. |
 | Super+1–9 / Super+0 | Switch to workspaces 1–10. Add Shift to move the current window. |
+| Alt+Tab / Alt+Shift+Tab | Cycle through recent windows, including minimized ones. Release Alt to select or press Esc to cancel. |
+| Super+Shift+Space | Toggle floating or tiling. |
+| Super+M / Super+Shift+M | Minimize the focused window or restore the most recently minimized window to the current workspace. |
+| Super+Ctrl+M / Super+F | Maximize without hiding the bar, or toggle fullscreen. |
+| Super+F7 | Open graphical i3 Notebook preferences. |
 | Super+Ctrl+Tab | Return to the previous workspace. |
 | Super+H / Super+V / Super+Ctrl+E | Split horizontally or vertically, or toggle the current split direction. |
 | Super+W / Super+S | Switch to tabbed or stacked layout. |
@@ -61,6 +66,18 @@ python3 darfinos_control.py style i3-notebook --apply --all-files
 The 28 px top bar uses JetBrainsMono Nerd Font Mono and keeps the workspace
 switcher, launchers and a shortened window title on the left. On the right,
 the tray and status controls fit the 720p layout.
+
+The task dock next to the workspace buttons lists up to five windows from the
+current workspace. Click an icon to focus the window. The active window is
+underlined, `+N` opens the window picker, and the arrow counter opens
+minimized windows from all workspaces. Right-click the keyboard icon to open
+preferences.
+
+Use **Super+F7** to adjust gaps, focus-follows-mouse and the default layout for
+new workspaces. i3 validates the preferences before they are saved, and the
+Workshop leaves the separate settings file alone on upgrades. The settings
+window also launches ARandR for monitors and LXAppearance for GTK themes.
+LXAppearance edits the account's GTK settings, outside of the i3 profile.
 
 | Control | Action |
 | --- | --- |

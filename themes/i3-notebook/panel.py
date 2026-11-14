@@ -306,6 +306,7 @@ def popup(page):
         for label, action in (("Wi-Fi e rede", "network"), ("Dispositivos Bluetooth", "bluetooth"),
                               ("Sobre o sistema · Fastfetch", "fastfetch-window"),
                               ("Tela e resolução", "display"), ("Papel de parede", "wallpaper"),
+                              ("Preferências do i3", "settings"),
                               ("Não perturbe · alternar", "dnd"), ("Bloquear tela", "lock")):
             button(label, lambda a=action: launch("sh", str(PROFILE / "session.sh"), a))
 

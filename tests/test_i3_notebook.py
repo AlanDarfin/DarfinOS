@@ -166,7 +166,7 @@ step_lab_i3_notebook
                          "xss-lock", "flameshot", "xterm", "chezmoi", "libnotify", "feh",
                          "zenity", "xorg-xrandr", "xorg-xrdb", "xorg-xsetroot", "xsettingsd", "polybar",
                          "ttf-jetbrains-mono-nerd", "xdotool", "powerline-fonts", "librsvg",
-                         "xdg-utils", "gtk3", "python-gobject", "pavucontrol", "network-manager-applet",
+                         "xdg-utils", "gtk3", "python-gobject", "pavucontrol", "network-manager-applet", "python-xlib", "arandr", "lxappearance",
                          "bluez-utils", "blueman", "polkit-gnome", "fastfetch", "chafa",
                          "curl", "tar", "xz"} <= packages)
         self.assertFalse({"wireplumber", "pipewire", "picom", "sonicde"} & packages)

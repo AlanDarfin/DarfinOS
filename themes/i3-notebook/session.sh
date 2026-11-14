@@ -57,6 +57,8 @@ case "${1:-}" in
         ;;
     desktop-start)
         python3 "$profile_dir/desktop.py" "$@"
+        # Existing switcher instances retain the X11 grabs across i3 reloads.
+        /usr/bin/python3 "$profile_dir/switcher.py" &
         exec sh "$0" bar-start
         ;;
     display|wallpaper|window-title)
@@ -100,6 +102,19 @@ case "${1:-}" in
         ;;
     audio|calendar|system|network|sink|source)
         exec /usr/bin/python3 "$profile_dir/panel.py" "$1"
+        ;;
+    window-*)
+        action=${1#window-}
+        shift
+        exec /usr/bin/python3 "$profile_dir/windows.py" "$action" "$@"
+        ;;
+    settings)
+        exec /usr/bin/python3 "$profile_dir/settings.py"
+        ;;
+    monitors|appearance)
+        if [ "$1" = monitors ]; then app=arandr; else app=lxappearance; fi
+        if command -v "$app" >/dev/null; then exec "$app"; fi
+        notebook_notice 'Atualize o i3 Notebook nos Labs para instalar esta ferramenta.'
         ;;
     mixer)
         exec pavucontrol
@@ -208,7 +223,8 @@ case "${1:-}" in
             'Super+B · Navegador padrão' \
             'Super+E · Pasta pessoal no gerenciador padrão' \
             'Super+D · Aplicativos' \
-            'Super+Tab · Trocar de janela' \
+            'Alt+Tab / Alt+Shift+Tab · Percorrer janelas; solte Alt para abrir' \
+            'Super+Tab · Buscar janela no Rofi' \
             'Super+Shift+Enter / Super+Grave · Terminal de bolso' \
             'Super+1–9 / Super+0 · Ir para áreas 1–10' \
             'Super+Shift+1–9 / Super+Shift+0 · Mover janela para áreas 1–10' \
@@ -217,6 +233,8 @@ case "${1:-}" in
             'Super+Shift+setas · Mover janela' \
             'Super+Shift+Q · Fechar janela' \
             'Super+F · Tela cheia' \
+            'Super+M / Super+Shift+M · Minimizar / Restaurar última janela' \
+            'Super+Ctrl+M · Maximizar ou restaurar sem esconder a barra' \
             'Super+Shift+Espaço · Alternar janela flutuante' \
             'Super+H / Super+V · Dividir na horizontal / vertical' \
             'Super+W / Super+S · Abas / pilha' \
@@ -227,6 +245,7 @@ case "${1:-}" in
             'Super+F4 · Fastfetch do DarfinOS' \
             'Super+F5 · Calendário' \
             'Super+F6 · Menu de sessão' \
+            'Super+F7 · Preferências gráficas do i3' \
             'Super+Shift+P · Escolher papel de parede' \
             'Super+Shift+B · Mostrar ou ocultar a barra' \
             'Super+N · Recuperar última notificação' \

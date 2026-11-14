@@ -50,6 +50,11 @@ python3 darfinos_control.py style i3-notebook --apply --all-files
 | Super+Enter / Super+B / Super+E | Abre o terminal, o navegador padrão ou a pasta pessoal no gerenciador de arquivos padrão. |
 | Super+Shift+B | Mostra ou oculta a barra para liberar espaço na tela. |
 | Super+1–9 / Super+0 | Vai para as áreas 1–10. Com Shift, move a janela atual. |
+| Alt+Tab / Alt+Shift+Tab | Percorre as janelas recentes, inclusive as minimizadas. Solte Alt para trocar ou tecle Esc para cancelar. |
+| Super+Shift+Espaço | Alterna entre flutuante e lado a lado. |
+| Super+M / Super+Shift+M | Minimiza a janela atual ou restaura a última minimizada na área atual. |
+| Super+Ctrl+M / Super+F | Maximiza sem esconder a barra, ou alterna a tela cheia. |
+| Super+F7 | Preferências gráficas do i3 Notebook. |
 | Super+Ctrl+Tab | Volta à área anterior. |
 | Super+H / Super+V / Super+Ctrl+E | Divide na horizontal ou vertical, ou alterna a direção da divisão atual. |
 | Super+W / Super+S | Organiza as janelas em abas ou em pilha. |
@@ -62,6 +67,17 @@ python3 darfinos_control.py style i3-notebook --apply --all-files
 A barra de 28 px usa JetBrainsMono Nerd Font Mono. Áreas de trabalho, atalhos e
 o título abreviado da janela ficam à esquerda. A bandeja e os indicadores
 ficam à direita, mantendo o layout compacto para 720p.
+
+A dock junto às áreas de trabalho mostra até cinco janelas da área atual.
+Clique em um ícone para focar a janela. O sublinhado indica a janela ativa,
+`+N` abre a lista de janelas e a seta com contador abre as minimizadas de
+todas as áreas. Clique direito no teclado da barra para abrir as preferências.
+
+Em **Super+F7**, ajuste os espaços, as margens, o foco por mouse e o layout
+padrão de novas áreas. As preferências são validadas pelo i3 antes de salvar
+e ficam num arquivo separado, preservado ao reaplicar a Oficina. O mesmo
+painel abre o ARandR para monitores e o LXAppearance para temas GTK. O
+LXAppearance usa as configurações GTK da conta, fora do perfil do i3.
 
 | Controle | Ação |
 | --- | --- |
