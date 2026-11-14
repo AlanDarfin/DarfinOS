@@ -1897,14 +1897,30 @@ step_lab_i3_notebook() {
 }
 
 step_icons() {
-  install_pkgs python papirus-icon-theme || return 1
+  install_pkgs python curl papirus-icon-theme || return 1
   notebook_papirus
 }
 
 notebook_papirus() {
-  local script_dir
+  local script_dir helper
   script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd) || return 1
-  python3 "$script_dir/scripts/papirus_yellow.py" "$@"
+  helper="$script_dir/scripts/papirus_yellow.py"
+  if [[ ! -r "$helper" ]]; then
+    # A TUI em --fetch e o Bash avulso não trazem a árvore do repositório.
+    local revision=45b6d1f4a7242359d9d1eb5fc094bd4b50d03b51
+    local checksum=bf61df584b7dba2e22a5479c5d4cec2a2ad5191207a63302ea7b5c676140f52f
+    helper="$TMP_DIR/papirus_yellow.py"
+    if ! curl --proto '=https' --proto-redir '=https' -fsSL --retry 2 --connect-timeout 10 --max-time 30 \
+      -o "$helper" "https://raw.githubusercontent.com/AlanDarfin/DarfinOS/$revision/scripts/papirus_yellow.py"; then
+      warn "Não foi possível obter o assistente Papirus Yellow. Tente com o repositório completo."
+      return 1
+    fi
+    if ! printf '%s  %s\n' "$checksum" "$helper" | sha256sum --check --status; then
+      warn "O assistente Papirus Yellow não corresponde ao SHA-256 esperado."
+      return 1
+    fi
+  fi
+  python3 "$helper" "$@"
 }
 
 step_i3() {
