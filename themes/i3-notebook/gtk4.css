@@ -10,10 +10,53 @@
 @define-color accent_bg_color {{ .accent }};
 @define-color accent_fg_color #171a1f;
 @define-color accent_color {{ .accent }};
+/* Semantic colors used by libadwaita applications when GTK_THEME opts in to
+   the Notebook stylesheet. Keep content, headers and cards on the same scale. */
+@define-color window_bg_color #20242b;
+@define-color window_fg_color #f2f2f2;
+@define-color view_bg_color #171a1f;
+@define-color view_fg_color #f2f2f2;
+@define-color headerbar_bg_color #252930;
+@define-color headerbar_fg_color #f2f2f2;
+@define-color headerbar_backdrop_color #20242b;
+@define-color card_bg_color #2c313a;
+@define-color card_fg_color #f2f2f2;
+@define-color dialog_bg_color #252930;
+@define-color dialog_fg_color #f2f2f2;
+@define-color popover_bg_color #252930;
+@define-color popover_fg_color #f2f2f2;
 
 window, dialog, .background, headerbar, toolbar, popover > contents {
     background-color: #20242b;
     color: #f2f2f2;
+}
+/* Explicit surfaces also cover modern GTK/libadwaita applications whose
+   header and ordinary button state selectors are more specific than window. */
+headerbar, headerbar:backdrop, .titlebar, .titlebar:backdrop {
+    background-color: #252930;
+    background-image: none;
+    color: #f2f2f2;
+}
+button:not(.suggested-action):not(.destructive-action),
+button:not(.suggested-action):not(.destructive-action):backdrop {
+    background-color: #2c313a;
+    background-image: none;
+    border-color: #454a54;
+    color: #f2f2f2;
+    text-shadow: none;
+    box-shadow: none;
+}
+button:not(.suggested-action):not(.destructive-action):hover {
+    background-color: #39404b;
+}
+button:not(.suggested-action):not(.destructive-action):active,
+button:not(.suggested-action):not(.destructive-action):checked {
+    background-color: #4b4333;
+    border-color: @theme_selected_bg_color;
+}
+button:not(.suggested-action):not(.destructive-action):disabled {
+    background-color: #252930;
+    color: #a8adb7;
 }
 .view, textview text, list, columnview, viewport {
     background-color: #171a1f;

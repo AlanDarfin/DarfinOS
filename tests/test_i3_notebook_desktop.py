@@ -132,6 +132,19 @@ class DesktopTests(unittest.TestCase):
         self.assertIn("cursorSize=32", config.read_text())
 
 
+    def test_cursor_environment_finds_theme_in_a_custom_xdg_directory(self):
+        data = self.home / "XDG data"
+        theme = "Bibata Modern Test"
+        pointer = data / "icons" / theme / "cursors" / "left_ptr"
+        pointer.parent.mkdir(parents=True)
+        pointer.touch()
+        (self.home / ".config/kcminputrc").write_text(f"[Mouse]\ncursorTheme={theme}\ncursorSize=30\n")
+        with patch.dict(os.environ, {"XDG_DATA_HOME": str(data), "XDG_CONFIG_HOME": str(self.home / ".config"),
+                                     "XCURSOR_PATH": "/custom/icons:/usr/share/icons"}):
+            self.assertEqual(desktop.cursor_preference(), (theme, 30, pointer))
+            self.assertEqual(desktop.cursor_search_path().split(":")[0], str(data / "icons"))
+            self.assertIn("/custom/icons", desktop.cursor_search_path().split(":"))
+
     def test_transform_snapshot_uses_only_selected_panel(self):
         verbose = """eDP-1 connected primary 1440x810+0+0
         Transform:  0.750000 0.000000 0.000000
@@ -226,7 +239,11 @@ HDMI-1 connected 1920x1080+1440+0
              patch.object(desktop.subprocess, "Popen") as start:
             start.return_value.pid = 1122
             desktop.apply_cursor()
-        self.assertIn('Net/ThemeName "DarfinOS-Notebook"', (self.profile / "cursor.xsettings").read_text())
+        settings = (self.profile / "cursor.xsettings").read_text()
+        self.assertIn('Net/ThemeName "DarfinOS-Notebook"', settings)
+        self.assertIn('Gtk/FontName "DejaVu Sans 10"', settings)
+        self.assertIn('Gtk/ApplicationPreferDarkTheme 1', settings)
+        self.assertIn('Xft/HintStyle "hintslight"', settings)
 
     def test_cursor_reload_updates_our_xsettings_provider_without_replacing_others(self):
         pointer = self.home / "pointer"

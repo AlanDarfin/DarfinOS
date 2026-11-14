@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=X-GNOME-Metatheme
+Name=DarfinOS Notebook
+Comment=Graphite and gold applications for the DarfinOS Notebook session
+
+[X-GNOME-Metatheme]
+GtkTheme=DarfinOS-Notebook
+IconTheme=Papirus-Yellow
+CursorTheme=Bibata-Modern-Ice

@@ -1,6 +1,17 @@
 [General]
 Name=DarfinOS Notebook
 ColorScheme=DarfinOSNotebook
+font=DejaVu Sans,10,-1,5,50,0,0,0,0,0
+menuFont=DejaVu Sans,10,-1,5,50,0,0,0,0,0
+smallestReadableFont=DejaVu Sans,9,-1,5,50,0,0,0,0,0
+toolBarFont=DejaVu Sans,10,-1,5,50,0,0,0,0,0
+fixed=JetBrainsMono Nerd Font Mono,11,-1,5,50,0,0,0,0,0
+
+[Icons]
+Theme=Papirus-Yellow
+
+[KDE]
+widgetStyle=kvantum
 
 [ColorEffects:Inactive]
 Enable=false

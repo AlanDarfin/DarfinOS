@@ -50,8 +50,8 @@ bindsym --release $mod+Shift+s exec --no-startup-id sh "$profile/session.sh" scr
 bindsym --release Shift+Print exec --no-startup-id sh "$profile/session.sh" screenshot full -c
 bindsym $mod+Shift+b exec --no-startup-id sh "$profile/session.sh" bar-toggle
 
-bindsym XF86MonBrightnessUp exec --no-startup-id brightnessctl -c backlight set +5%
-bindsym XF86MonBrightnessDown exec --no-startup-id brightnessctl -c backlight --min-value=1 set 5%-
+bindsym XF86MonBrightnessUp exec --no-startup-id sh "$profile/session.sh" brightness-up
+bindsym XF86MonBrightnessDown exec --no-startup-id sh "$profile/session.sh" brightness-down
 bindsym XF86AudioRaiseVolume exec --no-startup-id sh "$profile/session.sh" volume-up
 bindsym XF86AudioLowerVolume exec --no-startup-id sh "$profile/session.sh" volume-down
 bindsym XF86AudioPlay exec --no-startup-id sh "$profile/session.sh" media play-pause

@@ -1,4 +1,9 @@
 # DarfinOS Notebook · GTK 2 palette, no external theme engine required.
+gtk-font-name = "DejaVu Sans 10"
+gtk-icon-theme-name = "Papirus-Yellow"
+gtk-cursor-theme-name = "Bibata-Modern-Ice"
+gtk-cursor-theme-size = 24
+
 style "darfinos-notebook"
 {
     bg[NORMAL] = "#20242b"

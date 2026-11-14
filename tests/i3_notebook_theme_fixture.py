@@ -3,11 +3,18 @@ import sys
 
 import gi
 
-major = int(sys.argv[1])
+adwaita = sys.argv[1] == "adw"
+major = 4 if adwaita else int(sys.argv[1])
 gi.require_version("Gtk", f"{major}.0")
 from gi.repository import Gtk, GLib
 
-window = Gtk.Window(title=f"Notebook GTK{major} swatches")
+if adwaita:
+    gi.require_version("Adw", "1")
+    from gi.repository import Adw
+    Adw.init()
+    window = Adw.ApplicationWindow(title="Notebook Adw swatches")
+else:
+    window = Gtk.Window(title=f"Notebook GTK{major} swatches")
 window.set_default_size(460, 360)
 box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12, margin_top=8, margin_bottom=8,
               margin_start=12, margin_end=12)
@@ -28,12 +35,15 @@ choose.append(Gtk.Label(label="Linha selecionada")) if major == 4 else choose.ad
 choose.select_row(choose.get_row_at_index(0))
 button = Gtk.Button(label="Ação sugerida")
 button.get_style_context().add_class("suggested-action")
-for widget in (tabs, progress, scale, checked, radio, choose, button):
+icon = (Gtk.Image.new_from_icon_name("folder") if major == 4
+        else Gtk.Image.new_from_icon_name("folder", Gtk.IconSize.DIALOG))
+icon.set_pixel_size(48)
+for widget in (tabs, progress, scale, checked, radio, choose, button, icon):
     box.append(widget) if major == 4 else box.pack_start(widget, False, False, 0)
 
 loop = GLib.MainLoop()
 if major == 4:
-    window.set_child(box)
+    window.set_content(box) if adwaita else window.set_child(box)
     window.connect("close-request", lambda *_: loop.quit() or False)
     window.present()
 else:

@@ -109,6 +109,26 @@ def power_controls(Gtk, container, button, request):
     container.add(confirmation)
 
 
+def brightness_level():
+    # Machine-readable output avoids localized percentages and keyboard LEDs.
+    output = command("brightnessctl", "--class=backlight", "--machine-readable", "info") or ""
+    match = re.search(r",([0-9]{1,3})%,", output.splitlines()[0]) if output else None
+    if match and 0 <= int(match[1]) <= 100:
+        return int(match[1])
+    return None
+
+
+def popup_position(area, size, anchor=None):
+    left, top, available_width, available_height = area
+    width, height = size
+    right = left + max(0, available_width - width)
+    bottom = top + max(0, available_height - height)
+    if anchor is None:
+        return max(left, right - 8), top
+    x, y = anchor
+    return min(max(left, x), right), min(max(top, y), bottom)
+
+
 def popup_bounds(monitor, workarea):
     """GDK can report a work area shared by all outputs. Intersect it first."""
     x = max(monitor.x, workarea.x)
@@ -120,7 +140,7 @@ def popup_bounds(monitor, workarea):
     return x, y, right - x, bottom - y
 
 
-def popup(page):
+def popup(page, anchor=None):
     try:
         import gi
         gi.require_version("Gtk", "3.0")
@@ -133,6 +153,13 @@ def popup(page):
     ok, _ = Gtk.init_check(None)
     if not ok:
         return 1
+    settings = Gtk.Settings.get_default()
+    # Set before creating windows so popup cursors agree with the X11 root,
+    # even when another toolkit initialized before XSETTINGS was ready.
+    if theme := os.environ.get("XCURSOR_THEME"):
+        settings.set_property("gtk-cursor-theme-name", theme)
+    if (size := os.environ.get("XCURSOR_SIZE", "")).isdecimal():
+        settings.set_property("gtk-cursor-theme-size", int(size))
     style = Gtk.CssProvider()
     style.load_from_data("""
         #notebook-popup { background: #20242b; color: #f2f2f2; border: 1px solid @ACCENT@; }
@@ -149,7 +176,7 @@ def popup(page):
         #notebook-popup calendar:selected { color: #171a1f; background: @ACCENT@; }
     """.replace("@ACCENT@", ACCENT).encode())
     Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(), style, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
-    window = Gtk.Window(title={"audio": "Áudio", "calendar": "Calendário",
+    window = Gtk.Window(title={"audio": "Áudio", "brightness": "Brilho", "desktop-menu": "Área de trabalho", "calendar": "Calendário",
                                "network": "Wi-Fi e rede", "bluetooth": "Bluetooth", "system": "Sessão"}[page])
     window.set_name("notebook-popup")
     window.set_wmclass("darfinos-notebook-popup", "DarfinOSNotebookPopup")
@@ -167,13 +194,14 @@ def popup(page):
     window.connect("key-press-event", keypress)
     display = window.get_display()
     _, x, y = display.get_default_seat().get_pointer().get_position()
-    monitor = display.get_monitor_at_point(x, y)
-    left, top, available_width, available_height = popup_bounds(monitor.get_geometry(), monitor.get_workarea())
+    monitor = display.get_monitor_at_point(*(anchor or (x, y)))
+    area = popup_bounds(monitor.get_geometry(), monitor.get_workarea())
+    _, _, available_width, available_height = area
     width_limit = min(360 if page == "bluetooth" else 330, max(1, available_width - 16))
     window.set_default_size(width_limit, -1)
 
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin=14)
-    if page == "bluetooth":
+    if page in ("bluetooth", "desktop-menu"):
         scroll = Gtk.ScrolledWindow()
         scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scroll.set_propagate_natural_height(True)
@@ -205,7 +233,50 @@ def popup(page):
         parent.add(control)
         return control
 
-    if page == "calendar":
+    if page == "desktop-menu":
+        for label, action in (("Aplicativos", "apps"), ("Terminal", "terminal"),
+                              ("Arquivos", "notebook-files"), ("Papel de parede", "wallpaper"),
+                              ("Tela e resolução", "display"), ("Preferências do i3", "settings")):
+            button(label, lambda a=action: launch("sh", str(PROFILE / "session.sh"), a))
+    elif page == "brightness":
+        value = brightness_level()
+        if value is None:
+            box.add(Gtk.Label(label="Nenhum controle de brilho de tela disponível.", xalign=0))
+        else:
+            scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 1, 100, 1)
+            scale.get_accessible().set_name("Brilho da tela")
+            scale.set_value(max(1, value))
+            box.add(scale)
+            feedback = Gtk.Label(xalign=0)
+            box.add(feedback)
+            pending = 0
+            worker = ThreadPoolExecutor(max_workers=1)
+
+            def changed(widget):
+                nonlocal pending
+                if pending:
+                    GLib.source_remove(pending)
+                level = round(widget.get_value())
+
+                def commit():
+                    nonlocal pending
+                    pending = 0
+                    job = worker.submit(command, "brightnessctl", "--class=backlight",
+                                        "--min-value=1", "set", f"{level}%")
+
+                    def update():
+                        if job.result() is None:
+                            feedback.set_text("Não foi possível ajustar o brilho.")
+                        return False
+
+                    job.add_done_callback(lambda _: GLib.idle_add(update))
+                    return False
+
+                pending = GLib.timeout_add(75, commit)
+
+            scale.connect("value-changed", changed)
+            window.connect("show", lambda *_: scale.grab_focus())
+    elif page == "calendar":
         calendar = Gtk.Calendar()
         calendar.set_display_options(Gtk.CalendarDisplayOptions.SHOW_HEADING |
                                      Gtk.CalendarDisplayOptions.SHOW_DAY_NAMES)
@@ -454,21 +525,21 @@ def popup(page):
 
     window.connect("focus-out-event", lambda *_: window.destroy() or False)
     def align(*_):
-        width, _ = window.get_size()
-        # Re-anchor once GTK has negotiated its actual width, including after
-        # asynchronous labels change. Workarea offsets can be negative.
-        x = left + max(0, available_width - width - 8)
-        if window.get_position() != (x, top):
-            window.move(x, top)
+        # Use the negotiated bounds rather than the requested GTK width.
+        position = popup_position(area, window.get_size(), anchor)
+        if window.get_position() != position:
+            window.move(*position)
         return False
 
     def mapped(*_):
+        if cursor := Gdk.Cursor.new_from_name(display, "default"):
+            window.get_window().set_cursor(cursor)
         GLib.idle_add(align)
         return False
 
     window.connect("map-event", mapped)
-    window.connect("size-allocate", mapped)
-    window.move(left + max(0, available_width - width_limit - 8), top)
+    window.connect("size-allocate", lambda *_: GLib.idle_add(align))
+    window.move(*popup_position(area, (width_limit, 1), anchor))
     window.show_all()
     window.present()
     Gtk.main()
@@ -478,7 +549,15 @@ def popup(page):
 
 
 def main():
-    action = sys.argv[1] if len(sys.argv) == 2 else ""
+    action = sys.argv[1] if len(sys.argv) >= 2 else ""
+    anchor = None
+    if action == "desktop-menu" and len(sys.argv) == 4:
+        try:
+            anchor = tuple(map(int, sys.argv[2:]))
+        except ValueError:
+            return 2
+    elif len(sys.argv) != 2:
+        return 2
     if action in ("sink", "source"):
         print(audio_label(action))
         return 0
@@ -486,7 +565,11 @@ def main():
         state = bluetooth_state()
         print({"on": "󰂯 BT", "off": "󰂲 Off"}.get(state, "󰂲 —"))
         return 0
-    if action not in ("audio", "calendar", "network", "bluetooth", "system"):
+    if action == "brightness-status":
+        if (level := brightness_level()) is not None:
+            print(f"󰃠 {level}%")
+        return 0
+    if action not in ("audio", "brightness", "calendar", "network", "bluetooth", "system", "desktop-menu"):
         return 2
     if runtime := os.environ.get("XDG_RUNTIME_DIR"):
         display = re.sub(r"[^A-Za-z0-9_.-]", "_", os.environ.get("DISPLAY", ""))
@@ -495,8 +578,8 @@ def main():
                 fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError:
                 return 0
-            return popup(action)
-    return popup(action)
+            return popup(action, anchor)
+    return popup(action, anchor)
 
 
 if __name__ == "__main__":
