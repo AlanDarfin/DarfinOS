@@ -17,6 +17,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import xml.etree.ElementTree as ET
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
@@ -426,6 +427,10 @@ NOTEBOOK_APPEARANCE = {
     f"{NOTEBOOK_STYLE_DIR}/appearance/Trolltech.conf": "qt4.conf",
     f"{NOTEBOOK_STYLE_DIR}/appearance/Kvantum/kvantum.kvconfig": None,
 }
+NOTEBOOK_KDE_GLOBALS = f"{NOTEBOOK_STYLE_DIR}/appearance/kdeglobals"
+NOTEBOOK_KDE_SCHEME = f"{NOTEBOOK_STYLE_DIR}/appearance/share/color-schemes/DarfinOSNotebook.colors"
+NOTEBOOK_DOLPHIN_CONFIG = f"{NOTEBOOK_STYLE_DIR}/appearance/dolphinrc"
+NOTEBOOK_KDE_PATHS = (NOTEBOOK_KDE_GLOBALS, NOTEBOOK_KDE_SCHEME, NOTEBOOK_DOLPHIN_CONFIG)
 NOTEBOOK_KVANTUM_SVG = f"{NOTEBOOK_THEME_HOME}/Kvantum/DarfinOS-Notebook.svg"
 NOTEBOOK_FASTFETCH_DEFAULTS = (".config/fastfetch/config.jsonc", ".config/fastfetch/logo.png")
 FASTFETCH_DEFAULT_ACCENT = "38;2;255;203;46"
@@ -511,7 +516,7 @@ def _style_paths(profile: str) -> tuple[str, ...]:
                      ".config/fastfetch/config.jsonc", ".config/fastfetch/logo.png"),
         "i3-compacto": (".config/i3/config",),
         "i3-notebook": (NOTEBOOK_I3_CONFIG, *(f"{NOTEBOOK_STYLE_DIR}/{name}" for name in NOTEBOOK_STYLE_FILES),
-                        *NOTEBOOK_APPEARANCE, NOTEBOOK_KVANTUM_SVG, *NOTEBOOK_FASTFETCH_DEFAULTS),
+                        *NOTEBOOK_APPEARANCE, *NOTEBOOK_KDE_PATHS, NOTEBOOK_KVANTUM_SVG, *NOTEBOOK_FASTFETCH_DEFAULTS),
         "workstation-1995": ("GNUstep/Library/WindowMaker/Styles/DarfinOS-1995.style",),
         "sonicde-kvantum": (".config/kdeglobals", ".config/Kvantum/kvantum.kvconfig",
                            ".config/Kvantum/DarfinOSGold/DarfinOSGold.kvconfig",
@@ -520,6 +525,25 @@ def _style_paths(profile: str) -> tuple[str, ...]:
 
 
 KVANTUM_BASE = Path("/usr/share/Kvantum/KvDark")
+
+
+def _notebook_kvantum_svg(data: bytes, accent: str) -> bytes:
+    """Tint active KvDark artwork, leaving normal widgets and transparent edges intact."""
+    tree = ET.fromstring(data)
+    ET.register_namespace("", "http://www.w3.org/2000/svg")
+    ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
+    for node in tree:
+        name = node.get("id", "")
+        if not name.startswith(("progress-normal", "progress-pattern-normal", "slider-toggled",
+                                "itemview-toggled", "tab-toggled-top")):
+            continue
+        for child in node.iter():
+            # These active pieces use pre-painted gradients instead of QPalette.
+            # Leave flat highlights, strokes and transparent geometry untouched.
+            style = child.get("style")
+            if style:
+                child.set("style", re.sub(r"(?<![\w-])fill:url\(#[^)]+\)", f"fill:{accent}", style))
+    return ET.tostring(tree, encoding="utf-8")
 
 
 def _fastfetch_theme(source: Path, accent: str) -> tuple[bytes, bytes]:
@@ -610,8 +634,16 @@ bar {
         for name in NOTEBOOK_APPEARANCE.values():
             data = _render_style((theme / name).read_text(encoding="utf-8"), accent) if name else b"[General]\ntheme=DarfinOS-Notebook\n"
             files += (data,)
+        # KColorScheme uses CSV RGB values rather than CSS hex. Lock only the
+        # color keys in the Notebook search path so inherited KDE colors don't
+        # win, without touching ~/.config/kdeglobals or the user's app state.
+        rgb = ",".join(str(int(accent[j:j+2], 16)) for j in (1, 3, 5))
+        kde = (theme / "kde.colors").read_text(encoding="utf-8").replace("{{ .accent }}", rgb)
+        kde_globals = re.sub(r"(?m)^([^=\n]+)=", r"\1[$i]=", kde)
+        files += (kde_globals.encode(), kde.encode(),
+                  b"[UiSettings]\nColorScheme[$i]=DarfinOSNotebook\n")
         if NOTEBOOK_KVANTUM_SVG in paths:
-            files += ((KVANTUM_BASE / "KvDark.svg").read_bytes(),)
+            files += (_notebook_kvantum_svg((KVANTUM_BASE / "KvDark.svg").read_bytes(), accent),)
         if len(paths) > len(files):
             files += (fetch_config, logo)
     elif profile == "workstation-1995":
@@ -674,7 +706,7 @@ def style_apply(profile: str, plan: dict, selected: list[str], home: Path | None
         raise ValueError("Selecione apenas arquivos do perfil.")
     if profile == "i3-notebook" and NOTEBOOK_I3_CONFIG in selected:
         required = (f"{NOTEBOOK_STYLE_DIR}/{name}" for name in NOTEBOOK_STYLE_FILES)
-        for rel in (*required, *NOTEBOOK_APPEARANCE):
+        for rel in (*required, *NOTEBOOK_APPEARANCE, *NOTEBOOK_KDE_PATHS):
             if rel not in selected and (rel not in plan or _style_read(_style_path(root, rel)) != plan[rel][1]):
                 raise ValueError("Para ativar o i3 Notebook, aplique também os arquivos do perfil.")
     if profile == "i3-notebook" and set(selected).intersection(NOTEBOOK_FASTFETCH_DEFAULTS):

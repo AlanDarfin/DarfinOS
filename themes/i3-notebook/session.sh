@@ -13,6 +13,12 @@ fi
 if [ -r "$theme_dir/gtk-2.0/gtkrc" ]; then
     export GTK2_RC_FILES="$theme_dir/gtk-2.0/gtkrc"
 fi
+if [ -r "$appearance_dir/share/color-schemes/DarfinOSNotebook.colors" ]; then
+    case ":${XDG_DATA_DIRS:-/usr/local/share:/usr/share}:" in
+        *":$appearance_dir/share:"*) ;;
+        *) export XDG_DATA_DIRS="$appearance_dir/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}" ;;
+    esac
+fi
 if [ -r "$appearance_dir/Kvantum/kvantum.kvconfig" ]; then
     # Qt needs a profile-specific Kvantum selector even when SonicDE has
     # a different user selector. Qt's other settings still use normal XDG.
@@ -218,6 +224,10 @@ case "${1:-}" in
         fi
         exec sh "$0" files
         ;;
+    dolphin)
+        shift
+        exec dolphin --new-window "$@"
+        ;;
     qt4|qt-themed)
         mode=$1
         shift
@@ -237,6 +247,11 @@ case "${1:-}" in
         ;;
     files)
         app=$(xdg-mime query default inode/directory 2>/dev/null) || app=
+        case "$app" in
+            org.kde.dolphin.desktop|dolphin.desktop)
+                if command -v dolphin >/dev/null; then exec dolphin --new-window "$HOME"; fi
+                ;;
+        esac
         launch_desktop "$app" "$HOME" || shortcut_notice 'Defina um gerenciador de arquivos padrão para abrir pastas.'
         ;;
     apps|windows|shortcuts)

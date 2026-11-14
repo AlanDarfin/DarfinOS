@@ -60,7 +60,8 @@ x_pid= i3_pid= status_pid= mpris_pid=
 cleanup() {
   local status=$?
   if (( status )); then
-    tail -n 80 "$tmp/i3.log" "$tmp/xvfb.log" "$tmp/polybar.log" >&2 || :
+    tail -n 80 "$tmp/i3.log" "$tmp/xvfb.log" "$tmp/polybar.log" "$tmp/dolphin.log" "$tmp"/gtk-*.log >&2 || :
+    if [[ -f "$tmp/widgets.hist" ]]; then sort -nr "$tmp/widgets.hist" | head -20 >&2 || :; fi
   fi
   [[ -z "$mpris_pid" ]] || kill "$mpris_pid" 2>/dev/null || :
   [[ -z "$status_pid" ]] || kill "$status_pid" 2>/dev/null || :
@@ -139,6 +140,54 @@ assert palette.highlight().color().name() == "#ffcb2e", palette.highlight().colo
 assert palette.window().color().name() == "#20242b", palette.window().color().name()
 QT_THEME
 done
+
+# Use the actual preview-like widgets, not only a symbolic named color.
+for gtk in 3 4; do
+  sh "$profile/session.sh" themed python tests/i3_notebook_theme_fixture.py "$gtk" >"$tmp/gtk-$gtk.log" 2>&1 &
+  status_pid=$!
+  gtk_visible() { xdotool search --onlyvisible --name "^Notebook GTK$gtk swatches$" >/dev/null 2>&1; }
+  await_result gtk_visible
+  gtk_window=$(xdotool search --onlyvisible --name "^Notebook GTK$gtk swatches$")
+  gold_visible() {
+    magick import -window "$1" -depth 8 -format %c histogram:info:- >"$tmp/widgets.hist"
+    awk -v min="$2" '/#FFCB2E([[:space:]]|$)/ { total+=$1 } END {exit !(total >= min)}' "$tmp/widgets.hist"
+  }
+  await_result gold_visible "$gtk_window" 1500
+  if [[ -n "${DARFINOS_PREVIEW_DIR:-}" ]]; then
+    magick import -window "$gtk_window" "$DARFINOS_PREVIEW_DIR/gtk-$gtk-gold.png"
+  fi
+  if grep -F 'Theme parsing error' "$tmp/gtk-$gtk.log"; then exit 1; fi
+  kill "$status_pid"
+  wait "$status_pid" || :
+  status_pid=
+done
+
+# Reproduce the inherited blue KDE palette without changing it on disk.
+cat >"$XDG_CONFIG_HOME/kdeglobals" <<'KDE_BLUE'
+[Colors:Selection]
+BackgroundNormal=23,99,190
+[Colors:View]
+BackgroundNormal=31,45,72
+KDE_BLUE
+cat >"$XDG_CONFIG_HOME/dolphinrc" <<'DOLPHIN_BLUE'
+[UiSettings]
+ColorScheme=BreezeDark
+DOLPHIN_BLUE
+[[ "$(sh "$profile/session.sh" themed kreadconfig6 --file kdeglobals --group Colors:Selection --key BackgroundNormal)" == 255,203,46 ]]
+touch "$HOME/selected-item.txt"
+sh "$profile/session.sh" dolphin --select "$HOME/selected-item.txt" >"$tmp/dolphin.log" 2>&1 &
+status_pid=$!
+dolphin_visible() { xdotool search --onlyvisible --class '^dolphin$' >/dev/null 2>&1; }
+await_result dolphin_visible
+dolphin_window=$(xdotool search --onlyvisible --class '^dolphin$' | head -1)
+await_result gold_visible "$dolphin_window" 160
+[[ "$(kreadconfig6 --file kdeglobals --group Colors:Selection --key BackgroundNormal)" == 23,99,190 ]]
+if [[ -n "${DARFINOS_PREVIEW_DIR:-}" ]]; then
+  magick import -window "$dolphin_window" "$DARFINOS_PREVIEW_DIR/dolphin-gold.png"
+fi
+kill "$status_pid"
+wait "$status_pid" || :
+status_pid=
 
 # Default wallpaper is applied at login, before any user image is selected.
 wallpaper_loaded() { xprop -root _XROOTPMAP_ID | grep -q 'pixmap id #'; }
@@ -525,4 +574,4 @@ dunstctl close-all
 dunstctl set-paused true
 [[ "$(dunstctl is-paused)" == true ]]
 dunstctl set-paused false
-echo 'i3 Notebook: X11 720p, Polybar geometry and toggling, cursor, wallpaper, Rofi click, audio sliders, calendar, session, Fastfetch, XDG launchers, workspace keys, Alt+Tab, media dock, GTK3/GTK4, Qt5/Qt6, themed Thunar, contained Bluetooth popup, window dock, minimize/maximize, graphical preferences, scratchpad and Dunst verified.'
+echo 'i3 Notebook: X11 720p, Polybar geometry and toggling, cursor, wallpaper, Rofi click, audio sliders, calendar, session, Fastfetch, XDG launchers, workspace keys, Alt+Tab, media dock, GTK3/GTK4 rendered accents, Qt5/Qt6, themed Dolphin and Thunar, contained Bluetooth popup, window dock, minimize/maximize, graphical preferences, scratchpad and Dunst verified.'

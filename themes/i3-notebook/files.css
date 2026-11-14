@@ -28,3 +28,64 @@ window, dialog, .background, toolbar, menubar, headerbar {
 entry:focus, button:checked {
     border-color: {{ .accent }};
 }
+
+/* Adwaita 3 embeds literal blues in gradients and shadows. Named colors alone
+   cannot recolor those controls. */
+row:selected, row:selected:focus, row:selected:backdrop,
+.view:selected:focus, .view:selected:backdrop, flowboxchild:selected,
+iconview:selected, iconview:selected:focus,
+label selection, entry selection, textview text selection {
+    background-color: @theme_selected_bg_color;
+    background-image: none;
+    color: @theme_selected_fg_color;
+}
+row:selected label, row:selected image {
+    color: @theme_selected_fg_color;
+}
+scale trough highlight, scale trough highlight:backdrop,
+scale trough fill, progressbar trough progress,
+progressbar trough progress:backdrop, levelbar trough block.filled,
+switch:checked, switch:checked:backdrop,
+check:checked:not(:disabled), check:checked:hover:not(:disabled),
+radio:checked:not(:disabled), radio:checked:hover:not(:disabled),
+check:indeterminate:not(:disabled),
+button.suggested-action:not(:disabled),
+button.suggested-action:hover:not(:disabled),
+button.suggested-action:active:not(:disabled) {
+    background-color: @theme_selected_bg_color;
+    background-image: none;
+    border-color: shade(@theme_selected_bg_color, 0.8);
+    color: @theme_selected_fg_color;
+    box-shadow: none;
+    text-shadow: none;
+    -gtk-icon-shadow: none;
+}
+menu menuitem check:checked, menu menuitem radio:checked {
+    background-color: transparent;
+    border-color: transparent;
+    color: @theme_selected_bg_color;
+}
+notebook > header.top > tabs > tab:checked {
+    box-shadow: inset 0 -3px @theme_selected_bg_color;
+}
+notebook > header.bottom > tabs > tab:checked {
+    box-shadow: inset 0 3px @theme_selected_bg_color;
+}
+notebook > header.left > tabs > tab:checked {
+    box-shadow: inset -3px 0 @theme_selected_bg_color;
+}
+notebook > header.right > tabs > tab:checked {
+    box-shadow: inset 3px 0 @theme_selected_bg_color;
+}
+entry:focus, spinbutton:focus:not(.vertical), .osd entry:focus {
+    border-color: @theme_selected_bg_color;
+    box-shadow: inset 0 0 0 1px @theme_selected_bg_color;
+    caret-color: @theme_fg_color;
+    -gtk-secondary-caret-color: @theme_selected_bg_color;
+}
+entry progress, spinbutton:not(.vertical) progress {
+    border-color: @theme_selected_bg_color;
+}
+*:link, *:link:hover, button:link, button:link > label {
+    color: @theme_selected_bg_color;
+}
