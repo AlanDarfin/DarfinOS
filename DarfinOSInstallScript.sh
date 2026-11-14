@@ -29,7 +29,7 @@ STEPS=(
   # Base
   base aur_helper fonts hardware
   # Desktop (SonicDE + XLibre)
-  xlibre sonicde desktop_extras bluetooth
+  xlibre sonicde desktop_extras bluetooth icons
   # Window managers independentes
   i3 xfce
   # Shell e desenvolvimento
@@ -64,6 +64,7 @@ declare -A STEP_DESC=(
   [sonicde]="Ambiente SonicDE, login manager, rede e áudio"
   [desktop_extras]="Extras do desktop (portais, energia, KDE Connect...)"
   [bluetooth]="Bluetooth"
+  [icons]="Ícones globais · Papirus Yellow"
   [i3]="i3 WM: tiling X11, i3status, i3lock e dmenu (sem trocar sua sessão)"
   [xfce]="Xfce: desktop X11 alternativo, mantém SonicDE e login atuais"
   [cli_tools]="Ferramentas de terminal (fzf, eza, yazi, starship...)"
@@ -132,6 +133,7 @@ declare -A STEP_INFO=(
   [sonicde]="Instala e configura o ambiente gráfico SonicDE e serviços associados."
   [desktop_extras]="Acrescenta integração, portais e utilitários do desktop."
   [bluetooth]="Instala os componentes Bluetooth e prepara o serviço."
+  [icons]="Aplica Papirus com pastas amarelas à conta, em GTK, Qt, SonicDE, Xfce e Trinity. Preserva as demais preferências."
   [i3]="Instala a sessão i3 como alternativa X11. Não substitui SonicDE nem altera gerenciador de login ou configuração pessoal."
   [xfce]="Instala pacotes Xfce oficiais como sessão alternativa. Não modifica tema, painel nem gerenciador de login."
   [cli_tools]="Adiciona utilitários de produtividade, navegação e busca no terminal."
@@ -540,6 +542,12 @@ module_probe() {
   MODULE_STATUS=unknown
   MODULE_REASON="Etapa configura serviços, repositórios ou escolhas; checagem manual necessária."
   case "$name" in
+    icons)
+      if module_any_package papirus-icon-theme; then
+        MODULE_STATUS=partial
+        MODULE_REASON="Papirus instalado; a seleção do tema nas sessões não é certificada."
+      fi
+      return 0 ;;
     base) required=(base-devel git curl wget unzip p7zip rsync htop fastfetch man-db man-pages rclone fuse2 pacman-contrib bash-completion pciutils usbutils) ;;
     i3) required=(i3-wm i3status i3lock dmenu xorg-xinit) ;;
     xfce) required=(exo garcon thunar thunar-volman tumbler xfce4-appfinder xfce4-panel xfce4-power-manager xfce4-session xfce4-settings xfce4-terminal xfconf xfdesktop xfwm4 xorg-xinit) ;;
@@ -626,7 +634,7 @@ module_probe() {
     lab_etckeeper) required=(etckeeper git) ;;
     lab_rustic) required=(rustic) ;;
     lab_kvantum) required=(kvantum) ;;
-    lab_i3_notebook) required=(i3-wm i3status i3lock dmenu xorg-xinit chezmoi rofi dunst i3status-rust brightnessctl xss-lock flameshot xterm ttf-dejavu libpulse libnotify feh zenity xorg-xrandr xorg-xrdb xorg-xsetroot xsettingsd polybar xdotool ttf-jetbrains-mono-nerd powerline-fonts librsvg xdg-utils gtk3 python-gobject pavucontrol network-manager-applet bluez-utils blueman polkit-gnome fastfetch chafa python-xlib playerctl arandr lxappearance thunar gvfs adwaita-icon-theme kvantum kvantum-qt5 curl tar xz) ;;
+    lab_i3_notebook) required=(i3-wm i3status i3lock dmenu xorg-xinit chezmoi rofi dunst i3status-rust brightnessctl xss-lock flameshot xterm ttf-dejavu libpulse libnotify feh zenity xorg-xrandr xorg-xrdb xorg-xsetroot xsettingsd polybar xdotool ttf-jetbrains-mono-nerd powerline-fonts librsvg xdg-utils gtk3 python-gobject pavucontrol network-manager-applet bluez-utils blueman polkit-gnome fastfetch chafa python-xlib playerctl arandr lxappearance thunar gvfs adwaita-icon-theme papirus-icon-theme kvantum kvantum-qt5 curl tar xz) ;;
     lab_pkgsrc)
       if [[ -x "$HOME/.local/share/darfinos/pkgsrc-prefix/bin/bmake" && -x "$HOME/.local/share/darfinos/pkgsrc-prefix/sbin/pkg_info" && -d "$HOME/.local/share/darfinos/pkgsrc-tree/pkgtools" ]]; then
         MODULE_STATUS=installed; MODULE_REASON="Bootstrap pkgsrc e árvore de pacotes encontrados."
@@ -709,9 +717,10 @@ module_probe() {
     MODULE_STATUS=unknown
     MODULE_REASON="pacman -Qq indisponível; não pular por precaução."
   elif module_packages_ready "${required[@]}"; then
-    if [[ "$name" == lab_i3_notebook ]] && ! notebook_cursor_ready; then
+    if [[ "$name" == lab_i3_notebook ]] &&
+       { ! notebook_cursor_ready || [[ ! -r "$HOME/.icons/Papirus-Yellow/index.theme" ]]; }; then
       MODULE_STATUS=partial
-      MODULE_REASON="Pacotes Notebook instalados; cursor Bibata Modern Ice ainda não encontrado."
+      MODULE_REASON="Pacotes Notebook instalados; falta o cursor Bibata ou o tema Papirus Yellow."
     else
       MODULE_STATUS=installed
       MODULE_REASON="Todos os ${#required[@]} pacotes esperados já instalados."
@@ -1878,12 +1887,24 @@ step_lab_i3_notebook() {
   install_pkgs i3-wm i3status i3lock dmenu xorg-xinit chezmoi rofi dunst i3status-rust \
     brightnessctl xss-lock flameshot xterm ttf-dejavu libpulse libnotify feh zenity xorg-xrandr xorg-xrdb xorg-xsetroot xsettingsd \
     polybar xdotool ttf-jetbrains-mono-nerd powerline-fonts librsvg xdg-utils gtk3 python-gobject \
-    pavucontrol network-manager-applet bluez-utils blueman polkit-gnome fastfetch chafa python-xlib playerctl arandr lxappearance thunar gvfs adwaita-icon-theme kvantum kvantum-qt5 curl tar xz || return 1
+    pavucontrol network-manager-applet bluez-utils blueman polkit-gnome fastfetch chafa python-xlib playerctl arandr lxappearance thunar gvfs adwaita-icon-theme papirus-icon-theme kvantum kvantum-qt5 curl tar xz || return 1
   notebook_install_cursor || return 1
+  notebook_papirus --assets-only || return 1
   info "Abra a Oficina de Temas (W) e selecione i3-notebook. Entre novamente na sessão i3 para ativar."
   info "O perfil usa o áudio existente (wpctl ou pactl); não troca o servidor de áudio."
   info "Os controles usam NetworkManager e BlueZ quando ativos. Os Labs não trocam seu serviço de rede."
   info "Para ativar o BlueZ, use a etapa Bluetooth do DarfinOS."
+}
+
+step_icons() {
+  install_pkgs python papirus-icon-theme || return 1
+  notebook_papirus
+}
+
+notebook_papirus() {
+  local script_dir
+  script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd) || return 1
+  python3 "$script_dir/scripts/papirus_yellow.py" "$@"
 }
 
 step_i3() {

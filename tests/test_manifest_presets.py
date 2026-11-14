@@ -21,7 +21,7 @@ class ManifestPresetTests(unittest.TestCase):
 
     def test_manifest_has_all_steps_and_sha(self):
         manifest = TUI.build_manifest(BASH)
-        self.assertEqual(len(manifest['steps']), 64)
+        self.assertEqual(len(manifest['steps']), 65)
         self.assertEqual(manifest['script_sha256'], TUI.sha(BASH))
         self.assertEqual(manifest['accuracy'], 'partial_static')
 
@@ -32,6 +32,9 @@ class ManifestPresetTests(unittest.TestCase):
 
     def test_preset_names_and_risk(self):
         self.assertEqual(set(TUI.PRESETS), {'minimal', 'desktop', 'i3', 'retro', 'workstation', 'gaming', 'full'})
+        for preset in ('desktop', 'i3', 'gaming', 'full'):
+            self.assertIn('icons', TUI.preset_selection(preset, self.steps))
+        self.assertNotIn('icons', TUI.preset_selection('retro', self.steps))
         self.assertNotIn('bedrock', TUI.preset_selection('minimal', self.steps))
         self.assertNotIn('bedrock', TUI.preset_selection('desktop', self.steps))
         self.assertNotIn('bedrock', TUI.preset_selection('gaming', self.steps))
@@ -83,7 +86,7 @@ class ManifestPresetTests(unittest.TestCase):
     def test_manifest_cli_no_tty_required(self):
         result = subprocess.run([sys.executable, str(ROOT / 'DarfinOSInstallScript-TUI.py'), '--manifest'],
                                 capture_output=True, text=True, check=True)
-        self.assertEqual(len(json.loads(result.stdout)['steps']), 64)
+        self.assertEqual(len(json.loads(result.stdout)['steps']), 65)
 
     def test_list_presets_cli_no_tty_required(self):
         result = subprocess.run([sys.executable, str(ROOT / 'DarfinOSInstallScript-TUI.py'), '--list-presets'],

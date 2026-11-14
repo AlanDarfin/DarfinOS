@@ -151,6 +151,7 @@ esac
         setup = """
 info() { :; }
 notebook_install_cursor() { [[ "$approved" == 1 ]]; }
+notebook_papirus() { [[ "$1" == --assets-only && "$approved" == 1 ]]; }
 install_pkgs() { darfinos_event "PKG:pacman:$*"; }
 lab_confirm() { [[ "$1" == i3_notebook && "$approved" == 1 ]]; }
 approved=0
@@ -257,12 +258,17 @@ notebook_install_cursor && exit 62
 
     def test_module_probe_reports_missing_cursor_as_partial_and_ready_as_installed(self):
         code = r'''
+export HOME="$TMP_DIR/home"
 MODULE_PACMAN_AVAILABLE=1
 module_packages_ready() { return 0; }
 module_probe lab_i3_notebook
 [[ "$MODULE_STATUS" == partial ]] || exit 61
 mkdir -p "$XDG_DATA_HOME/icons/Bibata-Modern-Ice/cursors"
 touch "$XDG_DATA_HOME/icons/Bibata-Modern-Ice/index.theme" "$XDG_DATA_HOME/icons/Bibata-Modern-Ice/cursors/left_ptr"
+module_probe lab_i3_notebook
+[[ "$MODULE_STATUS" == partial ]] || exit 62
+mkdir -p "$HOME/.icons/Papirus-Yellow"
+touch "$HOME/.icons/Papirus-Yellow/index.theme"
 module_probe lab_i3_notebook
 [[ "$MODULE_STATUS" == installed ]]
 '''

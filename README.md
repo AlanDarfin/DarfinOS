@@ -35,7 +35,7 @@ GitHub Markdown cannot detect a reader's browser locale or automatically render 
 
 ## What you can customize
 
-DarfinOS currently describes **64 modular stages**, **seven presets**, and **29 Labs entries** (28 upstream projects and the i3 Notebook bundle).
+DarfinOS currently describes **65 modular stages**, **seven presets**, and **29 Labs entries** (28 upstream projects and the i3 Notebook bundle).
 
 | Area | Modules and examples |
 | --- | --- |
@@ -127,6 +127,8 @@ See [module verification details](docs/MODULOS.md) and the [TUI guide](docs/TUI_
 Use `python3 DarfinOSInstallScript-TUI.py --list-presets` to list them or `--compare-presets minimal gaming` to inspect the difference.
 
 The [i3 Notebook profile](docs/CUSTOMIZATION.md#i3-notebook-720p) adds a 720p Powerline bar with audio sliders, network and Bluetooth controls, a calendar, and themed Fastfetch without changing Compact i3.
+
+**Papirus Yellow** is the default icon theme in the desktop, i3 and gaming presets. For an existing install, run `bash DarfinOSInstallScript.sh --only icons` as your regular user and sign in again. It uses Papirus's official yellow folders without modifying the Arch package or changing application palettes.
 
 ### DarfinOS Labs
 

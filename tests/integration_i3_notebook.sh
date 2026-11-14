@@ -80,6 +80,9 @@ await_result() {
   return 1
 }
 
+python scripts/papirus_yellow.py
+grep -Fx 'Theme=Papirus-Yellow' "$XDG_CONFIG_HOME/kdeglobals"
+grep -Fx 'Theme=Papirus-Yellow' "$HOME/.trinity/share/config/kdeglobals"
 python darfinos_control.py style i3-notebook --apply --all-files
 profile="$XDG_CONFIG_HOME/darfinos/i3-notebook"
 i3 -C -c "$XDG_CONFIG_HOME/i3/config"
@@ -111,16 +114,27 @@ await_result cursor_loaded
 # Test both GTK versions installed by the runner and the same Qt style
 # through two different Qt ABIs. The tests share the real Notebook environment.
 dump_xsettings | grep -F 'Net/ThemeName "DarfinOS-Notebook"'
+dump_xsettings | grep -F 'Net/IconThemeName "Papirus-Yellow"'
 for gtk in 3 4; do
   sh "$profile/session.sh" themed python - "$gtk" <<'GTK_THEME'
 import gi
 import sys
 major = int(sys.argv[1])
 gi.require_version("Gtk", f"{major}.0")
-from gi.repository import Gtk
+from gi.repository import Gdk, Gtk
 Gtk.init() if major == 4 else Gtk.init([])
 window = Gtk.Window()
 assert Gtk.Settings.get_default().get_property("gtk-theme-name") == "DarfinOS-Notebook"
+assert Gtk.Settings.get_default().get_property("gtk-icon-theme-name") == "Papirus-Yellow"
+if major == 4:
+    icons = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
+    path = icons.lookup_icon("folder", None, 48, 1, Gtk.TextDirection.NONE,
+                             Gtk.IconLookupFlags(0)).get_file().get_path()
+else:
+    icons = Gtk.IconTheme.get_default()
+    path = icons.lookup_icon("folder", 48, Gtk.IconLookupFlags(0)).get_filename()
+from pathlib import Path
+assert Path(path).resolve().name == "folder-yellow.svg", path
 if major == 3:
     valid, color = window.get_style_context().lookup_color("theme_selected_bg_color")
     assert valid and tuple(round(component * 255) for component in (color.red, color.green, color.blue)) == (255, 203, 46)

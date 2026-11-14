@@ -38,7 +38,7 @@ shellcheck -S warning DarfinOSInstallScript.sh
 
 ## O que é testado
 
-- Parser de `STEPS`, `STEP_DESC` e `STEP_DEPS`; ordem e nomes únicos das 64 etapas.
+- Parser de `STEPS`, `STEP_DESC` e `STEP_DEPS`; ordem e nomes únicos das 65 etapas.
 - Dependências, seleção, comando `--only` e proteção contra execução vazia.
 - Prévia estática de pacotes, sem instalação.
 - Perfis salvos e carregados, validação dos nomes.

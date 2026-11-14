@@ -262,7 +262,9 @@ case "${1:-}" in
                 shortcuts) mode='Atalhos do i3' ;;
             esac
             shortcut_mode='Atalhos do i3:sh -c '"'"'exec sh "$HOME/.config/darfinos/i3-notebook/session.sh" shortcuts-list "$@"'"'"' sh'
-            exec rofi -no-config -theme "$profile_dir/rofi.rasi" -show-icons \
+            icons=Adwaita
+            if [ -r "$HOME/.icons/Papirus-Yellow/index.theme" ]; then icons=Papirus-Yellow; fi
+            exec rofi -no-config -theme "$profile_dir/rofi.rasi" -show-icons -icon-theme "$icons" \
                 -display-drun Apps -display-window Janelas \
                 -modes "drun,window,$shortcut_mode" -show "$mode"
         elif [ "$1" = apps ]; then
