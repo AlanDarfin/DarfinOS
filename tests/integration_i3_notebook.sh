@@ -121,6 +121,7 @@ import gi
 import sys
 major = int(sys.argv[1])
 gi.require_version("Gtk", f"{major}.0")
+gi.require_version("Gdk", f"{major}.0")
 from gi.repository import Gdk, Gtk
 Gtk.init() if major == 4 else Gtk.init([])
 window = Gtk.Window()
