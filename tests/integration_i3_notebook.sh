@@ -10,6 +10,31 @@ export HOME="$tmp/home" XDG_RUNTIME_DIR="$tmp/run"
 export XDG_CONFIG_HOME="$HOME/.config" XDG_DATA_HOME="$HOME/.local/share"
 export XDG_CURRENT_DESKTOP=i3 TERMINAL=xterm
 unset BROWSER
+export NO_AT_BRIDGE=1
+# Exercise the real controls with a simulated backend. Never change host audio.
+mkdir -p "$tmp/bin"
+export PATH="$tmp/bin:$PATH" DARFINOS_TEST_AUDIO="$tmp"
+printf '0.55\n' > "$tmp/sink"
+printf '0.35\n' > "$tmp/source"
+cat > "$tmp/bin/wpctl" <<'AUDIO'
+#!/bin/sh
+case " $* " in
+  *" @DEFAULT_AUDIO_SINK@ "*) device=sink ;;
+  *" @DEFAULT_AUDIO_SOURCE@ "*) device=source ;;
+  *) exit 1 ;;
+esac
+state="$DARFINOS_TEST_AUDIO/$device"
+case "$1" in
+  get-volume)
+    printf 'Volume: %s' "$(cat "$state")"
+    if [ -e "$state.mute" ]; then printf ' [MUTED]'; fi
+    printf '\n' ;;
+  set-volume) awk -v level="${5%%%}" 'BEGIN {printf "%.2f\n", level / 100}' > "$state" ;;
+  set-mute) if [ -e "$state.mute" ]; then rm "$state.mute"; else touch "$state.mute"; fi ;;
+  *) exit 1 ;;
+esac
+AUDIO
+chmod +x "$tmp/bin/wpctl"
 mkdir -m 700 "$HOME" "$XDG_RUNTIME_DIR"
 mkdir -p "$XDG_CONFIG_HOME" "$HOME/.icons/Bibata-NotebookTest/cursors"
 cp /usr/share/icons/Adwaita/cursors/left_ptr "$HOME/.icons/Bibata-NotebookTest/cursors/left_ptr"
@@ -74,13 +99,14 @@ fi
 
 # Check the actual Polybar payload, including loaded i3, fonts and launchers.
 status_ready() {
-  grep -Fq 'Atalhos' "$tmp/polybar.log" && grep -Fq 'Área de trabalho' "$tmp/polybar.log"
+  grep -Fq 'Atalhos' "$tmp/polybar.log" && grep -Fq 'Área de trabalho' "$tmp/polybar.log" &&
+    grep -Fq '󰕾 55%' "$tmp/polybar.log" && grep -Fq '󰍬 35%' "$tmp/polybar.log"
 }
 polybar -l info -s -c "$profile/polybar.ini" notebook >"$tmp/polybar.log" 2>&1 &
 status_pid=$!
 await_result status_ready
 for label in Apps Janelas Atalhos Fundo; do grep -Fq "$label" "$tmp/polybar.log"; done
-for font in 'JetBrains Mono' PowerlineSymbols 'Font Awesome'; do
+for font in 'JetBrainsMono Nerd Font Mono' PowerlineSymbols; do
   grep -F "Loaded font" "$tmp/i3.log" | grep -Fq "$font"
 done
 if grep -Eq 'Ignoring unmatched character|Unrecognized tag|Unclosed action' "$tmp/i3.log"; then
@@ -101,6 +127,52 @@ fi
 xdotool key Escape
 rofi_closed() { ! rofi_visible; }
 await_result rofi_closed
+
+popup_visible() { xdotool search --onlyvisible --class '^DarfinOSNotebookPopup$' >/dev/null 2>&1; }
+popup_closed() { ! popup_visible; }
+popup_y() {
+  local window
+  window=$(xdotool search --onlyvisible --class '^DarfinOSNotebookPopup$') || return 1
+  xwininfo -id "$window" | grep -Eq 'Absolute upper-left Y:[[:space:]]+2[89]$'
+}
+xdotool key super+F3
+await_result popup_visible
+await_result popup_y
+# Test the actual GTK slider by clicking its upper track, then read the simulated backend.
+audio_window=$(xdotool search --onlyvisible --class '^DarfinOSNotebookPopup$')
+audio_changed() { [[ "$(cat "$tmp/sink")" != 0.55 ]]; }
+xdotool mousemove --window "$audio_window" 260 89 click 1
+await_result audio_changed
+[[ "$(cat "$tmp/source")" == 0.35 ]]
+if [[ -n "${DARFINOS_PREVIEW_DIR:-}" ]]; then
+  magick import -window root "$DARFINOS_PREVIEW_DIR/audio-720p.png"
+fi
+xdotool key Escape
+await_result popup_closed
+xdotool key super+F5
+await_result popup_visible
+calendar_title() { [[ "$(xdotool getwindowname "$(xdotool search --onlyvisible --class '^DarfinOSNotebookPopup$')")" == Calendário ]]; }
+await_result calendar_title
+if [[ -n "${DARFINOS_PREVIEW_DIR:-}" ]]; then
+  magick import -window root "$DARFINOS_PREVIEW_DIR/calendar-720p.png"
+fi
+xdotool key Escape
+await_result popup_closed
+# The power icon is the last module on the right.
+xdotool mousemove 1266 14 click 1
+await_result popup_visible
+session_title() { [[ "$(xdotool getwindowname "$(xdotool search --onlyvisible --class '^DarfinOSNotebookPopup$')")" == Sessão ]]; }
+await_result session_title
+xdotool key Escape
+await_result popup_closed
+
+fastfetch_output=$(sh "$profile/session.sh" fastfetch --pipe)
+[[ "$fastfetch_output" == *Fastfetch* && "$fastfetch_output" == *SYSTEM* ]]
+[[ -s "$profile/logo.png" && -s "$XDG_CONFIG_HOME/fastfetch/logo.png" ]]
+xdotool key super+F4
+fastfetch_visible() { xdotool search --onlyvisible --name '^DarfinOS · Fastfetch$' >/dev/null 2>&1; }
+await_result fastfetch_visible
+xdotool key super+shift+q
 
 # Exercise the real XDG/GTK launch path with two disposable desktop entries.
 mkdir -p "$XDG_DATA_HOME/applications"
@@ -218,4 +290,4 @@ dunstctl close-all
 dunstctl set-paused true
 [[ "$(dunstctl is-paused)" == true ]]
 dunstctl set-paused false
-echo 'i3 Notebook: X11 720p, Polybar geometry and toggling, cursor, wallpaper, Rofi click, XDG launchers, workspace keys, scratchpad and Dunst verified.'
+echo 'i3 Notebook: X11 720p, Polybar geometry and toggling, cursor, wallpaper, Rofi click, audio sliders, calendar, session, Fastfetch, XDG launchers, workspace keys, scratchpad and Dunst verified.'

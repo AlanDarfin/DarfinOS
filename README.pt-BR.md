@@ -192,7 +192,7 @@ sobrescrever arquivos de tema. Saiba como interpretar os estados:
 
 Na TUI, **W** abre a [Oficina de Temas](docs/pt-BR/CUSTOMIZATION.md) com o perfil SonicDE + Kvantum e prévia das mudanças.
 
-O [perfil i3 Notebook](docs/pt-BR/CUSTOMIZATION.md#i3-notebook-720p) adiciona Polybar em estilo Powerline, Rofi e Dunst na mesma paleta, papel de parede e controles de notebook sem mudar o i3 Compacto.
+O [perfil i3 Notebook](docs/pt-BR/CUSTOMIZATION.md#i3-notebook-720p) adiciona uma barra Powerline de 720p com sliders de áudio, controles de rede e Bluetooth, calendário e Fastfetch temático, sem mudar o i3 Compacto.
 
 ## ⚡ DarfinOS Labs · 28 projetos independentes + i3 Notebook
 

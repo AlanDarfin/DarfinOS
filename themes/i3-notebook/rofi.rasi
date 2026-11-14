@@ -1,6 +1,6 @@
 /* DarfinOS Notebook · graphite and gold, centered launcher */
 * {
-    font: "JetBrains Mono 11";
+    font: "JetBrainsMono Nerd Font Mono 11";
     panel: #20242b;
     surface: #2c313a;
     ink: #171a1f;

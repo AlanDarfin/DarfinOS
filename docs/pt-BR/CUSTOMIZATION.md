@@ -59,13 +59,28 @@ python3 darfinos_control.py style i3-notebook --apply --all-files
 | Super+L | Bloqueia a tela. A sessão também usa xss-lock antes de suspender. |
 | Super+N / Super+Shift+N / Super+Ctrl+N | Recuperar a última notificação, ativar ou desativar o Não Perturbe e dispensar os pop-ups. |
 
-A Polybar de 28 px fica no topo, com divisões em seta, tipografia JetBrains Mono
-e título curto da janela ativa. **Apps**, **Janelas**, **Atalhos** e **Fundo** são
-clicáveis. Brilho, bateria, rede, volume e hora aparecem à direita conforme o
-hardware disponível. A primeira área é **1**. **Super+Enter** abre o terminal.
-As janelas recebem foco ao passar o mouse, sem mover o ponteiro ao trocar de
-monitor pelo teclado. Se a Polybar estiver ausente ou falhar ao iniciar, a barra
-nativa do i3 fica como reserva.
+A barra de 28 px usa JetBrainsMono Nerd Font Mono. Áreas de trabalho, atalhos e
+o título abreviado da janela ficam à esquerda. A bandeja e os indicadores
+ficam à direita, mantendo o layout compacto para 720p.
+
+| Controle | Ação |
+| --- | --- |
+| Saída / microfone ou Super+F3 | Abre o pop-up com sliders independentes e ajuste imediato. Clique direito em cada ícone alterna o mute. A roda sobre a saída ajusta o volume. O botão do mixer abre o volume por app e a seleção de dispositivos. |
+| Wi-Fi / rede | Abre o controle para ligar ou desligar o Wi-Fi e os atalhos de conexão. O applet da bandeja lista redes próximas e permite conectar. O clique direito no indicador abre o editor de conexões salvas. |
+| Bluetooth | Abre o Blueman para ativar o adaptador, parear e gerenciar dispositivos. |
+| Relógio ou Super+F5 | Abre o calendário mensal, com navegação por mês e botão Hoje. |
+| Ícone de energia ou Super+F6 | Abre o menu com bloqueio, Não Perturbe, tela e papel de parede. Suspender, sair, reiniciar e desligar pedem confirmação. |
+| Super+F4 | Abre o Fastfetch do DarfinOS com o logo, no terminal Notebook. |
+
+**Super+Enter** e o terminal de bolso usam a mesma Nerd Font. A Oficina instala
+o tema e o logo do Fastfetch do Notebook. Também prepara o comando `fastfetch`
+normal se não houver configuração ou logo pessoal. **Super+F4** sempre abre
+o tema do DarfinOS. Se a Polybar falhar ao iniciar, a barra nativa do i3 é
+usada como reserva.
+
+O Wi-Fi usa um NetworkManager ativo. O Bluetooth precisa de adaptador e
+BlueZ. Os Labs não trocam o gerenciador de rede nem o servidor de áudio.
+Para ativar o BlueZ, use a etapa Bluetooth separada do DarfinOS.
 
 O desktop combina superfícies grafite com blocos de status dourados, bronze e
 areia. A área de trabalho focada recebe um fundo na cor de destaque; janelas
