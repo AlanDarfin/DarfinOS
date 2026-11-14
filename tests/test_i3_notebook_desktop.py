@@ -132,6 +132,19 @@ class DesktopTests(unittest.TestCase):
         self.assertIn("cursorSize=32", config.read_text())
 
 
+    def test_cursor_environment_finds_theme_in_a_custom_xdg_directory(self):
+        data = self.home / "XDG data"
+        theme = "Bibata Modern Test"
+        pointer = data / "icons" / theme / "cursors" / "left_ptr"
+        pointer.parent.mkdir(parents=True)
+        pointer.touch()
+        (self.home / ".config/kcminputrc").write_text(f"[Mouse]\ncursorTheme={theme}\ncursorSize=30\n")
+        with patch.dict(os.environ, {"XDG_DATA_HOME": str(data), "XDG_CONFIG_HOME": str(self.home / ".config"),
+                                     "XCURSOR_PATH": "/custom/icons:/usr/share/icons"}):
+            self.assertEqual(desktop.cursor_preference(), (theme, 30, pointer))
+            self.assertEqual(desktop.cursor_search_path().split(":")[0], str(data / "icons"))
+            self.assertIn("/custom/icons", desktop.cursor_search_path().split(":"))
+
     def test_transform_snapshot_uses_only_selected_panel(self):
         verbose = """eDP-1 connected primary 1440x810+0+0
         Transform:  0.750000 0.000000 0.000000

@@ -414,7 +414,7 @@ STYLE_ROOT = ".local/state/darfinos-customization"
 DEFAULT_ACCENT = "#ffcb2e"
 NOTEBOOK_I3_CONFIG = ".config/i3/config"
 NOTEBOOK_STYLE_DIR = ".config/darfinos/i3-notebook"
-NOTEBOOK_STYLE_FILES = ("session.sh", "desktop.py", "panel.py", "media.py", "windows.py", "switcher.py", "settings.py",
+NOTEBOOK_STYLE_FILES = ("session.sh", "desktop.py", "panel.py", "media.py", "windows.py", "switcher.py", "settings.py", "mouse.py",
                         "rofi.rasi", "dunstrc", "status.toml",
                         "polybar.ini", "wallpaper.svg", "fastfetch.jsonc", "logo.png")
 NOTEBOOK_THEME_HOME = ".themes/DarfinOS-Notebook"

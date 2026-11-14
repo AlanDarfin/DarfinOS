@@ -141,6 +141,16 @@ or uses an installed Bibata variant (24 px by default). It does not edit SonicDE
 settings. Reloading the profile updates its own XSETTINGS cursor provider while
 leaving providers started by other desktops alone.
 
+The same cursor is passed to the bar and launched apps, including Notebook
+pop-ups, without touching other desktop sessions. Pointer shapes for text or
+resizing can still differ, but they come from the same cursor theme.
+
+Right-click an empty area of the desktop to open a menu for apps, terminal,
+files, wallpaper, display and i3 preferences. It stays on the clicked screen
+and leaves right-clicks inside applications alone. Use the mouse wheel over the
+volume or brightness indicator to adjust it in 5% steps. Click brightness for a
+slider. The brightness control appears only when a screen backlight is available.
+
 The 720p choice only changes the built-in panel and neither creates a mode nor
 forces a refresh rate. If the panel does not advertise 1280×720, the menu explains
 why the option is unavailable. A confirmed choice is reapplied at login with a

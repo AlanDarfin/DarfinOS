@@ -77,7 +77,7 @@ class CustomizationTests(unittest.TestCase):
                     self.assertIn(b"170,204,51", content)
                 elif name == control.NOTEBOOK_DOLPHIN_CONFIG:
                     self.assertIn(b"DarfinOSNotebook", content)
-                elif not name.endswith(("session.sh", "desktop.py", "media.py", "switcher.py", "settings.py", ".png",
+                elif not name.endswith(("session.sh", "desktop.py", "media.py", "switcher.py", "settings.py", "mouse.py", ".png",
                                         "/Kvantum/kvantum.kvconfig", "DarfinOS-Notebook.svg")):
                     self.assertIn(b"#aacc33", content)
                 self.assertNotIn(b"{{ .accent }}", content)
