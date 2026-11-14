@@ -213,7 +213,11 @@ await_result popup_closed
 # The power icon is the last module on the right.
 xdotool mousemove 1266 14 click 1
 await_result popup_visible
-session_title() { [[ "$(xdotool getwindowname "$(xdotool search --onlyvisible --class '^DarfinOSNotebookPopup$')")" == Sessão ]]; }
+session_title() {
+  local window
+  window=$(xdotool search --onlyvisible --class '^DarfinOSNotebookPopup$') || return 1
+  [[ "$(xdotool getwindowname "$window")" == Sessão ]]
+}
 await_result session_title
 if [[ -n "${DARFINOS_PREVIEW_DIR:-}" ]]; then
   magick import -window root "$DARFINOS_PREVIEW_DIR/session-720p.png"
@@ -234,8 +238,18 @@ await_result test -s "$tmp/power-event"
 [[ "$(cat "$tmp/power-event")" == poweroff ]]
 await_result popup_closed
 # Verify the real Bluetooth module is clickable even with its service disabled.
-xdotool mousemove 1106 14 click 1
-bluetooth_title() { [[ "$(xdotool getwindowname "$(xdotool search --onlyvisible --class '^DarfinOSNotebookPopup$')")" == Bluetooth ]]; }
+# No backlight in Xvfb, so bronze on the bar uniquely identifies Bluetooth.
+find_bluetooth() {
+  bluetooth_x=$(magick import -window root -crop 1280x1+0+3 -depth 8 txt:- |
+    awk 'toupper($0) ~ /#BC9859/ {split($1, p, ","); total+=p[1]; count++} END {if (count) print int(total/count); else exit 1}')
+}
+await_result find_bluetooth
+xdotool mousemove "$bluetooth_x" 14 click 1
+bluetooth_title() {
+  local window
+  window=$(xdotool search --onlyvisible --class '^DarfinOSNotebookPopup$') || return 1
+  [[ "$(xdotool getwindowname "$window")" == Bluetooth ]]
+}
 await_result bluetooth_title
 if [[ -n "${DARFINOS_PREVIEW_DIR:-}" ]]; then
   magick import -window root "$DARFINOS_PREVIEW_DIR/bluetooth-off-720p.png"
