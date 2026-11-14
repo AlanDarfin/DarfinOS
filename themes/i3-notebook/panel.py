@@ -532,11 +532,13 @@ def popup(page, anchor=None):
         return False
 
     def mapped(*_):
+        if cursor := Gdk.Cursor.new_from_name(display, "default"):
+            window.get_window().set_cursor(cursor)
         GLib.idle_add(align)
         return False
 
     window.connect("map-event", mapped)
-    window.connect("size-allocate", mapped)
+    window.connect("size-allocate", lambda *_: GLib.idle_add(align))
     window.move(*popup_position(area, (width_limit, 1), anchor))
     window.show_all()
     window.present()

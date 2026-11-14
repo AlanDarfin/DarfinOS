@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Headless X11 test. Run only in a disposable environment with the profile packages.
-set -euo pipefail
+set -eEuo pipefail
+trap 'printf "Falha no smoke X11, linha %s: %s\n" "$LINENO" "$BASH_COMMAND" >&2' ERR
 if [[ "${1:-}" != "--dbus" ]]; then
   exec dbus-run-session -- bash "$0" --dbus
 fi
@@ -350,18 +351,23 @@ status_pid=
 
 # Compare the real X11 cursor pixels on the root, on the bar and in GTK.
 cursor_stamp() { python tests/i3_notebook_mouse_fixture.py cursor; }
-xdotool mousemove 450 360
+xdotool mousemove --sync 450 360
 root_cursor=$(cursor_stamp)
-xdotool mousemove 35 14
-[[ "$(cursor_stamp)" == "$root_cursor" ]]
+printf 'Cursor na área de trabalho: %s\n' "$root_cursor"
+check_cursor() {
+  local actual
+  actual=$(cursor_stamp) || return 1
+  [[ "$actual" == "$root_cursor" ]] || { printf 'Cursor em %s: %s\n' "$1" "$actual" >&2; return 1; }
+}
+xdotool mousemove --sync 35 14
+await_result check_cursor barra
 
 xdotool key super+F3
 await_result popup_visible
 await_result popup_y
 audio_window=$(xdotool search --onlyvisible --class '^DarfinOSNotebookPopup$')
-xdotool mousemove --window "$audio_window" 35 25
-same_popup_cursor() { [[ "$(cursor_stamp)" == "$root_cursor" ]]; }
-await_result same_popup_cursor
+xdotool mousemove --sync --window "$audio_window" 35 25
+await_result check_cursor popup
 # The first available slider gets keyboard focus after the audio backend responds.
 # End moves it to 100%; tab to the mic and use Home to verify independence.
 audio_output_changed() {
