@@ -18,7 +18,7 @@ exec --no-startup-id sh "$profile/session.sh" start
 # Launchers
 bindsym $mod+Return exec --no-startup-id sh "$profile/session.sh" terminal
 bindsym $mod+b exec --no-startup-id sh "$profile/session.sh" browser
-bindsym $mod+e exec --no-startup-id sh "$profile/session.sh" files
+bindsym $mod+e exec --no-startup-id sh "$profile/session.sh" notebook-files
 bindsym $mod+d exec --no-startup-id sh "$profile/session.sh" apps
 bindsym $mod+Tab exec --no-startup-id sh "$profile/session.sh" windows
 bindsym $mod+F1 exec --no-startup-id sh "$profile/session.sh" shortcuts
@@ -32,7 +32,8 @@ for_window [class="^DarfinOSNotebookSettings$"] floating enable, move position c
 for_window [class="(?i)^(Arandr|Lxappearance)$"] floating enable, move position center
 for_window [class="^DarfinOSNotebookPopup$"] floating enable, border pixel 0
 for_window [instance="^darfinos-(network|fastfetch)$"] floating enable, move position center
-for_window [class="^(Pavucontrol|Blueman-manager|Nm-connection-editor)$"] floating enable, move position center
+for_window [class="^(Pavucontrol|Nm-connection-editor)$"] floating enable, move position center
+for_window [class="(?i)^blueman-manager$"] floating enable, resize set 72 ppt 72 ppt, move position center
 bindsym $mod+Shift+p exec --no-startup-id sh "$profile/session.sh" wallpaper
 bindsym $mod+Shift+Return exec --no-startup-id sh "$profile/session.sh" pocket
 bindsym --release $mod+grave exec --no-startup-id sh "$profile/session.sh" pocket

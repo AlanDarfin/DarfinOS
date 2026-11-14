@@ -416,6 +416,7 @@ NOTEBOOK_STYLE_DIR = ".config/darfinos/i3-notebook"
 NOTEBOOK_STYLE_FILES = ("session.sh", "desktop.py", "panel.py", "media.py", "windows.py", "switcher.py", "settings.py",
                         "rofi.rasi", "dunstrc", "status.toml",
                         "polybar.ini", "wallpaper.svg", "fastfetch.jsonc", "logo.png")
+NOTEBOOK_FILES_THEME = ".themes/DarfinOS-Notebook/gtk-3.0/gtk.css"
 NOTEBOOK_FASTFETCH_DEFAULTS = (".config/fastfetch/config.jsonc", ".config/fastfetch/logo.png")
 FASTFETCH_DEFAULT_ACCENT = "38;2;255;203;46"
 
@@ -500,7 +501,7 @@ def _style_paths(profile: str) -> tuple[str, ...]:
                      ".config/fastfetch/config.jsonc", ".config/fastfetch/logo.png"),
         "i3-compacto": (".config/i3/config",),
         "i3-notebook": (NOTEBOOK_I3_CONFIG, *(f"{NOTEBOOK_STYLE_DIR}/{name}" for name in NOTEBOOK_STYLE_FILES),
-                        *NOTEBOOK_FASTFETCH_DEFAULTS),
+                        NOTEBOOK_FILES_THEME, *NOTEBOOK_FASTFETCH_DEFAULTS),
         "workstation-1995": ("GNUstep/Library/WindowMaker/Styles/DarfinOS-1995.style",),
         "sonicde-kvantum": (".config/kdeglobals", ".config/Kvantum/kvantum.kvconfig",
                            ".config/Kvantum/DarfinOSGold/DarfinOSGold.kvconfig",
@@ -593,7 +594,7 @@ bar {
         files = tuple(_render_style(text, accent) if "{{ .accent }}" in text else text.encode()
                       for text in templates)
         fetch_config, logo = _fastfetch_theme(source, accent)
-        files += (fetch_config, logo)
+        files += (fetch_config, logo, _render_style((theme / "files.css").read_text(encoding="utf-8"), accent))
         if len(paths) > len(files):
             files += (fetch_config, logo)
     elif profile == "workstation-1995":
@@ -655,7 +656,7 @@ def style_apply(profile: str, plan: dict, selected: list[str], home: Path | None
     if not selected or not set(selected) <= set(plan) <= allowed:
         raise ValueError("Selecione apenas arquivos do perfil.")
     if profile == "i3-notebook" and NOTEBOOK_I3_CONFIG in selected:
-        for rel in (f"{NOTEBOOK_STYLE_DIR}/{name}" for name in NOTEBOOK_STYLE_FILES):
+        for rel in (*[f"{NOTEBOOK_STYLE_DIR}/{name}" for name in NOTEBOOK_STYLE_FILES], NOTEBOOK_FILES_THEME):
             if rel not in selected and (rel not in plan or _style_read(_style_path(root, rel)) != plan[rel][1]):
                 raise ValueError("Para ativar o i3 Notebook, aplique também os arquivos do perfil.")
     if profile == "i3-notebook" and set(selected).intersection(NOTEBOOK_FASTFETCH_DEFAULTS):

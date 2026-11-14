@@ -251,11 +251,24 @@ bluetooth_title() {
   [[ "$(xdotool getwindowname "$window")" == Bluetooth ]]
 }
 await_result bluetooth_title
+bluetooth_contained() {
+  local window
+  window=$(xdotool search --onlyvisible --class '^DarfinOSNotebookPopup$') || return 1
+  xwininfo -id "$window" | awk '
+    /Absolute upper-left X:/ {x=$NF}
+    /Absolute upper-left Y:/ {y=$NF}
+    /Width:/ {w=$NF}
+    /Height:/ {h=$NF}
+    END {exit !(x >= 0 && y >= 28 && w > 0 && w <= 370 && x+w <= 1280 && h > 0 && y+h <= 720)}
+  '
+}
+await_result bluetooth_contained
 if [[ -n "${DARFINOS_PREVIEW_DIR:-}" ]]; then
   magick import -window root "$DARFINOS_PREVIEW_DIR/bluetooth-off-720p.png"
 fi
 xdotool key Tab Return
 await_result test -f "$tmp/bt-enabled"
+await_result bluetooth_contained
 xdotool key Escape
 await_result popup_closed
 
@@ -298,8 +311,18 @@ FILES_APP
 sed -i "s|^Path=/$|Path=$HOME|" "$XDG_DATA_HOME"/applications/*.desktop
 xdotool key super+b
 await_result test -f "$HOME/browser-started"
-xdotool key super+e
+sh "$profile/session.sh" files
 await_result test -f "$HOME/files-started"
+xdotool key super+e
+thunar_visible() { xdotool search --onlyvisible --class '^Thunar$' >/dev/null 2>&1; }
+await_result thunar_visible
+thunar_window=$(xdotool search --onlyvisible --class '^Thunar$' | head -1)
+thunar_pid=$(xdotool getwindowpid "$thunar_window")
+tr '\0' '\n' <"/proc/$thunar_pid/environ" | grep -Fx 'GTK_THEME=DarfinOS-Notebook'
+if [[ -n "${DARFINOS_PREVIEW_DIR:-}" ]]; then
+  magick import -window root "$DARFINOS_PREVIEW_DIR/files-720p.png"
+fi
+i3-msg '[class="^Thunar$"] kill' >/dev/null
 bar_mapped
 
 terminal_visible() { xdotool search --onlyvisible --class '^XTerm$' >/dev/null 2>&1; }
@@ -469,4 +492,4 @@ dunstctl close-all
 dunstctl set-paused true
 [[ "$(dunstctl is-paused)" == true ]]
 dunstctl set-paused false
-echo 'i3 Notebook: X11 720p, Polybar geometry and toggling, cursor, wallpaper, Rofi click, audio sliders, calendar, session, Fastfetch, XDG launchers, workspace keys, Alt+Tab, media dock, Bluetooth popup, window dock, minimize/maximize, graphical preferences, scratchpad and Dunst verified.'
+echo 'i3 Notebook: X11 720p, Polybar geometry and toggling, cursor, wallpaper, Rofi click, audio sliders, calendar, session, Fastfetch, XDG launchers, workspace keys, Alt+Tab, media dock, themed Thunar, contained Bluetooth popup, window dock, minimize/maximize, graphical preferences, scratchpad and Dunst verified.'

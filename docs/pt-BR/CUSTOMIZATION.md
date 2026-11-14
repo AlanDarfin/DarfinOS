@@ -47,7 +47,7 @@ python3 darfinos_control.py style i3-notebook --apply --all-files
 | Super+F1 | Lista de atalhos, disponível também como aba **Atalhos do i3** no Rofi. |
 | Super+F2 | Mostra a resolução e os Hz atuais por saída. Se a tela interna oferecer 1280×720, dá para testar o modo sem escala. Sem confirmar em 15 s, restaura modo, Hz e transformação anteriores. |
 | Super+Shift+P | Escolhe uma imagem e reaplica ao entrar no i3, ou restaura o fundo DarfinOS. Também disponível em **Fundo**, na barra. |
-| Super+Enter / Super+B / Super+E | Abre o terminal, o navegador padrão ou a pasta pessoal no gerenciador de arquivos padrão. |
+| Super+Enter / Super+B / Super+E | Abre o terminal, o navegador padrão ou o Thunar grafite e dourado. O ícone de pasta da barra também abre o Thunar. |
 | Super+Shift+B | Mostra ou oculta a barra para liberar espaço na tela. |
 | Super+1–9 / Super+0 | Vai para as áreas 1–10. Com Shift, move a janela atual. |
 | Alt+Tab / Alt+Shift+Tab | Percorre as janelas recentes, inclusive as minimizadas. Solte Alt para trocar ou tecle Esc para cancelar. |
@@ -135,3 +135,21 @@ Se outro daemon de notificações já estiver ativo no mesmo barramento D-Bus, o
 perfil não o encerra. Nesse caso, saia do outro ambiente e entre na sessão i3
 para testar. Dentro do i3, rode `dunstify "DarfinOS" "Notificações prontas"` para
 ver o tema. A personalização não instala nem inicia o Picom.
+
+### Vivaldi entre i3, SonicDE e Trinity
+
+Se o Vivaldi exibir **Falha de descriptografia / risco de perda de dados**, volte
+ao ambiente onde o perfil abre normalmente. Na etapa **Vivaldi e chaveiro entre
+ambientes** do instalador, escolha a edição que você usa e fixe o **mesmo**
+chaveiro que já abre esse perfil. KWallet 6 é uma opção em instalações
+SonicDE/Plasma 6. GNOME/Secret Service e KWallet 5 são alternativas apenas se
+já forem o chaveiro do seu perfil. Não adivinhe nem aceite perder dados para
+testar. O instalador não toca em senhas, cookies, perfis ou PAM.
+
+A etapa também pode ser executada com
+`bash DarfinOSInstallScript.sh --only browser`. Feche todas as janelas e processos
+do Vivaldi antes de reabrir pelo menu. No Flatpak, o atalho da conta vale em
+todos os ambientes e mantém a mesma ID para os links. Se você executar
+`flatpak run com.vivaldi.Vivaldi` manualmente, inclua a mesma opção
+`--password-store=...`. No pacote nativo do Arch, ela fica em
+`vivaldi-stable.conf`. O chaveiro ainda pode pedir a senha para ser desbloqueado.

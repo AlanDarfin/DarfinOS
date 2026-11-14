@@ -109,6 +109,17 @@ def power_controls(Gtk, container, button, request):
     container.add(confirmation)
 
 
+def popup_bounds(monitor, workarea):
+    """GDK can report a work area shared by all outputs. Intersect it first."""
+    x = max(monitor.x, workarea.x)
+    y = max(monitor.y + 28, workarea.y)
+    right = min(monitor.x + monitor.width, workarea.x + workarea.width)
+    bottom = min(monitor.y + monitor.height, workarea.y + workarea.height)
+    if right <= x or bottom <= y:
+        return monitor.x, monitor.y + 28, monitor.width, max(1, monitor.height - 28)
+    return x, y, right - x, bottom - y
+
+
 def popup(page):
     try:
         import gi
@@ -145,7 +156,6 @@ def popup(page):
     window.set_decorated(False)
     window.set_resizable(False)
     window.set_skip_taskbar_hint(True)
-    window.set_default_size(330, -1)
     window.connect("destroy", lambda *_: Gtk.main_quit())
 
     def keypress(_window, event):
@@ -158,11 +168,20 @@ def popup(page):
     display = window.get_display()
     _, x, y = display.get_default_seat().get_pointer().get_position()
     monitor = display.get_monitor_at_point(x, y)
-    bounds = monitor.get_geometry()
-    area = monitor.get_workarea()
+    left, top, available_width, available_height = popup_bounds(monitor.get_geometry(), monitor.get_workarea())
+    width_limit = min(360 if page == "bluetooth" else 330, max(1, available_width - 16))
+    window.set_default_size(width_limit, -1)
 
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin=14)
-    window.add(box)
+    if page == "bluetooth":
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scroll.set_propagate_natural_height(True)
+        scroll.set_max_content_height(max(1, available_height - 8))
+        scroll.add(box)
+        window.add(scroll)
+    else:
+        window.add(box)
     heading = Gtk.Box(spacing=8)
     box.add(heading)
     title = Gtk.Label(label=window.get_title(), xalign=0)
@@ -347,7 +366,9 @@ def popup(page):
         status.set_text("Verificando a rede…")
         refresh_network()
     elif page == "bluetooth":
-        status = Gtk.Label(label="Verificando o Bluetooth…", xalign=0, wrap=True, max_width_chars=42)
+        from gi.repository import Pango
+        status = Gtk.Label(label="Verificando o Bluetooth…", xalign=0, wrap=True,
+                           wrap_mode=Pango.WrapMode.WORD_CHAR, width_chars=1, max_width_chars=30)
         box.add(status)
         worker = ThreadPoolExecutor(max_workers=1)
         state = None
@@ -432,11 +453,23 @@ def popup(page):
             button(label, lambda a=action: launch("sh", str(PROFILE / "session.sh"), a))
 
     window.connect("focus-out-event", lambda *_: window.destroy() or False)
+    def align(*_):
+        width, _ = window.get_size()
+        # Re-anchor once GTK has negotiated its actual width, including after
+        # asynchronous labels change. Workarea offsets can be negative.
+        x = left + max(0, available_width - width - 8)
+        if window.get_position() != (x, top):
+            window.move(x, top)
+        return False
+
+    def mapped(*_):
+        GLib.idle_add(align)
+        return False
+
+    window.connect("map-event", mapped)
+    window.connect("size-allocate", mapped)
+    window.move(left + max(0, available_width - width_limit - 8), top)
     window.show_all()
-    # i3 respects client movement for floating windows. Keep the popup on the
-    # monitor where it was opened and clear both the Polybar and the fallback bar.
-    width, _ = window.get_size()
-    window.move(area.x + max(0, area.width - width - 8), max(area.y, bounds.y + 28))
     window.present()
     Gtk.main()
     if worker:

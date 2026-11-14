@@ -184,6 +184,18 @@ case "${1:-}" in
         fi
         launch_desktop "$app" || shortcut_notice 'Defina um navegador padrão nos aplicativos do sistema.'
         ;;
+    notebook-files)
+        if command -v thunar >/dev/null; then
+            export GTK_THEME=DarfinOS-Notebook
+            # GApplication supports multiple app IDs; keep a preexisting
+            # Thunar process from another desktop from taking this launch.
+            if [ -r "$HOME/.themes/DarfinOS-Notebook/gtk-3.0/gtk.css" ]; then
+                exec thunar --gapplication-app-id=org.darfinos.NotebookFiles "$HOME"
+            fi
+            GTK_THEME=Adwaita:dark exec thunar --gapplication-app-id=org.darfinos.NotebookFiles "$HOME"
+        fi
+        exec sh "$0" files
+        ;;
     files)
         app=$(xdg-mime query default inode/directory 2>/dev/null) || app=
         launch_desktop "$app" "$HOME" || shortcut_notice 'Defina um gerenciador de arquivos padrão para abrir pastas.'
@@ -211,7 +223,7 @@ case "${1:-}" in
         printf '%s\n' \
             'Super+Enter · Terminal' \
             'Super+B · Navegador padrão' \
-            'Super+E · Pasta pessoal no gerenciador padrão' \
+            'Super+E · Explorador de arquivos (Thunar)' \
             'Super+D · Aplicativos' \
             'Alt+Tab / Alt+Shift+Tab · Percorrer janelas; solte Alt para abrir' \
             'Super+Tab · Buscar janela no Rofi' \

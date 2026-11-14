@@ -65,9 +65,10 @@ class CustomizationTests(unittest.TestCase):
         dunst.write_bytes(b"my global dunst\n")
         with self.fake_chezmoi():
             plan, preview = control.style_preview("i3-notebook", "#aacc33", self.home)
-            self.assertEqual(len(plan), 1 + len(control.NOTEBOOK_STYLE_FILES) + 2)
+            self.assertEqual(len(plan), 1 + len(control.NOTEBOOK_STYLE_FILES) + 3)
             self.assertIn(f"{control.NOTEBOOK_STYLE_DIR}/polybar.ini", plan)
             self.assertIn(f"{control.NOTEBOOK_STYLE_DIR}/wallpaper.svg", plan)
+            self.assertIn(control.NOTEBOOK_FILES_THEME, plan)
             self.assertIn("my old i3", preview)
             for name, (_, content) in plan.items():
                 if name.endswith(("fastfetch.jsonc", "config.jsonc")):
@@ -86,6 +87,7 @@ class CustomizationTests(unittest.TestCase):
             control.style_undo(control.style_history(self.home)[0], True, self.home)
         self.assertEqual(target.read_bytes(), b"my old i3\n")
         self.assertEqual(dunst.read_bytes(), b"my global dunst\n")
+        self.assertFalse((self.home / control.NOTEBOOK_FILES_THEME).exists())
         for name in control.NOTEBOOK_STYLE_FILES:
             self.assertFalse((self.home / control.NOTEBOOK_STYLE_DIR / name).exists())
 
