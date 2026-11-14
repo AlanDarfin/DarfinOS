@@ -144,6 +144,17 @@ instalada (24 px por padrão). A sessão i3 não altera os arquivos do SonicDE.
 Recarregar o perfil atualiza o provedor XSETTINGS que ele próprio iniciou,
 preservando provedores de outros ambientes.
 
+A barra e os aplicativos abertos pelo perfil, incluindo os pop-ups, usam o
+mesmo cursor sem alterar outras sessões. O ponteiro ainda pode mudar de forma
+sobre texto ou bordas de redimensionamento, mas mantém o mesmo tema.
+
+Clique com o botão direito em uma área vazia da área de trabalho para abrir
+aplicativos, terminal, arquivos, papel de parede, tela ou preferências do i3.
+O menu fica dentro do monitor clicado e não interfere no clique direito dos
+aplicativos. Use a rodinha sobre os indicadores de volume e brilho para ajustar
+em passos de 5%. Clique no brilho para abrir o controle deslizante. O controle
+só aparece quando o sistema encontra uma iluminação de tela compatível.
+
 A opção de 720p só mexe na tela interna, não inventa modos nem força taxa de
 atualização. Se o painel não oferecer 1280×720, o menu explica a indisponibilidade.
 A escolha confirmada é reaplicada ao entrar com escala 1:1; **Super+F2 → Parar de

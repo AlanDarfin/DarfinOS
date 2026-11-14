@@ -3,6 +3,24 @@
 set -eu
 profile_dir="$HOME/.config/darfinos/i3-notebook"
 
+# Polybar calls itself on IPC restart, so rediscover the mapped dock.
+set_bar_cursor() {
+    expected_pid=${1:-}
+    attempts=0
+    while [ "$attempts" -lt 50 ]; do
+        win=$(xdotool search --onlyvisible --name '^darfinos-notebook-bar$' 2>/dev/null | head -n 1)
+        if [ -n "$win" ]; then
+            got=$(xdotool getwindowpid "$win" 2>/dev/null) || got=
+            if [ -z "$expected_pid" ] || [ "$got" = "$expected_pid" ]; then
+                /usr/bin/python3 "$profile_dir/desktop.py" bar-cursor "$win"
+                return
+            fi
+        fi
+        attempts=$((attempts + 1))
+        sleep 0.1
+    done
+}
+
 # Scoped to the Notebook launcher tree (Rofi, terminal, dock and shortcuts).
 # Do not publish these variables to systemd or the session D-Bus.
 theme_dir="$HOME/.themes/DarfinOS-Notebook"
@@ -32,6 +50,25 @@ if [ -r "$appearance_dir/Kvantum/kvantum.kvconfig" ]; then
         export QT_QPA_PLATFORMTHEME=gtk3
     fi
 fi
+
+# XSETTINGS and Xresources name the theme. LibXcursor also has to be able to
+# find cursors installed by Labs in XDG_DATA_HOME/icons, including in pop-ups.
+# Only graphical launchers need this, not the bar's periodic status commands.
+case "${1:-}" in
+    desktop-start|start|bar-start|audio|brightness|calendar|network|bluetooth|system|desktop-menu|settings|display|wallpaper|monitors|appearance|screenshot|mixer|network-terminal|network-editor|terminal|fastfetch-window|browser|notebook-files|dolphin|qt4|qt-themed|themed|files|apps|windows|shortcuts|pocket)
+        if [ -r "$profile_dir/desktop.py" ] &&
+            cursor=$(/usr/bin/python3 "$profile_dir/desktop.py" cursor-env) && [ -n "$cursor" ]; then
+            {
+                IFS= read -r XCURSOR_THEME
+                IFS= read -r XCURSOR_SIZE
+                IFS= read -r XCURSOR_PATH
+            } <<CURSOR
+$cursor
+CURSOR
+            export XCURSOR_THEME XCURSOR_SIZE XCURSOR_PATH
+        fi
+        ;;
+esac
 
 # Look up only the named Notebook dock on this X display, never broadcast IPC.
 bar_pid() {
@@ -89,6 +126,7 @@ case "${1:-}" in
         python3 "$profile_dir/desktop.py" "$@"
         # Existing switcher instances retain the X11 grabs across i3 reloads.
         /usr/bin/python3 "$profile_dir/switcher.py" &
+        /usr/bin/python3 "$profile_dir/mouse.py" &
         exec sh "$0" bar-start
         ;;
     display|wallpaper|window-title)
@@ -98,7 +136,10 @@ case "${1:-}" in
         if command -v polybar >/dev/null && command -v polybar-msg >/dev/null &&
            command -v xdotool >/dev/null && [ -r "$profile_dir/polybar.ini" ]; then
             if pid=$(bar_pid); then
-                exec polybar-msg -p "$pid" cmd restart
+                polybar-msg -p "$pid" cmd restart || exit $?
+                sleep 0.5
+                set_bar_cursor
+                exit 0
             fi
             # Only this profile uses the discovered laptop battery; no BAT0 assumption.
             for supply in /sys/class/power_supply/*; do
@@ -108,7 +149,10 @@ case "${1:-}" in
                 fi
             done
             # A clean exit (including logout) shouldn't start a new bar.
-            polybar -c "$profile_dir/polybar.ini" notebook && exit 0
+            polybar -c "$profile_dir/polybar.ini" notebook &
+            pid=$!
+            set_bar_cursor "$pid" &
+            wait "$pid" && exit 0
         fi
         exec i3-msg 'bar mode dock notebook'
         ;;
@@ -130,8 +174,8 @@ case "${1:-}" in
         fi
         exec xss-lock --transfer-sleep-lock -- i3lock --nofork -c 171a1f
         ;;
-    audio|calendar|system|network|bluetooth|sink|source)
-        exec /usr/bin/python3 "$profile_dir/panel.py" "$1"
+    audio|brightness|calendar|system|network|bluetooth|sink|source|desktop-menu|brightness-status)
+        exec /usr/bin/python3 "$profile_dir/panel.py" "$@"
         ;;
     window-*)
         action=${1#window-}
@@ -337,6 +381,10 @@ case "${1:-}" in
             SHELL=/bin/sh exec i3status-rs "$profile_dir/status.toml"
         fi
         exec i3status
+        ;;
+    brightness-up|brightness-down)
+        case "$1" in brightness-up) step=5%+ ;; *) step=5%- ;; esac
+        exec brightnessctl --class=backlight --min-value=1 set "$step"
         ;;
     volume-up|volume-down|volume-mute|mic-mute)
         if command -v wpctl >/dev/null; then

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Headless X11 test. Run only in a disposable environment with the profile packages.
-set -euo pipefail
+set -eEuo pipefail
+trap 'printf "Falha no smoke X11, linha %s: %s\n" "$LINENO" "$BASH_COMMAND" >&2' ERR
 if [[ "${1:-}" != "--dbus" ]]; then
   exec dbus-run-session -- bash "$0" --dbus
 fi
@@ -29,11 +30,34 @@ case "$1" in
     printf 'Volume: %s' "$(cat "$state")"
     if [ -e "$state.mute" ]; then printf ' [MUTED]'; fi
     printf '\n' ;;
-  set-volume) awk -v level="${5%%%}" 'BEGIN {printf "%.2f\n", level / 100}' > "$state" ;;
+  set-volume)
+    for level do :; done
+    awk -v level="$level" -v current="$(cat "$state")" 'BEGIN {
+      value = level / 100
+      if (level ~ /[+]$/) value = current + value
+      if (level ~ /-$/) value = current - value
+      printf "%.2f\n", value < 0 ? 0 : (value > 1 ? 1 : value)
+    }' > "$state" ;;
   set-mute) if [ -e "$state.mute" ]; then rm "$state.mute"; else touch "$state.mute"; fi ;;
   *) exit 1 ;;
 esac
 AUDIO
+printf '60\n' > "$tmp/backlight"
+cat > "$tmp/bin/brightnessctl" <<'BACKLIGHT'
+#!/bin/sh
+state="$DARFINOS_TEST_AUDIO/backlight"
+case "$*" in
+  '--class=backlight --machine-readable info')
+    level=$(cat "$state")
+    printf 'intel_backlight,backlight,%s,%s%%,100\n' "$level" "$level" ;;
+  '--class=backlight --min-value=1 set 5%+') value=$(($(cat "$state") + 5)) ;;
+  '--class=backlight --min-value=1 set 5%-') value=$(($(cat "$state") - 5)) ;;
+  '--class=backlight --min-value=1 set '*) value=${4%%%} ;;
+  *) exit 1 ;;
+esac
+if [ -n "${value:-}" ]; then printf '%s\n' "$value" > "$state"; fi
+BACKLIGHT
+chmod +x "$tmp/bin/brightnessctl"
 # No Bluetooth adapter or real power changes are needed for the smoke test.
 cat > "$tmp/bin/systemctl" <<'SYSTEMCTL'
 #!/bin/sh
@@ -53,8 +77,11 @@ BLUEZ
 chmod +x "$tmp/bin/systemctl" "$tmp/bin/bluetoothctl"
 chmod +x "$tmp/bin/wpctl"
 mkdir -m 700 "$HOME" "$XDG_RUNTIME_DIR"
-mkdir -p "$XDG_CONFIG_HOME" "$HOME/.icons/Bibata-NotebookTest/cursors"
-cp /usr/share/icons/Adwaita/cursors/left_ptr "$HOME/.icons/Bibata-NotebookTest/cursors/left_ptr"
+test_cursor="$XDG_DATA_HOME/icons/Bibata-NotebookTest"
+mkdir -p "$XDG_CONFIG_HOME" "$test_cursor/cursors"
+cp /usr/share/icons/Adwaita/cursors/left_ptr "$test_cursor/cursors/left_ptr"
+ln -s left_ptr "$test_cursor/cursors/default"
+printf '[Icon Theme]\nName=Notebook cursor fixture\nInherits=Adwaita\n' > "$test_cursor/index.theme"
 printf "[Mouse]\ncursorTheme=Bibata-NotebookTest\ncursorSize=32\n" >"$XDG_CONFIG_HOME/kcminputrc"
 x_pid= i3_pid= status_pid= mpris_pid=
 cleanup() {
@@ -115,6 +142,13 @@ await_result cursor_loaded
 # through two different Qt ABIs. The tests share the real Notebook environment.
 dump_xsettings | grep -F 'Net/ThemeName "DarfinOS-Notebook"'
 dump_xsettings | grep -F 'Net/IconThemeName "Papirus-Yellow"'
+dump_xsettings | grep -F 'Gtk/CursorThemeName "Bibata-NotebookTest"'
+dump_xsettings | grep -F 'Gtk/CursorThemeSize 32'
+sh "$profile/session.sh" themed sh -c '
+  test "$XCURSOR_THEME" = Bibata-NotebookTest &&
+  test "$XCURSOR_SIZE" = 32 &&
+  case "$XCURSOR_PATH" in "$XDG_DATA_HOME/icons:"*) true ;; *) false ;; esac
+'
 for gtk in 3 4; do
   sh "$profile/session.sh" themed python - "$gtk" <<'GTK_THEME'
 import gi
@@ -279,9 +313,61 @@ popup_y() {
   window=$(xdotool search --onlyvisible --class '^DarfinOSNotebookPopup$') || return 1
   xwininfo -id "$window" | grep -Eq 'Absolute upper-left Y:[[:space:]]+2[89]$'
 }
+# A root click opens the desktop menu, with no clipping at the bottom right.
+xdotool mousemove 1276 715 click 3
+await_result popup_visible
+context_menu_position() {
+  local window
+  window=$(xdotool search --onlyvisible --name '^Área de trabalho$' | tail -1) || return 1
+  [[ -n "$window" ]] && xwininfo -id "$window" | awk '
+    /Absolute upper-left X:/ {x=$NF}
+    /Absolute upper-left Y:/ {y=$NF}
+    /Width:/ {w=$NF}
+    /Height:/ {h=$NF}
+    END {exit !(x > 750 && y > 280 && w > 50 && x+w <= 1280 && h > 0 && y+h <= 720)}
+  '
+}
+await_result context_menu_position
+if [[ -n "${DARFINOS_PREVIEW_DIR:-}" ]]; then
+  magick import -window root "$DARFINOS_PREVIEW_DIR/desktop-menu-720p.png"
+fi
+xdotool key Escape
+await_result popup_closed
+
+# Prove the right-click pass-through with an independent X11 application.
+python tests/i3_notebook_mouse_fixture.py "$tmp/app-right-click" &
+status_pid=$!
+find_test_app() {
+  test_app=$(xdotool search --onlyvisible --name '^DarfinOS mouse fixture$' | tail -1)
+  [[ -n "$test_app" ]]
+}
+await_result find_test_app
+xdotool mousemove --window "$test_app" 55 60 click 3
+await_result test -f "$tmp/app-right-click"
+popup_closed
+kill "$status_pid"
+wait "$status_pid" || :
+status_pid=
+
+# Compare the real X11 cursor pixels on the root, on the bar and in GTK.
+cursor_stamp() { python tests/i3_notebook_mouse_fixture.py cursor; }
+xdotool mousemove --sync 450 360
+root_cursor=$(cursor_stamp)
+printf 'Cursor na área de trabalho: %s\n' "$root_cursor"
+check_cursor() {
+  local actual
+  actual=$(cursor_stamp) || return 1
+  [[ "$actual" == "$root_cursor" ]] || { printf 'Cursor em %s: %s\n' "$1" "$actual" >&2; return 1; }
+}
+xdotool mousemove --sync 35 14
+await_result check_cursor barra
+
 xdotool key super+F3
 await_result popup_visible
 await_result popup_y
+audio_window=$(xdotool search --onlyvisible --class '^DarfinOSNotebookPopup$')
+xdotool mousemove --sync --window "$audio_window" 35 25
+await_result check_cursor popup
 # The first available slider gets keyboard focus after the audio backend responds.
 # End moves it to 100%; tab to the mic and use Home to verify independence.
 audio_output_changed() {
@@ -559,6 +645,30 @@ sed -i 's/^height = 32px$/height = 28px/' "$profile/polybar.ini"
 xdotool key super+shift+c
 await_result bar_has_height 28
 
+# Exercise wheel events on the actual modules with deterministic positions
+# independent of the status text, fonts and battery on the test machine.
+sed -i -e 's/^modules-left =.*/modules-left = audio brightness/' -e 's/^modules-right =.*/modules-right =/' -e 's/^height = 28px$/height = 29px/' "$profile/polybar.ini"
+xdotool key super+shift+c
+await_result bar_has_height 29
+printf '0.55\n' > "$tmp/sink"
+sleep 0.2
+xdotool mousemove 40 14 click 4
+await_result grep -Fx 0.60 "$tmp/sink"
+xdotool click 5
+await_result grep -Fx 0.55 "$tmp/sink"
+# The audio prefix, icon and padding take about 70 px in this minimal bar.
+xdotool mousemove 100 14 click 4
+await_result grep -Fx 65 "$tmp/backlight"
+xdotool click 5
+await_result grep -Fx 60 "$tmp/backlight"
+xdotool click 1
+find_brightness_popup() { xdotool search --onlyvisible --name '^Brilho$' >/dev/null 2>&1; }
+await_result find_brightness_popup
+xdotool key Home
+await_result grep -Fx 1 "$tmp/backlight"
+xdotool key Escape
+await_result popup_closed
+
 pocket_visible() {
   i3-msg -t get_tree | python -c '
 import json, sys
@@ -590,4 +700,4 @@ dunstctl close-all
 dunstctl set-paused true
 [[ "$(dunstctl is-paused)" == true ]]
 dunstctl set-paused false
-echo 'i3 Notebook: X11 720p, Polybar geometry and toggling, cursor, wallpaper, Rofi click, audio sliders, calendar, session, Fastfetch, XDG launchers, workspace keys, Alt+Tab, media dock, GTK3/GTK4 rendered accents, Qt5/Qt6, themed Dolphin and Thunar, contained Bluetooth popup, window dock, minimize/maximize, graphical preferences, scratchpad and Dunst verified.'
+echo 'i3 Notebook: X11 720p, Polybar geometry and toggling, cursor image, desktop menu and right-click pass-through, wallpaper, Rofi click, audio and backlight wheel, audio sliders, calendar, session, Fastfetch, XDG launchers, workspace keys, Alt+Tab, media dock, GTK3/GTK4 rendered accents, Qt5/Qt6, themed Dolphin and Thunar, contained Bluetooth popup, window dock, minimize/maximize, graphical preferences, scratchpad and Dunst verified.'

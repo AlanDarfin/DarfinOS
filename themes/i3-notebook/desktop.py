@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import configparser
+import ctypes
 import json
 import os
 import re
@@ -107,6 +108,20 @@ def wallpaper_picker():
         notify("Não consegui abrir a imagem. Escolha outro arquivo.")
 
 
+def cursor_search_path():
+    data_home = Path(os.environ.get("XDG_DATA_HOME") or HOME / ".local/share")
+    default = "~/.icons:~/.local/share/icons:/usr/local/share/icons:/usr/share/icons:/usr/share/pixmaps"
+    paths = [str(data_home / "icons"), str(HOME / ".icons")]
+    paths += [str(Path(path).expanduser()) for path in (os.environ.get("XCURSOR_PATH") or default).split(":") if path]
+    return os.pathsep.join(dict.fromkeys(paths))
+
+
+def print_cursor_env():
+    if preference := cursor_preference():
+        theme, size, _ = preference
+        print(theme, size, cursor_search_path(), sep="\n")
+
+
 def cursor_preference():
     config = configparser.ConfigParser(interpolation=None, strict=False)
     try:
@@ -116,9 +131,7 @@ def cursor_preference():
     except (configparser.Error, UnicodeError, ValueError):
         theme, size = "", 24
     size = size if 8 <= size <= 128 else 24
-    data_home = Path(os.environ.get("XDG_DATA_HOME") or HOME / ".local/share")
-    roots = [Path(p).expanduser() for p in os.environ.get("XCURSOR_PATH", "").split(":") if p]
-    roots += [data_home / "icons", HOME / ".icons", Path("/usr/local/share/icons"), Path("/usr/share/icons")]
+    roots = [Path(directory) for directory in cursor_search_path().split(os.pathsep)]
     # Prefer the exact SonicDE selection, then an installed Bibata variant.
     def pointer(directory):
         for name in ("left_ptr", "default", "arrow"):
@@ -137,6 +150,53 @@ def cursor_preference():
             if path := pointer(directory):
                 return directory.name, size, path
     return None
+
+
+def set_window_pointer(window_id):
+    # i3 gives its window frames an explicit cursor. Setting the actual dock
+    # window avoids inheriting the frame cursor i3 cached before login setup.
+    preference = cursor_preference()
+    if not preference:
+        return
+    _, size, pointer = preference
+    try:
+        x11 = ctypes.CDLL("libX11.so.6")
+        xcursor = ctypes.CDLL("libXcursor.so.1")
+    except OSError:
+        return
+
+    dpy, xid = ctypes.c_void_p, ctypes.c_ulong
+    x11.XOpenDisplay.argtypes = (ctypes.c_char_p,)
+    x11.XOpenDisplay.restype = dpy
+    x11.XDefineCursor.argtypes = (dpy, xid, xid)
+    x11.XFreeCursor.argtypes = (dpy, xid)
+    x11.XCloseDisplay.argtypes = (dpy,)
+    xcursor.XcursorFilenameLoadImages.argtypes = (ctypes.c_char_p, ctypes.c_int)
+    xcursor.XcursorFilenameLoadImages.restype = ctypes.c_void_p
+    xcursor.XcursorImagesLoadCursor.argtypes = (dpy, ctypes.c_void_p)
+    xcursor.XcursorImagesLoadCursor.restype = xid
+    xcursor.XcursorImagesDestroy.argtypes = (ctypes.c_void_p,)
+    if not (connection := x11.XOpenDisplay(None)):
+        return
+    try:
+        if images := xcursor.XcursorFilenameLoadImages(os.fsencode(pointer), size):
+            try:
+                if cursor := xcursor.XcursorImagesLoadCursor(connection, images):
+                    # The bar can exit between discovery and setting the cursor.
+                    handler_type = ctypes.CFUNCTYPE(ctypes.c_int, dpy, ctypes.c_void_p)
+                    ignore_error = handler_type(lambda *_: 0)
+                    x11.XSetErrorHandler.argtypes = (handler_type,)
+                    x11.XSetErrorHandler.restype = ctypes.c_void_p
+                    x11.XSetErrorHandler(ignore_error)
+                    x11.XDefineCursor(connection, window_id, cursor)
+                    x11.XFreeCursor(connection, cursor)
+                    x11.XCloseDisplay(connection)
+                    connection = None
+            finally:
+                xcursor.XcursorImagesDestroy(images)
+    finally:
+        if connection:
+            x11.XCloseDisplay(connection)
 
 
 def apply_cursor():
@@ -365,8 +425,13 @@ def window_title():
 
 
 if __name__ == "__main__":
+    if len(sys.argv) == 3 and sys.argv[1] == "bar-cursor":
+        if not sys.argv[2].isdecimal():
+            sys.exit(2)
+        set_window_pointer(int(sys.argv[2]))
+        sys.exit(0)
     actions = {"desktop-start": desktop_start, "display": display_picker,
-               "wallpaper": wallpaper_picker, "window-title": window_title}
+               "wallpaper": wallpaper_picker, "window-title": window_title, "cursor-env": print_cursor_env}
     if len(sys.argv) != 2 or sys.argv[1] not in actions:
         sys.exit(2)
     actions[sys.argv[1]]()

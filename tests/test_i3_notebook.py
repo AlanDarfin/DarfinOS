@@ -95,6 +95,13 @@ class I3NotebookTests(unittest.TestCase):
         self.assertEqual(self.run_entry("mic-mute").stdout.strip(),
                          b"set-source-mute @DEFAULT_SOURCE@ toggle")
 
+    def test_scroll_brightness_uses_the_backlight_and_never_sets_it_to_zero(self):
+        self.stub("brightnessctl", 'printf "%s\\n" "$@"')
+        for action, change in (("brightness-up", b"5%+"), ("brightness-down", b"5%-")):
+            with self.subTest(action=action):
+                self.assertEqual(self.run_entry(action).stdout.splitlines(),
+                                 [b"--class=backlight", b"--min-value=1", b"set", change])
+
     def test_network_reports_status_and_uses_the_existing_networkmanager(self):
         self.stub("nmcli", """
 case "$*" in
