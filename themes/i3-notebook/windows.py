@@ -193,14 +193,17 @@ def dock(items, workspace):
         visible[-1] = focused
     output = []
     command = 'sh "$HOME/.config/darfinos/i3-notebook/session.sh"'
+    def click(action, label):
+        return "%{A1:" + command + " " + action + ":}" + label + "%{A}"
+
     for w in visible:
-        on = f"%{{F{ACCENT}}}%{{u{ACCENT}}}%{{+u}}" if w.focused else "%{F#c0c4cd}"
+        on = ("%{F" + ACCENT + "}%{u" + ACCENT + "}%{+u}") if w.focused else "%{F#c0c4cd}"
         off = "%{-u}%{F-}" if w.focused else "%{F-}"
-        output.append(f"%{{A1:{command} window-focus {w.id}:}}{on} {w.icon} {off}%{{A}}")
+        output.append(click(f"window-focus {w.id}", f"{on} {w.icon} {off}"))
     if hidden := sum(w.hidden and bool(w.minimized) for w in items):
-        output.append(f"%{{A1:{command} window-list-minimized:}}%{{F#efd799}} 󰁌 {min(hidden, 99)} %{{F-}}%{{A}}")
+        output.append(click("window-list-minimized", "%{F#efd799} 󰁌 " + str(min(hidden, 99)) + " %{F-}"))
     if len(local) > len(visible):
-        output.append(f"%{{A1:{command} window-list:}} +{min(99, len(local) - len(visible))} %{{A}}")
+        output.append(click("window-list", f" +{min(99, len(local) - len(visible))} "))
     return "".join(output)
 
 

@@ -96,6 +96,9 @@ class CustomizationTests(unittest.TestCase):
         self.assertIn(b'ACCENT = "#aacc33"', data)
         self.assertIn(b"#notebook-popup { background:", data)
         compile(data, "panel.py", "exec")
+        data = plan[f"{control.NOTEBOOK_STYLE_DIR}/windows.py"][1]
+        self.assertIn(b'ACCENT = "#aacc33"', data)
+        compile(data, "windows.py", "exec")
 
     def test_i3_notebook_preserves_existing_fastfetch_but_has_its_own_preset(self):
         global_config = self.home / ".config/fastfetch/config.jsonc"
