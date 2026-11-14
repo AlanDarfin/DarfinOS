@@ -119,17 +119,17 @@ esac
                          ["<--config>", f"<{profile / 'fastfetch.jsonc'}>",
                           "<--logo>", f"<{profile / 'logo.png'}>", "<--logo-type>", "<chafa>"])
 
-    def test_power_confirmation_is_required(self):
+    def test_power_dispatch_accepts_only_named_actions(self):
         self.stub("systemctl", 'printf "%s\n" "$@"')
-        self.stub("rofi", """
-case "$*" in
-    *Confirmar*) echo Cancelar ;;
-    *) echo Desligar ;;
-esac
-""")
-        self.assertEqual(self.run_entry("power").stdout, b"")
-        self.stub("rofi", 'echo Desligar')
-        self.assertEqual(self.run_entry("power").stdout, b"poweroff\n")
+        self.stub("i3-msg", 'printf "%s\n" "$@"')
+        for action, expected in (("poweroff", b"poweroff"), ("reboot", b"reboot"), ("logout", b"exit")):
+            with self.subTest(action=action):
+                run = subprocess.run(["/bin/sh", str(self.entry), "power-action", action],
+                                     capture_output=True, env=dict(os.environ, HOME=str(self.home), PATH=str(self.bin)))
+                self.assertEqual((run.returncode, run.stdout.strip()), (0, expected))
+        run = subprocess.run(["/bin/sh", str(self.entry), "power-action", "--force"],
+                             capture_output=True, env=dict(os.environ, HOME=str(self.home), PATH=str(self.bin)))
+        self.assertEqual((run.returncode, run.stdout), (2, b""))
 
     def test_bar_toggle_only_targets_the_notebook_dock_on_current_display(self):
         self.stub("head", 'exec /usr/bin/head "$@"')
@@ -166,8 +166,8 @@ step_lab_i3_notebook
                          "xss-lock", "flameshot", "xterm", "chezmoi", "libnotify", "feh",
                          "zenity", "xorg-xrandr", "xorg-xrdb", "xorg-xsetroot", "xsettingsd", "polybar",
                          "ttf-jetbrains-mono-nerd", "xdotool", "powerline-fonts", "librsvg",
-                         "xdg-utils", "gtk3", "python-gobject", "pavucontrol", "network-manager-applet",
-                         "bluez-utils", "blueman", "polkit-gnome", "fastfetch", "chafa",
+                         "xdg-utils", "gtk3", "python-gobject", "pavucontrol", "network-manager-applet", "python-xlib", "arandr", "lxappearance",
+                         "bluez-utils", "blueman", "polkit-gnome", "fastfetch", "chafa", "playerctl",
                          "curl", "tar", "xz"} <= packages)
         self.assertFalse({"wireplumber", "pipewire", "picom", "sonicde"} & packages)
 

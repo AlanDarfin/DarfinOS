@@ -72,7 +72,7 @@ class CustomizationTests(unittest.TestCase):
             for name, (_, content) in plan.items():
                 if name.endswith(("fastfetch.jsonc", "config.jsonc")):
                     self.assertIn(b"38;2;170;204;51", content)
-                elif not name.endswith(("session.sh", "desktop.py", ".png")):
+                elif not name.endswith(("session.sh", "desktop.py", "media.py", "switcher.py", "settings.py", ".png")):
                     self.assertIn(b"#aacc33", content)
                 self.assertNotIn(b"{{ .accent }}", content)
                 if name != control.NOTEBOOK_I3_CONFIG:
@@ -96,6 +96,9 @@ class CustomizationTests(unittest.TestCase):
         self.assertIn(b'ACCENT = "#aacc33"', data)
         self.assertIn(b"#notebook-popup { background:", data)
         compile(data, "panel.py", "exec")
+        data = plan[f"{control.NOTEBOOK_STYLE_DIR}/windows.py"][1]
+        self.assertIn(b'ACCENT = "#aacc33"', data)
+        compile(data, "windows.py", "exec")
 
     def test_i3_notebook_preserves_existing_fastfetch_but_has_its_own_preset(self):
         global_config = self.home / ".config/fastfetch/config.jsonc"

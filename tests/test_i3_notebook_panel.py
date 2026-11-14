@@ -12,6 +12,17 @@ spec.loader.exec_module(panel)
 
 
 class NotebookPanelTests(unittest.TestCase):
+    def test_bluetooth_state_distinguishes_service_adapter_and_power(self):
+        for replies, expected in (
+            ([None], "inactive"),
+            (["active\n", None], "no-adapter"),
+            (["active\n", "Controller X\n\tPowered: yes\n"], "on"),
+            (["active\n", "Controller X\n\tPowered: no\n"], "off"),
+        ):
+            with self.subTest(expected=expected):
+                with patch.object(panel, "command", side_effect=replies):
+                    self.assertEqual(panel.bluetooth_state(), expected)
+
     def test_pipewire_reads_separate_devices_and_mute(self):
         with patch.object(panel, "command", side_effect=["Volume: 0.75\n", "Volume: 0.36 [MUTED]\n"]) as run:
             self.assertEqual(panel.audio_state("sink"), panel.Audio("wire", 75, False))

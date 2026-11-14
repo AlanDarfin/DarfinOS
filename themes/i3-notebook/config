@@ -10,6 +10,7 @@ smart_gaps on
 floating_modifier $mod
 focus_follows_mouse yes
 mouse_warping none
+show_marks no
 
 exec_always --no-startup-id sh "$profile/session.sh" desktop-start
 exec --no-startup-id sh "$profile/session.sh" start
@@ -26,6 +27,9 @@ bindsym $mod+F3 exec --no-startup-id sh "$profile/session.sh" audio
 bindsym $mod+F4 exec --no-startup-id sh "$profile/session.sh" fastfetch-window
 bindsym $mod+F5 exec --no-startup-id sh "$profile/session.sh" calendar
 bindsym $mod+F6 exec --no-startup-id sh "$profile/session.sh" system
+bindsym $mod+F7 exec --no-startup-id sh "$profile/session.sh" settings
+for_window [class="^DarfinOSNotebookSettings$"] floating enable, move position center
+for_window [class="(?i)^(Arandr|Lxappearance)$"] floating enable, move position center
 for_window [class="^DarfinOSNotebookPopup$"] floating enable, border pixel 0
 for_window [instance="^darfinos-(network|fastfetch)$"] floating enable, move position center
 for_window [class="^(Pavucontrol|Blueman-manager|Nm-connection-editor)$"] floating enable, move position center
@@ -34,10 +38,11 @@ bindsym $mod+Shift+Return exec --no-startup-id sh "$profile/session.sh" pocket
 bindsym --release $mod+grave exec --no-startup-id sh "$profile/session.sh" pocket
 for_window [instance="^darfinos-pocket$"] mark --add darfinos-pocket, floating enable, resize set 75 ppt 60 ppt, move position center, move scratchpad, scratchpad show
 
+bindsym $mod+q kill
 bindsym $mod+Shift+q kill
 bindsym $mod+Shift+c exec --no-startup-id sh "$profile/session.sh" reload
 bindsym $mod+Shift+r restart
-bindsym $mod+Shift+e exec i3-nagbar -t warning -m 'Encerrar a sessão i3?' -B 'Sair' 'i3-msg exit'
+bindsym $mod+Shift+e exec --no-startup-id sh "$profile/session.sh" system
 bindsym $mod+l exec --no-startup-id i3lock -c 171a1f
 bindsym --release Print exec --no-startup-id flameshot gui
 bindsym --release $mod+Shift+s exec --no-startup-id flameshot gui
@@ -48,6 +53,9 @@ bindsym XF86MonBrightnessUp exec --no-startup-id brightnessctl -c backlight set 
 bindsym XF86MonBrightnessDown exec --no-startup-id brightnessctl -c backlight --min-value=1 set 5%-
 bindsym XF86AudioRaiseVolume exec --no-startup-id sh "$profile/session.sh" volume-up
 bindsym XF86AudioLowerVolume exec --no-startup-id sh "$profile/session.sh" volume-down
+bindsym XF86AudioPlay exec --no-startup-id sh "$profile/session.sh" media play-pause
+bindsym XF86AudioNext exec --no-startup-id sh "$profile/session.sh" media next
+bindsym XF86AudioPrev exec --no-startup-id sh "$profile/session.sh" media previous
 bindsym XF86AudioMute exec --no-startup-id sh "$profile/session.sh" volume-mute
 bindsym XF86AudioMicMute exec --no-startup-id sh "$profile/session.sh" mic-mute
 bindsym $mod+n exec --no-startup-id dunstctl history-pop
@@ -68,6 +76,9 @@ bindsym $mod+w layout tabbed
 bindsym $mod+s layout stacking
 bindsym $mod+Ctrl+e layout toggle split
 bindsym $mod+f fullscreen toggle
+bindsym $mod+m exec --no-startup-id sh "$profile/session.sh" window-minimize
+bindsym $mod+Shift+m exec --no-startup-id sh "$profile/session.sh" window-restore
+bindsym $mod+Ctrl+m exec --no-startup-id sh "$profile/session.sh" window-maximize
 bindsym $mod+Shift+space floating toggle
 bindsym $mod+space focus mode_toggle
 
@@ -132,3 +143,6 @@ bar {
         inactive_workspace #171a1f #252930 #e5e7eb
     }
 }
+
+# Managed by Preferências do i3 Notebook and kept across Workshop updates.
+include "$HOME/.config/darfinos/i3-notebook/preferences.conf"

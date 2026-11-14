@@ -50,6 +50,12 @@ python3 darfinos_control.py style i3-notebook --apply --all-files
 | Super+Enter / Super+B / Super+E | Abre o terminal, o navegador padrão ou a pasta pessoal no gerenciador de arquivos padrão. |
 | Super+Shift+B | Mostra ou oculta a barra para liberar espaço na tela. |
 | Super+1–9 / Super+0 | Vai para as áreas 1–10. Com Shift, move a janela atual. |
+| Alt+Tab / Alt+Shift+Tab | Percorre as janelas recentes, inclusive as minimizadas. Solte Alt para trocar ou tecle Esc para cancelar. |
+| Super+Q | Fecha a janela atual. |
+| Super+Shift+Espaço | Alterna entre flutuante e lado a lado. |
+| Super+M / Super+Shift+M | Minimiza a janela atual ou restaura a última minimizada na área atual. |
+| Super+Ctrl+M / Super+F | Maximiza sem esconder a barra, ou alterna a tela cheia. |
+| Super+F7 | Preferências gráficas do i3 Notebook. |
 | Super+Ctrl+Tab | Volta à área anterior. |
 | Super+H / Super+V / Super+Ctrl+E | Divide na horizontal ou vertical, ou alterna a direção da divisão atual. |
 | Super+W / Super+S | Organiza as janelas em abas ou em pilha. |
@@ -63,13 +69,25 @@ A barra de 28 px usa JetBrainsMono Nerd Font Mono. Áreas de trabalho, atalhos e
 o título abreviado da janela ficam à esquerda. A bandeja e os indicadores
 ficam à direita, mantendo o layout compacto para 720p.
 
+A dock junto às áreas de trabalho mostra até cinco janelas da área atual.
+Clique em um ícone para focar a janela. O sublinhado indica a janela ativa,
+`+N` abre a lista de janelas e a seta com contador abre as minimizadas de
+todas as áreas. Clique direito no teclado da barra para abrir as preferências.
+
+Em **Super+F7**, ajuste os espaços, as margens, o foco por mouse e o layout
+padrão de novas áreas. As preferências são validadas pelo i3 antes de salvar
+e ficam num arquivo separado, preservado ao reaplicar a Oficina. O mesmo
+painel abre o ARandR para monitores e o LXAppearance para temas GTK. O
+LXAppearance usa as configurações GTK da conta, fora do perfil do i3.
+
 | Controle | Ação |
 | --- | --- |
 | Saída / microfone ou Super+F3 | Abre o pop-up com sliders independentes e ajuste imediato. Clique direito em cada ícone alterna o mute. A roda sobre a saída ajusta o volume. O botão do mixer abre o volume por app e a seleção de dispositivos. |
 | Wi-Fi / rede | Abre o controle para ligar ou desligar o Wi-Fi e os atalhos de conexão. O applet da bandeja lista redes próximas e permite conectar. O clique direito no indicador abre o editor de conexões salvas. |
-| Bluetooth | Abre o Blueman para ativar o adaptador, parear e gerenciar dispositivos. |
+| Bluetooth | Abre o pop-up mesmo com o serviço parado. Mostra se falta adaptador, permite iniciar o BlueZ ou ligar/desligar o rádio e abre o Blueman para parear. |
+| Player na dock | Anterior, reproduzir/pausar e próximo. Aparece ao começar a tocar em um app compatível com MPRIS, continua durante a pausa e some ao parar ou fechar o player. |
 | Relógio ou Super+F5 | Abre o calendário mensal, com navegação por mês e botão Hoje. |
-| Ícone de energia ou Super+F6 | Abre o menu com bloqueio, Não Perturbe, tela e papel de parede. Suspender, sair, reiniciar e desligar pedem confirmação. |
+| Ícone de energia ou Super+F6 | Abre o gerenciador de sessão. Encerrar, reiniciar, desligar e suspender ficam no topo e pedem confirmação no próprio painel. |
 | Super+F4 | Abre o Fastfetch do DarfinOS com o logo, no terminal Notebook. |
 
 **Super+Enter** e o terminal de bolso usam a mesma Nerd Font. A Oficina instala
