@@ -69,6 +69,10 @@ A barra de 28 px usa JetBrainsMono Nerd Font Mono. Áreas de trabalho, atalhos e
 o título abreviado da janela ficam à esquerda. A bandeja e os indicadores
 ficam à direita, mantendo o layout compacto para 720p.
 
+O tema é aplicado ao Thunar iniciado pelo Notebook. Se já houver um Thunar
+sem tema aberto nessa sessão, feche-o antes de abrir pela barra. O padrão
+dos outros ambientes fica como está.
+
 A dock junto às áreas de trabalho mostra até cinco janelas da área atual.
 Clique em um ícone para focar a janela. O sublinhado indica a janela ativa,
 `+N` abre a lista de janelas e a seta com contador abre as minimizadas de

@@ -187,12 +187,10 @@ case "${1:-}" in
     notebook-files)
         if command -v thunar >/dev/null; then
             export GTK_THEME=DarfinOS-Notebook
-            # GApplication supports multiple app IDs; keep a preexisting
-            # Thunar process from another desktop from taking this launch.
             if [ -r "$HOME/.themes/DarfinOS-Notebook/gtk-3.0/gtk.css" ]; then
-                exec thunar --gapplication-app-id=org.darfinos.NotebookFiles "$HOME"
+                exec thunar --window "$HOME"
             fi
-            GTK_THEME=Adwaita:dark exec thunar --gapplication-app-id=org.darfinos.NotebookFiles "$HOME"
+            GTK_THEME=Adwaita:dark exec thunar --window "$HOME"
         fi
         exec sh "$0" files
         ;;

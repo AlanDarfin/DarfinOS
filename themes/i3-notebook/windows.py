@@ -20,7 +20,7 @@ ICONS = (
     (("chromium", "chrome", "brave", "vivaldi"), "󰊯"),
     (("xterm", "alacritty", "kitty", "konsole", "terminal", "wezterm", "ghostty"), "󰆍"),
     (("obsidian", "libreoffice", "kate", "mousepad"), "󰈙"),
-    (("dolphin", "thunar", "nautilus", "pcmanfm", "notebookfiles"), "󰉋"),
+    (("dolphin", "thunar", "nautilus", "pcmanfm"), "󰉋"),
     (("steam", "lutris", "heroic"), "󰓓"),
     (("code", "codium", "zed", "jetbrains"), "󰨞"),
     (("vlc", "mpv", "spotify"), "󰎆"),

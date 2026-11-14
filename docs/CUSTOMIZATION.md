@@ -68,6 +68,10 @@ The 28 px top bar uses JetBrainsMono Nerd Font Mono and keeps the workspace
 switcher, launchers and a shortened window title on the left. On the right,
 the tray and status controls fit the 720p layout.
 
+The Thunar launcher only applies the Notebook theme to its own process. If an
+un-themed Thunar from an earlier launch is already running, close it before
+opening the file manager from the Notebook bar. Other desktop defaults stay unchanged.
+
 The task dock next to the workspace buttons lists up to five windows from the
 current workspace. Click an icon to focus the window. The active window is
 underlined, `+N` opens the window picker, and the arrow counter opens
