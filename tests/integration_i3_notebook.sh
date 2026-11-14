@@ -142,6 +142,7 @@ QT_THEME
 done
 
 # Use the actual preview-like widgets, not only a symbolic named color.
+if [[ -n "${DARFINOS_PREVIEW_DIR:-}" ]]; then mkdir -p "$DARFINOS_PREVIEW_DIR"; fi
 for gtk in 3 4; do
   sh "$profile/session.sh" themed python tests/i3_notebook_theme_fixture.py "$gtk" >"$tmp/gtk-$gtk.log" 2>&1 &
   status_pid=$!

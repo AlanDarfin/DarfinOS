@@ -80,6 +80,10 @@ ficam à direita, mantendo o layout compacto para 720p.
   Kvantum Manager se quiser o mesmo tema também nos outros ambientes, ou use
   `sh ~/.config/darfinos/i3-notebook/session.sh qt-themed aplicativo` para testar
   só nesse app com configuração separada.
+- **Dolphin e aplicativos KDE** recebem também o esquema de cores do
+  Notebook. Isso corrige seleção, foco e superfícies que o Kvantum sozinho
+  não controla. O lançador `sh ~/.config/darfinos/i3-notebook/session.sh dolphin`
+  abre uma instância nova no i3, sem sobrescrever o tema do SonicDE.
 - **Qt 4** tem uma paleta legada com o lançador opcional
   `sh ~/.config/darfinos/i3-notebook/session.sh qt4 aplicativo`. Ele usa uma
   configuração separada, portanto o app pode não ler suas preferências usuais.

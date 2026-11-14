@@ -79,6 +79,10 @@ the tray and status controls fit the 720p layout.
   other desktops, or try
   `sh ~/.config/darfinos/i3-notebook/session.sh qt-themed application` to
   launch just one app with a separate config.
+- **Dolphin and KDE applications** also receive the Notebook color scheme for
+  selections, focus and surfaces that Kvantum alone does not control.
+  `sh ~/.config/darfinos/i3-notebook/session.sh dolphin` opens a fresh instance
+  in i3 without overwriting the SonicDE theme.
 - **Qt 4** has an optional legacy palette through
   `sh ~/.config/darfinos/i3-notebook/session.sh qt4 application`. This uses a
   separate config directory and does not install Qt 4.
