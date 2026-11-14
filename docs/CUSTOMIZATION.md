@@ -68,9 +68,25 @@ The 28 px top bar uses JetBrainsMono Nerd Font Mono and keeps the workspace
 switcher, launchers and a shortened window title on the left. On the right,
 the tray and status controls fit the 720p layout.
 
-The Thunar launcher only applies the Notebook theme to its own process. If an
-un-themed Thunar from an earlier launch is already running, close it before
-opening the file manager from the Notebook bar. Other desktop defaults stay unchanged.
+#### Application themes
+
+- **GTK 2, 3 and 4** have toolkit-specific graphite-and-gold styles. The
+  Notebook session selects them via XSETTINGS and the profile's shortcuts,
+  launcher and terminal. Legacy GTK 2 apps still require an existing GTK 2 runtime.
+- **Qt 5 and 6** use Kvantum from Labs with the Workshop accent. Existing user
+  Kvantum preferences are not overwritten and take priority. Select
+  **DarfinOS-Notebook** in Kvantum Manager if you want the same theme in your
+  other desktops, or try
+  `sh ~/.config/darfinos/i3-notebook/session.sh qt-themed application` to
+  launch just one app with a separate config.
+- **Qt 4** has an optional legacy palette through
+  `sh ~/.config/darfinos/i3-notebook/session.sh qt4 application`. This uses a
+  separate config directory and does not install Qt 4.
+
+GTK 1, Qt 1–3 and TQt do not receive the theme automatically. Apps with
+their own appearance, libadwaita, Qt Quick and sandboxed apps may ignore
+parts of the palette. No SonicDE or Trinity settings are edited. Restart open
+applications to pick up the change.
 
 The task dock next to the workspace buttons lists up to five windows from the
 current workspace. Click an icon to focus the window. The active window is

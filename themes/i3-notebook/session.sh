@@ -3,6 +3,30 @@
 set -eu
 profile_dir="$HOME/.config/darfinos/i3-notebook"
 
+# Scoped to the Notebook launcher tree (Rofi, terminal, dock and shortcuts).
+# Do not publish these variables to systemd or the session D-Bus.
+theme_dir="$HOME/.themes/DarfinOS-Notebook"
+appearance_dir="$profile_dir/appearance"
+if [ -r "$theme_dir/gtk-3.0/gtk.css" ]; then
+    export GTK_THEME=DarfinOS-Notebook
+fi
+if [ -r "$theme_dir/gtk-2.0/gtkrc" ]; then
+    export GTK2_RC_FILES="$theme_dir/gtk-2.0/gtkrc"
+fi
+if [ -r "$appearance_dir/Kvantum/kvantum.kvconfig" ]; then
+    # Qt needs a profile-specific Kvantum selector even when SonicDE has
+    # a different user selector. Qt's other settings still use normal XDG.
+    case ":${XDG_CONFIG_DIRS:-/etc/xdg}:" in
+        *":$appearance_dir:"*) ;;
+        *) export XDG_CONFIG_DIRS="$appearance_dir:${XDG_CONFIG_DIRS:-/etc/xdg}" ;;
+    esac
+    if [ -r /usr/lib/qt6/plugins/styles/libkvantum.so ] ||
+       [ -r /usr/lib/qt/plugins/styles/libkvantum.so ]; then
+        export QT_STYLE_OVERRIDE=kvantum
+        export QT_QPA_PLATFORMTHEME=gtk3
+    fi
+fi
+
 # Look up only the named Notebook dock on this X display, never broadcast IPC.
 bar_pid() {
     command -v xdotool >/dev/null || return 1
@@ -116,6 +140,10 @@ case "${1:-}" in
         if command -v "$app" >/dev/null; then exec "$app"; fi
         notebook_notice 'Atualize o i3 Notebook nos Labs para instalar esta ferramenta.'
         ;;
+    screenshot)
+        shift
+        exec flameshot "$@"
+        ;;
     mixer)
         exec pavucontrol
         ;;
@@ -186,13 +214,26 @@ case "${1:-}" in
         ;;
     notebook-files)
         if command -v thunar >/dev/null; then
-            export GTK_THEME=DarfinOS-Notebook
-            if [ -r "$HOME/.themes/DarfinOS-Notebook/gtk-3.0/gtk.css" ]; then
-                exec thunar --window "$HOME"
-            fi
-            GTK_THEME=Adwaita:dark exec thunar --window "$HOME"
+            GTK_THEME="${GTK_THEME:-Adwaita:dark}" exec thunar --window "$HOME"
         fi
         exec sh "$0" files
+        ;;
+    qt4|qt-themed)
+        mode=$1
+        shift
+        [ "$#" -gt 0 ] || exit 2
+        # Explicit fallbacks when the user's existing Qt config takes priority.
+        # The application sees a separate config directory in these modes.
+        export XDG_CONFIG_HOME="$appearance_dir"
+        if [ "$mode" = qt4 ]; then
+            unset QT_STYLE_OVERRIDE QT_QPA_PLATFORMTHEME
+        fi
+        exec "$@"
+        ;;
+    themed)
+        shift
+        [ "$#" -gt 0 ] || exit 2
+        exec "$@"
         ;;
     files)
         app=$(xdg-mime query default inode/directory 2>/dev/null) || app=

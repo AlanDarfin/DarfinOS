@@ -69,9 +69,26 @@ A barra de 28 px usa JetBrainsMono Nerd Font Mono. Áreas de trabalho, atalhos e
 o título abreviado da janela ficam à esquerda. A bandeja e os indicadores
 ficam à direita, mantendo o layout compacto para 720p.
 
-O tema é aplicado ao Thunar iniciado pelo Notebook. Se já houver um Thunar
-sem tema aberto nessa sessão, feche-o antes de abrir pela barra. O padrão
-dos outros ambientes fica como está.
+#### Tema de aplicativos
+
+- **GTK 2, 3 e 4** têm arquivos próprios do tema grafite/dourado. O i3 Notebook
+  seleciona o tema via XSETTINGS e nos atalhos, Rofi e terminal do perfil. Apps
+  GTK 2 precisam já ter o runtime antigo instalado.
+- **Qt 5 e 6** usam o Kvantum instalado pelos Labs, com a mesma cor de destaque
+  da Oficina. A configuração pessoal do Kvantum não é modificada e tem
+  precedência se já existir. Nesse caso, selecione **DarfinOS-Notebook** no
+  Kvantum Manager se quiser o mesmo tema também nos outros ambientes, ou use
+  `sh ~/.config/darfinos/i3-notebook/session.sh qt-themed aplicativo` para testar
+  só nesse app com configuração separada.
+- **Qt 4** tem uma paleta legada com o lançador opcional
+  `sh ~/.config/darfinos/i3-notebook/session.sh qt4 aplicativo`. Ele usa uma
+  configuração separada, portanto o app pode não ler suas preferências usuais.
+  O perfil não instala Qt 4.
+
+GTK 1, Qt 1–3 e TQt não recebem esse tema automaticamente. Apps com visual
+próprio, libadwaita, Qt Quick ou em sandbox podem ignorar partes da paleta. O
+perfil não muda configurações gerais do SonicDE ou Trinity. Reabra os apps
+para ver o tema, inclusive se o Thunar já estava rodando antes da atualização.
 
 A dock junto às áreas de trabalho mostra até cinco janelas da área atual.
 Clique em um ícone para focar a janela. O sublinhado indica a janela ativa,

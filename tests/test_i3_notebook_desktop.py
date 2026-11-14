@@ -216,6 +216,18 @@ HDMI-1 connected 1920x1080+1440+0
                 load.assert_not_called()
                 self.assertEqual(desktop.read_settings()["wallpaper"], "/saved.png")
 
+    def test_theme_does_not_require_the_optional_bibata_cursor(self):
+        theme = self.home / ".themes/DarfinOS-Notebook/gtk-3.0/gtk.css"
+        theme.parent.mkdir(parents=True)
+        theme.touch()
+        with patch.object(desktop, "cursor_preference", return_value=None), \
+             patch.object(desktop.shutil, "which", return_value=True), \
+             patch.object(desktop, "run", return_value=result(1)), \
+             patch.object(desktop.subprocess, "Popen") as start:
+            start.return_value.pid = 1122
+            desktop.apply_cursor()
+        self.assertIn('Net/ThemeName "DarfinOS-Notebook"', (self.profile / "cursor.xsettings").read_text())
+
     def test_cursor_reload_updates_our_xsettings_provider_without_replacing_others(self):
         pointer = self.home / "pointer"
         pointer.touch()

@@ -141,16 +141,16 @@ def cursor_preference():
 
 def apply_cursor():
     preference = cursor_preference()
-    if not preference:
-        return
-    theme, size, path = preference
-    if shutil.which("xrdb"):
-        run("xrdb", "-nocpp", "-merge", input=f"Xcursor.theme: {theme}\nXcursor.size: {size}\n")
-    if shutil.which("xsetroot"):
-        run("xsetroot", "-xcf", str(path), str(size))
+    if preference:
+        theme, size, path = preference
+        if shutil.which("xrdb"):
+            run("xrdb", "-nocpp", "-merge", input=f"Xcursor.theme: {theme}\nXcursor.size: {size}\n")
+        if shutil.which("xsetroot"):
+            run("xsetroot", "-xcf", str(path), str(size))
     # GTK can read XSETTINGS instead of Xresources. Reload our own provider,
     # but never replace the provider belonging to another desktop.
-    if shutil.which("xsettingsd") and shutil.which("dump_xsettings"):
+    theme_installed = (HOME / ".themes/DarfinOS-Notebook/gtk-3.0/gtk.css").is_file()
+    if (theme_installed or preference) and shutil.which("xsettingsd") and shutil.which("dump_xsettings"):
         config = PROFILE / "cursor.xsettings"
         pid_file = PROFILE / "cursor.xsettings.pid"
         own_pid = None
@@ -165,7 +165,10 @@ def apply_cursor():
         if own_pid is None and run("dump_xsettings", capture_output=True).returncode == 0:
             return
         with tempfile.NamedTemporaryFile(mode="w", dir=PROFILE, prefix=".cursor-", delete=False) as temp:
-            temp.write(f'Gtk/CursorThemeName "{theme}"\nGtk/CursorThemeSize {size}\n')
+            if theme_installed:
+                temp.write('Net/ThemeName "DarfinOS-Notebook"\nNet/IconThemeName "Adwaita"\n')
+            if preference:
+                temp.write(f'Gtk/CursorThemeName "{theme}"\nGtk/CursorThemeSize {size}\n')
         # xsettingsd reads this file at startup; keep it until the session ends or the next run.
         try:
             os.replace(temp.name, config)

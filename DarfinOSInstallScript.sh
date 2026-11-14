@@ -626,7 +626,7 @@ module_probe() {
     lab_etckeeper) required=(etckeeper git) ;;
     lab_rustic) required=(rustic) ;;
     lab_kvantum) required=(kvantum) ;;
-    lab_i3_notebook) required=(i3-wm i3status i3lock dmenu xorg-xinit chezmoi rofi dunst i3status-rust brightnessctl xss-lock flameshot xterm ttf-dejavu libpulse libnotify feh zenity xorg-xrandr xorg-xrdb xorg-xsetroot xsettingsd polybar xdotool ttf-jetbrains-mono-nerd powerline-fonts librsvg xdg-utils gtk3 python-gobject pavucontrol network-manager-applet bluez-utils blueman polkit-gnome fastfetch chafa python-xlib playerctl arandr lxappearance thunar gvfs adwaita-icon-theme curl tar xz) ;;
+    lab_i3_notebook) required=(i3-wm i3status i3lock dmenu xorg-xinit chezmoi rofi dunst i3status-rust brightnessctl xss-lock flameshot xterm ttf-dejavu libpulse libnotify feh zenity xorg-xrandr xorg-xrdb xorg-xsetroot xsettingsd polybar xdotool ttf-jetbrains-mono-nerd powerline-fonts librsvg xdg-utils gtk3 python-gobject pavucontrol network-manager-applet bluez-utils blueman polkit-gnome fastfetch chafa python-xlib playerctl arandr lxappearance thunar gvfs adwaita-icon-theme kvantum kvantum-qt5 curl tar xz) ;;
     lab_pkgsrc)
       if [[ -x "$HOME/.local/share/darfinos/pkgsrc-prefix/bin/bmake" && -x "$HOME/.local/share/darfinos/pkgsrc-prefix/sbin/pkg_info" && -d "$HOME/.local/share/darfinos/pkgsrc-tree/pkgtools" ]]; then
         MODULE_STATUS=installed; MODULE_REASON="Bootstrap pkgsrc e árvore de pacotes encontrados."
@@ -1878,7 +1878,7 @@ step_lab_i3_notebook() {
   install_pkgs i3-wm i3status i3lock dmenu xorg-xinit chezmoi rofi dunst i3status-rust \
     brightnessctl xss-lock flameshot xterm ttf-dejavu libpulse libnotify feh zenity xorg-xrandr xorg-xrdb xorg-xsetroot xsettingsd \
     polybar xdotool ttf-jetbrains-mono-nerd powerline-fonts librsvg xdg-utils gtk3 python-gobject \
-    pavucontrol network-manager-applet bluez-utils blueman polkit-gnome fastfetch chafa python-xlib playerctl arandr lxappearance thunar gvfs adwaita-icon-theme curl tar xz || return 1
+    pavucontrol network-manager-applet bluez-utils blueman polkit-gnome fastfetch chafa python-xlib playerctl arandr lxappearance thunar gvfs adwaita-icon-theme kvantum kvantum-qt5 curl tar xz || return 1
   notebook_install_cursor || return 1
   info "Abra a Oficina de Temas (W) e selecione i3-notebook. Entre novamente na sessão i3 para ativar."
   info "O perfil usa o áudio existente (wpctl ou pactl); não troca o servidor de áudio."

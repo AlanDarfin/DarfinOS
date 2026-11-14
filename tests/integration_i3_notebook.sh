@@ -107,6 +107,39 @@ xprop -id "$bar_window" _NET_WM_WINDOW_TYPE | grep -Fq _NET_WM_WINDOW_TYPE_DOCK
 cursor_loaded() { xrdb -query | grep -q 'Xcursor.theme:.*Bibata-NotebookTest'; }
 await_result cursor_loaded
 
+# Test both GTK versions installed by the runner and the same Qt style
+# through two different Qt ABIs. The tests share the real Notebook environment.
+dump_xsettings | grep -F 'Net/ThemeName "DarfinOS-Notebook"'
+for gtk in 3 4; do
+  sh "$profile/session.sh" themed python - "$gtk" <<'GTK_THEME'
+import gi
+import sys
+major = int(sys.argv[1])
+gi.require_version("Gtk", f"{major}.0")
+from gi.repository import Gtk
+Gtk.init() if major == 4 else Gtk.init([])
+window = Gtk.Window()
+assert Gtk.Settings.get_default().get_property("gtk-theme-name") == "DarfinOS-Notebook"
+if major == 3:
+    valid, color = window.get_style_context().lookup_color("theme_selected_bg_color")
+    assert valid and tuple(round(component * 255) for component in (color.red, color.green, color.blue)) == (255, 203, 46)
+window.destroy()
+GTK_THEME
+done
+for qt in 5 6; do
+  sh "$profile/session.sh" themed python - "$qt" <<'QT_THEME'
+import importlib
+import sys
+qt = importlib.import_module(f"PyQt{sys.argv[1]}.QtWidgets")
+app = qt.QApplication(["notebook-theme-probe"])
+window = qt.QWidget()
+assert app.style().objectName().lower() == "kvantum", app.style().objectName()
+palette = app.style().standardPalette()
+assert palette.highlight().color().name() == "#ffcb2e", palette.highlight().color().name()
+assert palette.window().color().name() == "#20242b", palette.window().color().name()
+QT_THEME
+done
+
 # Default wallpaper is applied at login, before any user image is selected.
 wallpaper_loaded() { xprop -root _XROOTPMAP_ID | grep -q 'pixmap id #'; }
 await_result wallpaper_loaded
@@ -492,4 +525,4 @@ dunstctl close-all
 dunstctl set-paused true
 [[ "$(dunstctl is-paused)" == true ]]
 dunstctl set-paused false
-echo 'i3 Notebook: X11 720p, Polybar geometry and toggling, cursor, wallpaper, Rofi click, audio sliders, calendar, session, Fastfetch, XDG launchers, workspace keys, Alt+Tab, media dock, themed Thunar, contained Bluetooth popup, window dock, minimize/maximize, graphical preferences, scratchpad and Dunst verified.'
+echo 'i3 Notebook: X11 720p, Polybar geometry and toggling, cursor, wallpaper, Rofi click, audio sliders, calendar, session, Fastfetch, XDG launchers, workspace keys, Alt+Tab, media dock, GTK3/GTK4, Qt5/Qt6, themed Thunar, contained Bluetooth popup, window dock, minimize/maximize, graphical preferences, scratchpad and Dunst verified.'

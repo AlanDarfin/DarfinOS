@@ -167,7 +167,7 @@ step_lab_i3_notebook
                          "zenity", "xorg-xrandr", "xorg-xrdb", "xorg-xsetroot", "xsettingsd", "polybar",
                          "ttf-jetbrains-mono-nerd", "xdotool", "powerline-fonts", "librsvg",
                          "xdg-utils", "gtk3", "python-gobject", "pavucontrol", "network-manager-applet", "python-xlib", "arandr", "lxappearance",
-                         "bluez-utils", "blueman", "polkit-gnome", "fastfetch", "chafa", "playerctl", "thunar", "gvfs", "adwaita-icon-theme",
+                         "bluez-utils", "blueman", "polkit-gnome", "fastfetch", "chafa", "playerctl", "thunar", "gvfs", "adwaita-icon-theme", "kvantum", "kvantum-qt5",
                          "curl", "tar", "xz"} <= packages)
         self.assertFalse({"wireplumber", "pipewire", "picom", "sonicde"} & packages)
 
