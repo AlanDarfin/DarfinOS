@@ -100,7 +100,7 @@ case "${1:-}" in
         fi
         exec xss-lock --transfer-sleep-lock -- i3lock --nofork -c 171a1f
         ;;
-    audio|calendar|system|network|sink|source)
+    audio|calendar|system|network|bluetooth|sink|source)
         exec /usr/bin/python3 "$profile_dir/panel.py" "$1"
         ;;
     window-*)
@@ -144,18 +144,12 @@ case "${1:-}" in
             fi
         fi
         ;;
-    bluetooth)
-        if [ "$(systemctl is-active bluetooth.service 2>/dev/null)" != active ]; then
-            notebook_notice 'Se houver adaptador Bluetooth, habilite o serviço pela etapa Bluetooth do DarfinOS.'
-        fi
-        exec blueman-manager
-        ;;
     bluetooth-status)
-        case "$(LC_ALL=C timeout 1 bluetoothctl show 2>/dev/null)" in
-            *'Powered: yes'*) printf '󰂯 BT\n' ;;
-            *'Powered: no'*) printf '󰂲 Off\n' ;;
-            *) printf '󰂲 —\n' ;;
-        esac
+        exec /usr/bin/python3 "$profile_dir/panel.py" bluetooth-status
+        ;;
+    media)
+        shift
+        exec /usr/bin/python3 "$profile_dir/media.py" "$@"
         ;;
     terminal)
         notebook_terminal darfinos-terminal 'DarfinOS · Terminal'
@@ -174,17 +168,13 @@ case "${1:-}" in
         exec i3lock -c 171a1f
         ;;
     power)
-        menu() {
-            rofi -no-config -theme "$profile_dir/rofi.rasi" -dmenu -no-custom -p "$1"
-        }
-        choice=$(printf '%s\n' 'Suspender' 'Sair da sessão' 'Reiniciar' 'Desligar' | menu Sessão) || exit 0
-        confirm=$(printf '%s\n' 'Cancelar' "$choice" | menu 'Confirmar ação') || exit 0
-        [ "$confirm" = "$choice" ] || exit 0
-        case "$choice" in
-            Suspender) exec systemctl suspend ;;
-            'Sair da sessão') exec i3-msg exit ;;
-            Reiniciar) exec systemctl reboot ;;
-            Desligar) exec systemctl poweroff ;;
+        exec sh "$0" system
+        ;;
+    power-action)
+        case "${2:-}" in
+            suspend|reboot|poweroff) exec systemctl "$2" ;;
+            logout) exec i3-msg exit ;;
+            *) exit 2 ;;
         esac
         ;;
     browser)
@@ -231,7 +221,7 @@ case "${1:-}" in
             'Super+Ctrl+Tab · Voltar à área anterior' \
             'Super+setas · Focar outra janela' \
             'Super+Shift+setas · Mover janela' \
-            'Super+Shift+Q · Fechar janela' \
+            'Super+Q · Fechar janela' \
             'Super+F · Tela cheia' \
             'Super+M / Super+Shift+M · Minimizar / Restaurar última janela' \
             'Super+Ctrl+M · Maximizar ou restaurar sem esconder a barra' \
@@ -244,7 +234,7 @@ case "${1:-}" in
             'Super+F3 · Controles de áudio e microfone' \
             'Super+F4 · Fastfetch do DarfinOS' \
             'Super+F5 · Calendário' \
-            'Super+F6 · Menu de sessão' \
+            'Super+F6 · Encerrar sessão, suspender, reiniciar e desligar' \
             'Super+F7 · Preferências gráficas do i3' \
             'Super+Shift+P · Escolher papel de parede' \
             'Super+Shift+B · Mostrar ou ocultar a barra' \

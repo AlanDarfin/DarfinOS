@@ -23,9 +23,9 @@ class Audio:
     muted: bool
 
 
-def command(*args):
+def command(*args, timeout=0.8):
     try:
-        result = subprocess.run(args, capture_output=True, text=True, timeout=0.8,
+        result = subprocess.run(args, capture_output=True, text=True, timeout=timeout,
                                 env={**os.environ, "LC_ALL": "C"})
         return result.stdout if result.returncode == 0 else None
     except (OSError, subprocess.TimeoutExpired):
@@ -65,6 +65,50 @@ def audio_label(kind):
     return f"{off if state.muted else on} {'Mudo' if state.muted else str(state.volume) + '%'}"
 
 
+def bluetooth_state():
+    if (command("systemctl", "is-active", "bluetooth.service") or "").strip() != "active":
+        return "inactive"
+    adapter = command("bluetoothctl", "show", timeout=1.5)
+    if adapter is None or not re.search(r"^Controller ", adapter, re.M):
+        return "no-adapter"
+    if re.search(r"^\s+Powered: yes\s*$", adapter, re.M):
+        return "on"
+    if re.search(r"^\s+Powered: no\s*$", adapter, re.M):
+        return "off"
+    return "unknown"
+
+
+def power_controls(Gtk, container, button, request):
+    confirmation = Gtk.Box(spacing=8)
+    confirm = button("Confirmar", lambda: request(pending), confirmation)
+    cancel = button("Cancelar", lambda: choose(None), confirmation)
+    description = Gtk.Label(xalign=0, wrap=True, max_width_chars=40)
+    pending = None
+    names = {"logout": "Encerrar sessão", "reboot": "Reiniciar",
+             "poweroff": "Desligar", "suspend": "Suspender"}
+
+    def choose(action):
+        nonlocal pending
+        pending = action
+        description.set_text(f"{names[action]} agora?" if action else "")
+        description.set_visible(action is not None)
+        confirmation.set_visible(action is not None)
+        if action:
+            # Pressing Enter twice on an action should not commit immediately.
+            cancel.grab_focus()
+
+    actions = Gtk.Box(spacing=6, homogeneous=True)
+    for action, name in names.items():
+        button(name, lambda a=action: choose(a), actions)
+    confirmation.set_no_show_all(True)
+    description.set_no_show_all(True)
+    confirm.show()
+    cancel.show()
+    container.add(actions)
+    container.add(description)
+    container.add(confirmation)
+
+
 def popup(page):
     try:
         import gi
@@ -95,7 +139,7 @@ def popup(page):
     """.replace("@ACCENT@", ACCENT).encode())
     Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(), style, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
     window = Gtk.Window(title={"audio": "Áudio", "calendar": "Calendário",
-                               "network": "Wi-Fi e rede", "system": "Sessão"}[page])
+                               "network": "Wi-Fi e rede", "bluetooth": "Bluetooth", "system": "Sessão"}[page])
     window.set_name("notebook-popup")
     window.set_wmclass("darfinos-notebook-popup", "DarfinOSNotebookPopup")
     window.set_decorated(False)
@@ -302,16 +346,90 @@ def popup(page):
         editor.set_sensitive(False)
         status.set_text("Verificando a rede…")
         refresh_network()
-    else:
-        for label, action in (("Wi-Fi e rede", "network"), ("Dispositivos Bluetooth", "bluetooth"),
-                              ("Sobre o sistema · Fastfetch", "fastfetch-window"),
-                              ("Tela e resolução", "display"), ("Papel de parede", "wallpaper"),
-                              ("Preferências do i3", "settings"),
-                              ("Não perturbe · alternar", "dnd"), ("Bloquear tela", "lock")):
-            button(label, lambda a=action: launch("sh", str(PROFILE / "session.sh"), a))
+    elif page == "bluetooth":
+        status = Gtk.Label(label="Verificando o Bluetooth…", xalign=0, wrap=True, max_width_chars=42)
+        box.add(status)
+        worker = ThreadPoolExecutor(max_workers=1)
+        state = None
+        messages = {
+            "inactive": "Serviço Bluetooth (BlueZ) parado. Inicie o serviço para procurar adaptadores.",
+            "no-adapter": "Nenhum adaptador Bluetooth detectado. Confira o modo avião, o bloqueio físico ou o adaptador USB.",
+            "off": "Adaptador encontrado. Bluetooth desligado.",
+            "on": "Bluetooth ligado. Abra os dispositivos para conectar ou parear.",
+            "unknown": "Adaptador encontrado, mas não consegui ler se ele está ligado. Tente o gerenciador.",
+        }
 
-        # Confirmation happens in a separate themed menu, so focus-out still works here.
-        button("Suspender, sair ou desligar…", lambda: launch("sh", str(PROFILE / "session.sh"), "power"))
+        def paint(result, failure):
+            nonlocal state
+            state = result
+            status.set_text(failure or messages[state])
+            toggle.set_label({"inactive": "Iniciar serviço Bluetooth", "on": "Desligar Bluetooth"}.get(
+                state, "Ligar Bluetooth"))
+            toggle.set_sensitive(state in ("inactive", "on", "off"))
+            manager.set_sensitive(state in ("on", "off", "unknown"))
+            refresh.set_sensitive(True)
+            return False
+
+        def probe(action=None):
+            for control in (toggle, manager, refresh):
+                control.set_sensitive(False)
+
+            def apply():
+                failure = None
+                if action == "inactive":
+                    if command("systemctl", "start", "bluetooth.service", timeout=25) is None:
+                        failure = "Não consegui iniciar o BlueZ. Confira a permissão ou rode a etapa Bluetooth do DarfinOS."
+                elif action in ("on", "off"):
+                    power = "off" if action == "on" else "on"
+                    if command("bluetoothctl", "power", power, timeout=3) is None:
+                        failure = "Não consegui mudar o estado do Bluetooth. Confira o modo avião ou um bloqueio (rfkill)."
+                return bluetooth_state(), failure
+
+            future = worker.submit(apply)
+            future.add_done_callback(lambda f: GLib.idle_add(paint, *f.result()))
+
+        def open_manager():
+            try:
+                proc = subprocess.Popen(["blueman-manager"], stdin=subprocess.DEVNULL)
+            except OSError:
+                status.set_text("Blueman não encontrado. Rode Labs → i3 Notebook para instalar.")
+                return
+
+            def opened():
+                code = proc.poll()
+                if code is None or code == 0:
+                    window.destroy()
+                else:
+                    status.set_text("O Blueman não abriu. Verifique o adaptador e tente de novo.")
+                return False
+
+            GLib.timeout_add(650, opened)
+
+        toggle = button("Iniciar serviço Bluetooth", lambda: probe(state))
+        manager = button("Abrir dispositivos · Blueman", open_manager)
+        refresh = button("Verificar novamente", probe)
+        probe()
+    else:
+        def request_power(action):
+            if action is None:
+                return
+            window.destroy()
+            try:
+                result = subprocess.run(["sh", str(PROFILE / "session.sh"), "power-action", action],
+                                        capture_output=True, text=True, timeout=30)
+                if not result.returncode:
+                    return
+            except (OSError, subprocess.TimeoutExpired):
+                pass
+            command("notify-send", "DarfinOS · Sessão", "Não foi possível executar a ação. Confira a sessão e as permissões.")
+
+        power_controls(Gtk, box, button, request_power)
+        box.add(Gtk.Separator())
+        for label, action in (("Bloquear tela", "lock"), ("Não perturbe · alternar", "dnd"),
+                              ("Wi-Fi e rede", "network"), ("Dispositivos Bluetooth", "bluetooth"),
+                              ("Tela e resolução", "display"), ("Papel de parede", "wallpaper"),
+                              ("Preferências do i3", "settings"), ("Sobre o sistema · Fastfetch", "fastfetch-window")):
+            button(label, lambda a=action: launch("sh", str(PROFILE / "session.sh"), a))
 
     window.connect("focus-out-event", lambda *_: window.destroy() or False)
     window.show_all()
@@ -331,11 +449,15 @@ def main():
     if action in ("sink", "source"):
         print(audio_label(action))
         return 0
-    if action not in ("audio", "calendar", "network", "system"):
+    if action == "bluetooth-status":
+        state = bluetooth_state()
+        print({"on": "󰂯 BT", "off": "󰂲 Off"}.get(state, "󰂲 —"))
+        return 0
+    if action not in ("audio", "calendar", "network", "bluetooth", "system"):
         return 2
     if runtime := os.environ.get("XDG_RUNTIME_DIR"):
         display = re.sub(r"[^A-Za-z0-9_.-]", "_", os.environ.get("DISPLAY", ""))
-        with (Path(runtime) / f"darfinos-i3-popup-{display}.lock").open("w") as lock:
+        with (Path(runtime) / f"darfinos-i3-popup-{display}-{action}.lock").open("w") as lock:
             try:
                 fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError:

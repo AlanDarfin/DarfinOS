@@ -50,6 +50,7 @@ python3 darfinos_control.py style i3-notebook --apply --all-files
 | Super+Shift+B | Show or hide the bar to free up screen space. |
 | Super+1–9 / Super+0 | Switch to workspaces 1–10. Add Shift to move the current window. |
 | Alt+Tab / Alt+Shift+Tab | Cycle through recent windows, including minimized ones. Release Alt to select or press Esc to cancel. |
+| Super+Q | Close the focused window. |
 | Super+Shift+Space | Toggle floating or tiling. |
 | Super+M / Super+Shift+M | Minimize the focused window or restore the most recently minimized window to the current workspace. |
 | Super+Ctrl+M / Super+F | Maximize without hiding the bar, or toggle fullscreen. |
@@ -83,9 +84,10 @@ LXAppearance edits the account's GTK settings, outside of the i3 profile.
 | --- | --- |
 | Output / microphone or Super+F3 | Open the audio popup with independent live sliders and mute buttons. Right-click each icon to toggle its mute. Scroll over output to change volume. The mixer button opens per-app audio and device selection. |
 | Wi-Fi / network | Open the Wi-Fi toggle and connection shortcuts. The tray applet lists nearby networks and supports joining them. Right-click the bar's network module to edit saved connections. |
-| Bluetooth | Open Blueman to enable the adapter, pair and manage devices. |
+| Bluetooth | Open controls even if BlueZ is stopped. Start the service, check adapter availability, toggle Bluetooth, or open Blueman to pair devices. |
+| Dock player | Previous, play/pause and next. Appears when an MPRIS app starts playback, stays during pause, and hides when playback stops or the player closes. |
 | Clock or Super+F5 | Open the monthly calendar, with month navigation and a Today button. |
-| Power icon or Super+F6 | Open session controls, including lock, Do Not Disturb, display and wallpaper. Suspend, log out, restart and shut down require confirmation. |
+| Power icon or Super+F6 | Open the session manager. Log out, restart, shut down and suspend are shown first and require confirmation in the popup. |
 | Super+F4 | Open the DarfinOS Fastfetch preset, including its logo, in the Notebook terminal. |
 
 **Super+Enter** and the pocket terminal use the same Nerd Font. The Workshop

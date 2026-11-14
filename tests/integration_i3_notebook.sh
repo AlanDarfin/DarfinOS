@@ -34,17 +34,35 @@ case "$1" in
   *) exit 1 ;;
 esac
 AUDIO
+# No Bluetooth adapter or real power changes are needed for the smoke test.
+cat > "$tmp/bin/systemctl" <<'SYSTEMCTL'
+#!/bin/sh
+case "$*" in
+  'is-active bluetooth.service')
+    if [ -f "$DARFINOS_TEST_AUDIO/bt-enabled" ]; then echo active; else echo inactive; exit 3; fi ;;
+  'start bluetooth.service') touch "$DARFINOS_TEST_AUDIO/bt-enabled" ;;
+  reboot|poweroff|suspend) printf '%s\n' "$1" > "$DARFINOS_TEST_AUDIO/power-event" ;;
+  *) exit 1 ;;
+esac
+SYSTEMCTL
+cat > "$tmp/bin/bluetoothctl" <<'BLUEZ'
+#!/bin/sh
+[ "$1" = show ] || exit 1
+printf 'Controller TEST\n\tPowered: no\n'
+BLUEZ
+chmod +x "$tmp/bin/systemctl" "$tmp/bin/bluetoothctl"
 chmod +x "$tmp/bin/wpctl"
 mkdir -m 700 "$HOME" "$XDG_RUNTIME_DIR"
 mkdir -p "$XDG_CONFIG_HOME" "$HOME/.icons/Bibata-NotebookTest/cursors"
 cp /usr/share/icons/Adwaita/cursors/left_ptr "$HOME/.icons/Bibata-NotebookTest/cursors/left_ptr"
 printf "[Mouse]\ncursorTheme=Bibata-NotebookTest\ncursorSize=32\n" >"$XDG_CONFIG_HOME/kcminputrc"
-x_pid= i3_pid= status_pid=
+x_pid= i3_pid= status_pid= mpris_pid=
 cleanup() {
   local status=$?
   if (( status )); then
     tail -n 80 "$tmp/i3.log" "$tmp/xvfb.log" "$tmp/polybar.log" >&2 || :
   fi
+  [[ -z "$mpris_pid" ]] || kill "$mpris_pid" 2>/dev/null || :
   [[ -z "$status_pid" ]] || kill "$status_pid" 2>/dev/null || :
   [[ -z "$i3_pid" ]] || kill "$i3_pid" 2>/dev/null || :
   [[ -z "$x_pid" ]] || kill "$x_pid" 2>/dev/null || :
@@ -115,6 +133,32 @@ if grep -Eq 'Ignoring unmatched character|Unrecognized tag|Unclosed action' "$tm
   cat "$tmp/i3.log" >&2
   exit 1
 fi
+! grep -Fq 'media play-pause' "$tmp/polybar.log"
+printf 'Playing' > "$tmp/player-state"
+python tests/i3_notebook_mpris_fixture.py "$tmp/player-state" "$tmp/media-event" &
+mpris_pid=$!
+media_playing() { grep -Fq 'media play-pause darfinos.test:} 󰏤' "$tmp/polybar.log"; }
+await_result media_playing
+if [[ -n "${DARFINOS_PREVIEW_DIR:-}" ]]; then
+  magick import -window root "$DARFINOS_PREVIEW_DIR/media-720p.png"
+fi
+sh "$profile/session.sh" media next darfinos.test
+[[ "$(cat "$tmp/media-event")" == Next ]]
+sh "$profile/session.sh" media previous darfinos.test
+[[ "$(cat "$tmp/media-event")" == Previous ]]
+sh "$profile/session.sh" media play-pause darfinos.test
+media_paused() { grep -Fq 'media play-pause darfinos.test:} 󰐊' "$tmp/polybar.log"; }
+await_result media_paused
+[[ "$(cat "$tmp/media-event")" == PlayPause ]]
+kill "$mpris_pid"
+wait "$mpris_pid" || :
+mpris_pid=
+media_hidden() {
+  local line
+  line=$(grep -F '%{l}' "$tmp/polybar.log" | tail -1)
+  [[ -n "$line" && "$line" != *'media play-pause'* ]]
+}
+await_result media_hidden
 kill "$status_pid"
 wait "$status_pid" || :
 status_pid=
@@ -171,6 +215,33 @@ xdotool mousemove 1266 14 click 1
 await_result popup_visible
 session_title() { [[ "$(xdotool getwindowname "$(xdotool search --onlyvisible --class '^DarfinOSNotebookPopup$')")" == Sessão ]]; }
 await_result session_title
+if [[ -n "${DARFINOS_PREVIEW_DIR:-}" ]]; then
+  magick import -window root "$DARFINOS_PREVIEW_DIR/session-720p.png"
+fi
+# Navigate from Fechar to Desligar. Cancel first, then explicitly confirm.
+xdotool key Tab Tab Tab Return
+[[ ! -e "$tmp/power-event" ]]
+xdotool key Return
+[[ ! -e "$tmp/power-event" ]]
+xdotool key Escape
+await_result popup_closed
+xdotool key super+F6
+await_result session_title
+xdotool key Tab Tab Tab Return
+[[ ! -e "$tmp/power-event" ]]
+xdotool key Shift+Tab Return
+await_result test -s "$tmp/power-event"
+[[ "$(cat "$tmp/power-event")" == poweroff ]]
+await_result popup_closed
+# Verify the real Bluetooth module is clickable even with its service disabled.
+xdotool mousemove 1106 14 click 1
+bluetooth_title() { [[ "$(xdotool getwindowname "$(xdotool search --onlyvisible --class '^DarfinOSNotebookPopup$')")" == Bluetooth ]]; }
+await_result bluetooth_title
+if [[ -n "${DARFINOS_PREVIEW_DIR:-}" ]]; then
+  magick import -window root "$DARFINOS_PREVIEW_DIR/bluetooth-off-720p.png"
+fi
+xdotool key Tab Return
+await_result test -f "$tmp/bt-enabled"
 xdotool key Escape
 await_result popup_closed
 
@@ -180,7 +251,9 @@ fastfetch_output=$(sh "$profile/session.sh" fastfetch --pipe)
 xdotool key super+F4
 fastfetch_visible() { xdotool search --onlyvisible --name '^DarfinOS · Fastfetch$' >/dev/null 2>&1; }
 await_result fastfetch_visible
-xdotool key super+shift+q
+xdotool key super+q
+fastfetch_closed() { ! fastfetch_visible; }
+await_result fastfetch_closed
 
 # Exercise the real XDG/GTK launch path with two disposable desktop entries.
 mkdir -p "$XDG_DATA_HOME/applications"
@@ -382,4 +455,4 @@ dunstctl close-all
 dunstctl set-paused true
 [[ "$(dunstctl is-paused)" == true ]]
 dunstctl set-paused false
-echo 'i3 Notebook: X11 720p, Polybar geometry and toggling, cursor, wallpaper, Rofi click, audio sliders, calendar, session, Fastfetch, XDG launchers, workspace keys, Alt+Tab, window dock, minimize/maximize, graphical preferences, scratchpad and Dunst verified.'
+echo 'i3 Notebook: X11 720p, Polybar geometry and toggling, cursor, wallpaper, Rofi click, audio sliders, calendar, session, Fastfetch, XDG launchers, workspace keys, Alt+Tab, media dock, Bluetooth popup, window dock, minimize/maximize, graphical preferences, scratchpad and Dunst verified.'

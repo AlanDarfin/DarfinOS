@@ -38,10 +38,11 @@ bindsym $mod+Shift+Return exec --no-startup-id sh "$profile/session.sh" pocket
 bindsym --release $mod+grave exec --no-startup-id sh "$profile/session.sh" pocket
 for_window [instance="^darfinos-pocket$"] mark --add darfinos-pocket, floating enable, resize set 75 ppt 60 ppt, move position center, move scratchpad, scratchpad show
 
+bindsym $mod+q kill
 bindsym $mod+Shift+q kill
 bindsym $mod+Shift+c exec --no-startup-id sh "$profile/session.sh" reload
 bindsym $mod+Shift+r restart
-bindsym $mod+Shift+e exec i3-nagbar -t warning -m 'Encerrar a sessão i3?' -B 'Sair' 'i3-msg exit'
+bindsym $mod+Shift+e exec --no-startup-id sh "$profile/session.sh" system
 bindsym $mod+l exec --no-startup-id i3lock -c 171a1f
 bindsym --release Print exec --no-startup-id flameshot gui
 bindsym --release $mod+Shift+s exec --no-startup-id flameshot gui
@@ -52,6 +53,9 @@ bindsym XF86MonBrightnessUp exec --no-startup-id brightnessctl -c backlight set 
 bindsym XF86MonBrightnessDown exec --no-startup-id brightnessctl -c backlight --min-value=1 set 5%-
 bindsym XF86AudioRaiseVolume exec --no-startup-id sh "$profile/session.sh" volume-up
 bindsym XF86AudioLowerVolume exec --no-startup-id sh "$profile/session.sh" volume-down
+bindsym XF86AudioPlay exec --no-startup-id sh "$profile/session.sh" media play-pause
+bindsym XF86AudioNext exec --no-startup-id sh "$profile/session.sh" media next
+bindsym XF86AudioPrev exec --no-startup-id sh "$profile/session.sh" media previous
 bindsym XF86AudioMute exec --no-startup-id sh "$profile/session.sh" volume-mute
 bindsym XF86AudioMicMute exec --no-startup-id sh "$profile/session.sh" mic-mute
 bindsym $mod+n exec --no-startup-id dunstctl history-pop
