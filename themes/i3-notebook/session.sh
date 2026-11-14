@@ -30,6 +30,26 @@ shortcut_notice() {
     fi
 }
 
+notebook_notice() {
+    if command -v notify-send >/dev/null; then
+        notify-send 'DarfinOS · i3 Notebook' "$1"
+    else
+        printf '%s\n' "$1" >&2
+    fi
+}
+
+notebook_terminal() {
+    # Configure only this terminal invocation. Do not edit the user's Xresources or shell.
+    instance=$1 title=$2
+    shift 2
+    exec xterm -name "$instance" -title "$title" -bg '#171a1f' -fg '#f2f2f2' \
+        -fa 'JetBrainsMono Nerd Font Mono' -fs 11 "$@"
+}
+
+network_running() {
+    [ "$(LC_ALL=C timeout 1 nmcli -t -f RUNNING general 2>/dev/null)" = running ]
+}
+
 case "${1:-}" in
     reload)
         i3-msg reload >/dev/null
@@ -67,11 +87,90 @@ case "${1:-}" in
         exec i3-msg 'bar mode toggle notebook'
         ;;
     start)
+        if [ -x /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 ]; then
+            /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 &
+        fi
+        if command -v nm-applet >/dev/null; then nm-applet & fi
+        if command -v blueman-applet >/dev/null; then blueman-applet & fi
         # Don't take the D-Bus name from a notification daemon already in use.
         if command -v dunst >/dev/null; then
             dunst -conf "$profile_dir/dunstrc" &
         fi
         exec xss-lock --transfer-sleep-lock -- i3lock --nofork -c 171a1f
+        ;;
+    audio|calendar|system|network|sink|source)
+        exec /usr/bin/python3 "$profile_dir/panel.py" "$1"
+        ;;
+    mixer)
+        exec pavucontrol
+        ;;
+    network-terminal)
+        if network_running; then
+            notebook_terminal darfinos-network 'DarfinOS · Wi-Fi e rede' -geometry 70x20 -e nmtui
+        fi
+        notebook_notice 'NetworkManager não está ativo. A configuração de rede existente foi preservada.'
+        ;;
+    network-editor)
+        exec nm-connection-editor
+        ;;
+    network-status)
+        if ! network_running; then
+            printf '󰖪 Rede\n'
+        else
+            devices=$(LC_ALL=C timeout 1 nmcli -t -f TYPE,STATE device status 2>/dev/null) || devices=
+            if printf '%s\n' "$devices" | grep -qx 'wifi:connected'; then
+                printf '󰖩 Wi-Fi\n'
+            elif printf '%s\n' "$devices" | grep -qx 'ethernet:connected'; then
+                printf '󰈀 Rede\n'
+            elif [ "$(LC_ALL=C timeout 1 nmcli radio wifi 2>/dev/null)" = enabled ]; then
+                printf '󰖪 Wi-Fi\n'
+            else
+                printf '󰖪 Off\n'
+            fi
+        fi
+        ;;
+    bluetooth)
+        if [ "$(systemctl is-active bluetooth.service 2>/dev/null)" != active ]; then
+            notebook_notice 'Se houver adaptador Bluetooth, habilite o serviço pela etapa Bluetooth do DarfinOS.'
+        fi
+        exec blueman-manager
+        ;;
+    bluetooth-status)
+        case "$(LC_ALL=C timeout 1 bluetoothctl show 2>/dev/null)" in
+            *'Powered: yes'*) printf '󰂯 BT\n' ;;
+            *'Powered: no'*) printf '󰂲 Off\n' ;;
+            *) printf '󰂲 —\n' ;;
+        esac
+        ;;
+    terminal)
+        notebook_terminal darfinos-terminal 'DarfinOS · Terminal'
+        ;;
+    fastfetch-window)
+        notebook_terminal darfinos-fastfetch 'DarfinOS · Fastfetch' -hold -geometry 87x26 -e sh "$0" fastfetch
+        ;;
+    fastfetch)
+        shift
+        exec fastfetch --config "$profile_dir/fastfetch.jsonc" --logo "$profile_dir/logo.png" --logo-type chafa "$@"
+        ;;
+    dnd)
+        exec dunstctl set-paused toggle
+        ;;
+    lock)
+        exec i3lock -c 171a1f
+        ;;
+    power)
+        menu() {
+            rofi -no-config -theme "$profile_dir/rofi.rasi" -dmenu -no-custom -p "$1"
+        }
+        choice=$(printf '%s\n' 'Suspender' 'Sair da sessão' 'Reiniciar' 'Desligar' | menu Sessão) || exit 0
+        confirm=$(printf '%s\n' 'Cancelar' "$choice" | menu 'Confirmar ação') || exit 0
+        [ "$confirm" = "$choice" ] || exit 0
+        case "$choice" in
+            Suspender) exec systemctl suspend ;;
+            'Sair da sessão') exec i3-msg exit ;;
+            Reiniciar) exec systemctl reboot ;;
+            Desligar) exec systemctl poweroff ;;
+        esac
         ;;
     browser)
         app=$(xdg-settings get default-web-browser 2>/dev/null) || app=
@@ -124,6 +223,10 @@ case "${1:-}" in
             'Super+Ctrl+E · Alternar divisão horizontal / vertical' \
             'Super+R · Redimensionar com as setas (Esc para sair)' \
             'Super+F2 · Ver resolução e modo 720p' \
+            'Super+F3 · Controles de áudio e microfone' \
+            'Super+F4 · Fastfetch do DarfinOS' \
+            'Super+F5 · Calendário' \
+            'Super+F6 · Menu de sessão' \
             'Super+Shift+P · Escolher papel de parede' \
             'Super+Shift+B · Mostrar ou ocultar a barra' \
             'Super+N · Recuperar última notificação' \
@@ -144,7 +247,7 @@ case "${1:-}" in
             exec i3-msg '[con_mark="^darfinos-pocket$"] scratchpad show'
         fi
         xterm -name darfinos-pocket -title 'DarfinOS · Terminal de bolso' \
-            -bg '#171a1f' -fg '#f2f2f2' -fa 'JetBrains Mono' -fs 11 9>&- &
+            -bg '#171a1f' -fg '#f2f2f2' -fa 'JetBrainsMono Nerd Font Mono' -fs 11 9>&- &
         if [ -n "${XDG_RUNTIME_DIR:-}" ]; then
             for tick in 1 2 3 4 5 6 7 8 9 10; do
                 i3-msg -t get_marks | grep -Fq '"darfinos-pocket"' && break
@@ -169,7 +272,14 @@ case "${1:-}" in
         fi
         command -v pactl >/dev/null || exit 1
         case "$1" in
-            volume-up) exec pactl set-sink-volume @DEFAULT_SINK@ +5% ;;
+            volume-up)
+                current=$(LC_ALL=C pactl get-sink-volume @DEFAULT_SINK@ | awk -F/ 'NR == 1 {gsub(/[^0-9]/, "", $2); print $2}')
+                case "$current" in ''|*[!0-9]*) exit 1 ;; esac
+                if [ "$current" -ge 95 ]; then
+                    exec pactl set-sink-volume @DEFAULT_SINK@ 100%
+                fi
+                exec pactl set-sink-volume @DEFAULT_SINK@ +5%
+                ;;
             volume-down) exec pactl set-sink-volume @DEFAULT_SINK@ -5% ;;
             volume-mute) exec pactl set-sink-mute @DEFAULT_SINK@ toggle ;;
             mic-mute) exec pactl set-source-mute @DEFAULT_SOURCE@ toggle ;;

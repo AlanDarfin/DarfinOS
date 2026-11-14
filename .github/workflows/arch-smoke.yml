@@ -34,7 +34,7 @@ jobs:
     steps:
       - name: Preparar i3 e servidor virtual no contêiner
         run: |
-          pacman -Syu --noconfirm --needed python git dbus i3-wm i3status i3lock xss-lock xterm ttf-dejavu rofi dunst libnotify i3status-rust chezmoi xorg-server-xvfb xorg-xrandr xorg-xrdb xorg-xsetroot xorg-xprop feh adwaita-cursors polybar xdotool xorg-xwininfo ttf-jetbrains-mono powerline-fonts otf-font-awesome librsvg xdg-utils gtk3 imagemagick
+          pacman -Syu --noconfirm --needed python git dbus i3-wm i3status i3lock xss-lock xterm ttf-dejavu rofi dunst libnotify i3status-rust chezmoi xorg-server-xvfb xorg-xrandr xorg-xrdb xorg-xsetroot xorg-xprop feh adwaita-cursors polybar xdotool xorg-xwininfo ttf-jetbrains-mono-nerd powerline-fonts librsvg xdg-utils gtk3 python-gobject fastfetch chafa imagemagick
       - uses: actions/checkout@v4
       - name: Validar perfil e notificações sem alterar o host
         env:

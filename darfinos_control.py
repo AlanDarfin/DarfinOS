@@ -407,13 +407,16 @@ STYLE_PROFILES = {
     "i3-compacto": "i3 compacto para telas de 720p",
     "workstation-1995": "Window Maker grafite e amarelo",
     "sonicde-kvantum": "Kvantum com KvDark em grafite e amarelo, sem mudar o painel",
-    "i3-notebook": "DarfinOS Notebook 720p · Polybar, Rofi, Dunst, tela e fundo",
+    "i3-notebook": "DarfinOS Notebook 720p · painel, áudio, rede, calendário e Fastfetch",
 }
 STYLE_ROOT = ".local/state/darfinos-customization"
 DEFAULT_ACCENT = "#ffcb2e"
 NOTEBOOK_I3_CONFIG = ".config/i3/config"
 NOTEBOOK_STYLE_DIR = ".config/darfinos/i3-notebook"
-NOTEBOOK_STYLE_FILES = ("session.sh", "desktop.py", "rofi.rasi", "dunstrc", "status.toml", "polybar.ini", "wallpaper.svg")
+NOTEBOOK_STYLE_FILES = ("session.sh", "desktop.py", "panel.py", "rofi.rasi", "dunstrc", "status.toml",
+                        "polybar.ini", "wallpaper.svg", "fastfetch.jsonc", "logo.png")
+NOTEBOOK_FASTFETCH_DEFAULTS = (".config/fastfetch/config.jsonc", ".config/fastfetch/logo.png")
+FASTFETCH_DEFAULT_ACCENT = "38;2;255;203;46"
 
 
 def _style_path(root: Path, relative: str) -> Path:
@@ -495,7 +498,8 @@ def _style_paths(profile: str) -> tuple[str, ...]:
         "terminal": (".config/fish/conf.d/90-darfinos.fish", ".config/starship.toml",
                      ".config/fastfetch/config.jsonc", ".config/fastfetch/logo.png"),
         "i3-compacto": (".config/i3/config",),
-        "i3-notebook": (NOTEBOOK_I3_CONFIG, *(f"{NOTEBOOK_STYLE_DIR}/{name}" for name in NOTEBOOK_STYLE_FILES)),
+        "i3-notebook": (NOTEBOOK_I3_CONFIG, *(f"{NOTEBOOK_STYLE_DIR}/{name}" for name in NOTEBOOK_STYLE_FILES),
+                        *NOTEBOOK_FASTFETCH_DEFAULTS),
         "workstation-1995": ("GNUstep/Library/WindowMaker/Styles/DarfinOS-1995.style",),
         "sonicde-kvantum": (".config/kdeglobals", ".config/Kvantum/kvantum.kvconfig",
                            ".config/Kvantum/DarfinOSGold/DarfinOSGold.kvconfig",
@@ -506,23 +510,37 @@ def _style_paths(profile: str) -> tuple[str, ...]:
 KVANTUM_BASE = Path("/usr/share/Kvantum/KvDark")
 
 
+def _fastfetch_theme(source: Path, accent: str) -> tuple[bytes, bytes]:
+    config = (source / "Fastfetch/config.jsonc").read_text(encoding="utf-8")
+    # Raw SGR is also understood by versions of Fastfetch before hex support.
+    rgb = ";".join(str(int(accent[i:i + 2], 16)) for i in (1, 3, 5))
+    return (config.replace(FASTFETCH_DEFAULT_ACCENT, f"38;2;{rgb}").encode("utf-8"),
+            (source / "Fastfetch/logo.png").read_bytes())
+
+
 def _style_plan(profile: str, root: Path, accent: str) -> dict[str, tuple[bytes | None, bytes]]:
     if profile not in STYLE_PROFILES:
         raise ValueError("Perfil desconhecido.")
     if not re.fullmatch(r"#[0-9a-fA-F]{6}", accent):
         raise ValueError("Use uma cor hexadecimal #RRGGBB.")
     paths = _style_paths(profile)
+    if profile == "i3-notebook":
+        # Make plain fastfetch work on a fresh install, but never take over a
+        # pre-existing Fastfetch config or logo (including symlinks).
+        candidates = (*NOTEBOOK_FASTFETCH_DEFAULTS, ".config/fastfetch/config.json")
+        try:
+            occupied = any(_style_path(root, rel).exists() for rel in candidates)
+        except ValueError:
+            occupied = True
+        if occupied:
+            paths = paths[:-len(NOTEBOOK_FASTFETCH_DEFAULTS)]
     current = {rel: _style_read(_style_path(root, rel)) for rel in paths}
     source = Path(__file__).resolve().parent
     if profile == "terminal":
-        config = (source / "Fastfetch/config.jsonc").read_text(encoding="utf-8")
-        # Keep the official preset and substitute just its accent.
-        config = config.replace(DEFAULT_ACCENT, "{{ .accent }}")
         files = (
             b"if status is-interactive; and type -q starship\n    starship init fish | source\nend\n",
             _render_style('add_newline = false\n[character]\nsuccess_symbol = "[❯]({{ .accent }})"\nerror_symbol = "[❯](bold red)"\n', accent),
-            _render_style(config, accent),
-            (source / "Fastfetch/logo.png").read_bytes(),
+            *_fastfetch_theme(source, accent),
         )
     elif profile == "i3-compacto":
         files = (_render_style('''# DarfinOS · i3 compacto
@@ -569,9 +587,14 @@ bar {
 ''', accent),)
     elif profile == "i3-notebook":
         theme = source / "themes/i3-notebook"
-        templates = ((theme / name).read_text(encoding="utf-8") for name in ("config", *NOTEBOOK_STYLE_FILES))
+        templates = ((theme / name).read_text(encoding="utf-8")
+                     for name in ("config", *NOTEBOOK_STYLE_FILES[:-2]))
         files = tuple(_render_style(text, accent) if "{{ .accent }}" in text else text.encode()
                       for text in templates)
+        fetch_config, logo = _fastfetch_theme(source, accent)
+        files += (fetch_config, logo)
+        if len(paths) > len(files):
+            files += (fetch_config, logo)
     elif profile == "workstation-1995":
         files = (_render_style('''{
   FTitleBack = (solid, "#2a2d32");
@@ -631,9 +654,15 @@ def style_apply(profile: str, plan: dict, selected: list[str], home: Path | None
     if not selected or not set(selected) <= set(plan) <= allowed:
         raise ValueError("Selecione apenas arquivos do perfil.")
     if profile == "i3-notebook" and NOTEBOOK_I3_CONFIG in selected:
-        for rel in _style_paths(profile)[1:]:
+        for rel in (f"{NOTEBOOK_STYLE_DIR}/{name}" for name in NOTEBOOK_STYLE_FILES):
             if rel not in selected and (rel not in plan or _style_read(_style_path(root, rel)) != plan[rel][1]):
                 raise ValueError("Para ativar o i3 Notebook, aplique também os arquivos do perfil.")
+    if profile == "i3-notebook" and set(selected).intersection(NOTEBOOK_FASTFETCH_DEFAULTS):
+        if not set(NOTEBOOK_FASTFETCH_DEFAULTS) <= set(selected):
+            raise ValueError("Para instalar o Fastfetch padrão, selecione o tema e o logo juntos.")
+        for rel in (*NOTEBOOK_FASTFETCH_DEFAULTS, ".config/fastfetch/config.json"):
+            if _style_path(root, rel).exists():
+                raise ValueError("Já existe uma configuração ou logo do Fastfetch. Refazer a prévia preserva seus arquivos.")
     changes = {rel: plan[rel] for rel in dict.fromkeys(selected) if plan[rel][0] != plan[rel][1]}
     if profile == "i3-notebook" and NOTEBOOK_I3_CONFIG in changes:
         # Publish the entry point after the files it uses.

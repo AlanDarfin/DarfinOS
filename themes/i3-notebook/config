@@ -1,7 +1,7 @@
 # DarfinOS · i3 Notebook (720p)
 set $mod Mod4
 set $profile $HOME/.config/darfinos/i3-notebook
-font pango:JetBrains Mono 10
+font pango:JetBrainsMono Nerd Font Mono 10
 default_border pixel 2
 default_floating_border pixel 2
 gaps inner 8
@@ -15,13 +15,20 @@ exec_always --no-startup-id sh "$profile/session.sh" desktop-start
 exec --no-startup-id sh "$profile/session.sh" start
 
 # Launchers
-bindsym $mod+Return exec --no-startup-id i3-sensible-terminal
+bindsym $mod+Return exec --no-startup-id sh "$profile/session.sh" terminal
 bindsym $mod+b exec --no-startup-id sh "$profile/session.sh" browser
 bindsym $mod+e exec --no-startup-id sh "$profile/session.sh" files
 bindsym $mod+d exec --no-startup-id sh "$profile/session.sh" apps
 bindsym $mod+Tab exec --no-startup-id sh "$profile/session.sh" windows
 bindsym $mod+F1 exec --no-startup-id sh "$profile/session.sh" shortcuts
 bindsym $mod+F2 exec --no-startup-id sh "$profile/session.sh" display
+bindsym $mod+F3 exec --no-startup-id sh "$profile/session.sh" audio
+bindsym $mod+F4 exec --no-startup-id sh "$profile/session.sh" fastfetch-window
+bindsym $mod+F5 exec --no-startup-id sh "$profile/session.sh" calendar
+bindsym $mod+F6 exec --no-startup-id sh "$profile/session.sh" system
+for_window [class="^DarfinOSNotebookPopup$"] floating enable, border pixel 0
+for_window [instance="^darfinos-(network|fastfetch)$"] floating enable, move position center
+for_window [class="^(Pavucontrol|Blueman-manager|Nm-connection-editor)$"] floating enable, move position center
 bindsym $mod+Shift+p exec --no-startup-id sh "$profile/session.sh" wallpaper
 bindsym $mod+Shift+Return exec --no-startup-id sh "$profile/session.sh" pocket
 bindsym --release $mod+grave exec --no-startup-id sh "$profile/session.sh" pocket

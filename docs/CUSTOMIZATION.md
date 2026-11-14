@@ -58,13 +58,28 @@ python3 darfinos_control.py style i3-notebook --apply --all-files
 | Super+L | Lock the screen. xss-lock also locks before suspend. |
 | Super+N / Super+Shift+N / Super+Ctrl+N | Redisplay the last notification, toggle Do Not Disturb, and dismiss visible pop-ups. |
 
-The 28 px Polybar sits at the top with arrow separators, JetBrains Mono and a
-short active window title. **Apps**, **Janelas** (Windows), **Atalhos** (Shortcuts),
-and **Fundo** (Wallpaper) are clickable. Brightness, battery, network, audio
-and time appear on the right as available. The first workspace is **1**.
-**Super+Enter** opens the terminal. Focus follows the pointer without warping
-it between monitors. If Polybar is unavailable or fails to start, the profile
-falls back to native i3bar.
+The 28 px top bar uses JetBrainsMono Nerd Font Mono and keeps the workspace
+switcher, launchers and a shortened window title on the left. On the right,
+the tray and status controls fit the 720p layout.
+
+| Control | Action |
+| --- | --- |
+| Output / microphone or Super+F3 | Open the audio popup with independent live sliders and mute buttons. Right-click each icon to toggle its mute. Scroll over output to change volume. The mixer button opens per-app audio and device selection. |
+| Wi-Fi / network | Open the Wi-Fi toggle and connection shortcuts. The tray applet lists nearby networks and supports joining them. Right-click the bar's network module to edit saved connections. |
+| Bluetooth | Open Blueman to enable the adapter, pair and manage devices. |
+| Clock or Super+F5 | Open the monthly calendar, with month navigation and a Today button. |
+| Power icon or Super+F6 | Open session controls, including lock, Do Not Disturb, display and wallpaper. Suspend, log out, restart and shut down require confirmation. |
+| Super+F4 | Open the DarfinOS Fastfetch preset, including its logo, in the Notebook terminal. |
+
+**Super+Enter** and the pocket terminal use the same Nerd Font. The Workshop
+installs the Notebook's Fastfetch preset with its logo. It also sets up plain
+`fastfetch` in a new profile when there is no personal config or logo to
+preserve. **Super+F4** always opens the DarfinOS preset. If Polybar cannot start,
+native i3bar remains the fallback.
+
+Wi-Fi controls require an active NetworkManager. Bluetooth requires an adapter
+and BlueZ. The Labs step does not switch the system's network or audio service.
+Use the separate Bluetooth step if you need to enable BlueZ.
 
 The desktop pairs graphite surfaces with gold, bronze and sand status blocks.
 The focused workspace has a solid accent background; inactive windows use subdued

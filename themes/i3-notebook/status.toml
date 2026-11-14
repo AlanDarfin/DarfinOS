@@ -65,13 +65,39 @@ interval = 5
 format = " {Wi-Fi $signal_strength|Rede} "
 inactive_format = " Sem rede "
 missing_format = " Sem rede "
+[[block.click]]
+button = "left"
+cmd = 'sh "$HOME/.config/darfinos/i3-notebook/session.sh" network'
 
 [[block]]
 block = "sound"
 format = " {VOL $volume|Mudo} "
 max_vol = 100
+[[block.click]]
+button = "left"
+cmd = 'sh "$HOME/.config/darfinos/i3-notebook/session.sh" audio'
+
+[[block]]
+block = "custom"
+command = "echo BT"
+interval = "once"
+[[block.click]]
+button = "left"
+cmd = 'sh "$HOME/.config/darfinos/i3-notebook/session.sh" bluetooth'
 
 [[block]]
 block = "time"
 interval = 30
 format = " $timestamp.datetime(f:'%d/%m %H:%M') "
+
+[[block.click]]
+button = "left"
+cmd = 'sh "$HOME/.config/darfinos/i3-notebook/session.sh" calendar'
+
+[[block]]
+block = "custom"
+command = "echo Sessão"
+interval = "once"
+[[block.click]]
+button = "left"
+cmd = 'sh "$HOME/.config/darfinos/i3-notebook/session.sh" system'

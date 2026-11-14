@@ -95,6 +95,42 @@ class I3NotebookTests(unittest.TestCase):
         self.assertEqual(self.run_entry("mic-mute").stdout.strip(),
                          b"set-source-mute @DEFAULT_SOURCE@ toggle")
 
+    def test_network_reports_status_and_uses_the_existing_networkmanager(self):
+        self.stub("nmcli", """
+case "$*" in
+    '-t -f RUNNING general') echo running ;;
+    '-t -f TYPE,STATE device status') echo wifi:connected ;;
+esac
+""")
+        self.stub("grep", 'exec /usr/bin/grep "$@"')
+        self.stub("timeout", 'exec /usr/bin/timeout "$@"')
+        self.stub("xterm", 'printf "<%s>\n" "$@"')
+        self.assertIn("Wi-Fi", self.run_entry("network-status").stdout.decode())
+        args = self.run_entry("network-terminal").stdout.decode().splitlines()
+        self.assertIn("<JetBrainsMono Nerd Font Mono>", args)
+        self.assertEqual(args[-2:], ["<-e>", "<nmtui>"])
+        self.stub("nmcli", "exit 1")
+        self.assertIn("NetworkManager não está ativo", self.run_entry("network-terminal").stderr.decode())
+
+    def test_fastfetch_targets_the_profile_preset_and_logo(self):
+        self.stub("fastfetch", 'printf "<%s>\n" "$@"')
+        profile = self.installed_entry.parent
+        self.assertEqual(self.run_entry("fastfetch").stdout.decode().splitlines(),
+                         ["<--config>", f"<{profile / 'fastfetch.jsonc'}>",
+                          "<--logo>", f"<{profile / 'logo.png'}>", "<--logo-type>", "<chafa>"])
+
+    def test_power_confirmation_is_required(self):
+        self.stub("systemctl", 'printf "%s\n" "$@"')
+        self.stub("rofi", """
+case "$*" in
+    *Confirmar*) echo Cancelar ;;
+    *) echo Desligar ;;
+esac
+""")
+        self.assertEqual(self.run_entry("power").stdout, b"")
+        self.stub("rofi", 'echo Desligar')
+        self.assertEqual(self.run_entry("power").stdout, b"poweroff\n")
+
     def test_bar_toggle_only_targets_the_notebook_dock_on_current_display(self):
         self.stub("head", 'exec /usr/bin/head "$@"')
         self.stub("xdotool", """
@@ -129,8 +165,10 @@ step_lab_i3_notebook
         self.assertTrue({"i3-wm", "rofi", "dunst", "i3status-rust", "brightnessctl",
                          "xss-lock", "flameshot", "xterm", "chezmoi", "libnotify", "feh",
                          "zenity", "xorg-xrandr", "xorg-xrdb", "xorg-xsetroot", "xsettingsd", "polybar",
-                         "ttf-jetbrains-mono", "xdotool", "powerline-fonts", "otf-font-awesome", "librsvg",
-                         "xdg-utils", "gtk3", "curl", "tar", "xz"} <= packages)
+                         "ttf-jetbrains-mono-nerd", "xdotool", "powerline-fonts", "librsvg",
+                         "xdg-utils", "gtk3", "python-gobject", "pavucontrol", "network-manager-applet",
+                         "bluez-utils", "blueman", "polkit-gnome", "fastfetch", "chafa",
+                         "curl", "tar", "xz"} <= packages)
         self.assertFalse({"wireplumber", "pipewire", "picom", "sonicde"} & packages)
 
 

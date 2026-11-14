@@ -12,48 +12,48 @@
   "display": {
     "separator": " ➜  ",
     "color": {
-      "keys": "#806f00"
+      "keys": "38;2;128;111;0"
     }
   },
   "modules": [
     {
       "type": "title",
-      "format": "    \u001b[90m    󰌽   {user-name} • Fastfetch\u001b[90m  󰌽",
+      "format": " 󰌽   {user-name} • Fastfetch  󰌽",
       "color": {
-        "user": "#806f00",
-        "host": "#806f00"
+        "user": "38;2;128;111;0",
+        "host": "38;2;128;111;0"
         }
     },
     {
       "type": "custom",
       "format": " 󰝤───────────────────────────────────────󰝤",
-      "color": "#806f00"
+      "color": "38;2;128;111;0"
     },
     {
       "type": "os",
       "key": " 󰣇  SYSTEM  ",
-      "keyColor": "#ffcb2e"
+      "keyColor": "38;2;255;203;46"
     },
     {
       "type": "kernel",
       "key": " 󰌢  KERNEL  ",
-      "keyColor": "#ffcb2e"
+      "keyColor": "38;2;255;203;46"
     },
     {
   "type": "command",
   "key": " 󰃭  AGE     ",
-  "keyColor": "#ffcb2e",
+  "keyColor": "38;2;255;203;46",
   "text": "birth_install=$(stat -c %W /); if [ \"$birth_install\" -eq 0 ]; then birth_install=$(stat -c %Y /); fi; now=$(date +%s); echo $(((now-birth_install)/86400)) days"
     },
     {
       "type": "uptime",
       "key": " 󰔛  UPTIME  ",
-      "keyColor": "#ffcb2e"
+      "keyColor": "38;2;255;203;46"
     },
     {
       "type": "packages",
       "key": " 󰏖  PACKS   ",
-      "keyColor": "#ffcb2e"
+      "keyColor": "38;2;255;203;46"
     },
     {
       "type": "break"
@@ -61,25 +61,25 @@
     {
       "type": "cpu",
       "key": " 󰍛  CPU     ",
-      "keyColor": "#ffcb2e",
+      "keyColor": "38;2;255;203;46",
       "format": "{1}",
     },
     {
       "type": "gpu",
       "key": " 󰍹  GPU     ",
-      "keyColor": "#ffcb2e",
+      "keyColor": "38;2;255;203;46",
       "format": "{2}"
     },
 {
       "type": "memory",
       "key": " 󰑭  RAM     ",
-      "keyColor": "#ffcb2e",
+      "keyColor": "38;2;255;203;46",
       "format": "{1} / {2} ({3})"
     },
     {
       "type": "disk",
       "key": " 󰋊  DISK    ",
-      "keyColor": "#ffcb2e",
+      "keyColor": "38;2;255;203;46",
       "format": "{1} / {2} ({3})"
     },
     {
@@ -88,22 +88,22 @@
     {
       "type": "wm",
       "key": " 󱂬  WINDOW  ",
-      "keyColor": "#ffcb2e"
+      "keyColor": "38;2;255;203;46"
     },
     {
       "type": "shell",
       "key": " 󰆍  SHELL   ",
-      "keyColor": "#ffcb2e"
+      "keyColor": "38;2;255;203;46"
     },
     {
       "type": "terminal",
       "key": "   TERM    ",
-      "keyColor": "#ffcb2e"
+      "keyColor": "38;2;255;203;46"
     },
     {
       "type": "media",
       "key": " 󰝚  PLAYER  ",
-      "keyColor": "#ffcb2e",
+      "keyColor": "38;2;255;203;46",
     },
     {
       "type": "break"
@@ -111,7 +111,7 @@
     {
       "type": "custom",
       "format": " 󰝤───────────────────────────────────────󰝤",
-      "color": "#806f00"
+      "color": "38;2;128;111;0"
     },
   ]
 }

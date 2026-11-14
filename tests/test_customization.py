@@ -1,6 +1,7 @@
 """Exercise previews, selective writes, drift-aware undo, and timer isolation."""
 from pathlib import Path
 import json
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -64,12 +65,14 @@ class CustomizationTests(unittest.TestCase):
         dunst.write_bytes(b"my global dunst\n")
         with self.fake_chezmoi():
             plan, preview = control.style_preview("i3-notebook", "#aacc33", self.home)
-            self.assertEqual(len(plan), 1 + len(control.NOTEBOOK_STYLE_FILES))
+            self.assertEqual(len(plan), 1 + len(control.NOTEBOOK_STYLE_FILES) + 2)
             self.assertIn(f"{control.NOTEBOOK_STYLE_DIR}/polybar.ini", plan)
             self.assertIn(f"{control.NOTEBOOK_STYLE_DIR}/wallpaper.svg", plan)
             self.assertIn("my old i3", preview)
             for name, (_, content) in plan.items():
-                if not name.endswith(("session.sh", "desktop.py")):
+                if name.endswith(("fastfetch.jsonc", "config.jsonc")):
+                    self.assertIn(b"38;2;170;204;51", content)
+                elif not name.endswith(("session.sh", "desktop.py", ".png")):
                     self.assertIn(b"#aacc33", content)
                 self.assertNotIn(b"{{ .accent }}", content)
                 if name != control.NOTEBOOK_I3_CONFIG:
@@ -85,6 +88,31 @@ class CustomizationTests(unittest.TestCase):
         self.assertEqual(dunst.read_bytes(), b"my global dunst\n")
         for name in control.NOTEBOOK_STYLE_FILES:
             self.assertFalse((self.home / control.NOTEBOOK_STYLE_DIR / name).exists())
+
+    @unittest.skipUnless(shutil.which("chezmoi"), "requires the real template engine")
+    def test_i3_notebook_renders_popup_with_real_chezmoi(self):
+        plan, _ = control.style_preview("i3-notebook", "#aacc33", self.home)
+        data = plan[f"{control.NOTEBOOK_STYLE_DIR}/panel.py"][1]
+        self.assertIn(b'ACCENT = "#aacc33"', data)
+        self.assertIn(b"#notebook-popup { background:", data)
+        compile(data, "panel.py", "exec")
+
+    def test_i3_notebook_preserves_existing_fastfetch_but_has_its_own_preset(self):
+        global_config = self.home / ".config/fastfetch/config.jsonc"
+        global_config.parent.mkdir(parents=True)
+        with self.fake_chezmoi():
+            first, _ = control.style_preview("i3-notebook", home=self.home)
+            self.assertIn(".config/fastfetch/logo.png", first)
+            global_config.write_text("my Fastfetch config")
+            with self.assertRaisesRegex(ValueError, "Já existe"):
+                control.style_apply("i3-notebook", first, list(first), self.home)
+            plan, _ = control.style_preview("i3-notebook", home=self.home)
+            self.assertNotIn(".config/fastfetch/config.jsonc", plan)
+            self.assertNotIn(".config/fastfetch/logo.png", plan)
+            control.style_apply("i3-notebook", plan, list(plan), self.home)
+        self.assertEqual(global_config.read_text(), "my Fastfetch config")
+        self.assertTrue((self.home / control.NOTEBOOK_STYLE_DIR / "logo.png").is_file())
+        self.assertTrue((self.home / control.NOTEBOOK_STYLE_DIR / "fastfetch.jsonc").is_file())
 
     def test_kvantum_only_edits_the_intended_config_keys(self):
         base = self.home / "base"
