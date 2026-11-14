@@ -80,13 +80,13 @@ O DarfinOS oferece uma **etapa opcional** relacionada ao Bedrock. Ela não é ne
 
 ## 🛠 O que o DarfinOS configura
 
-O instalador Bash organiza **64 etapas** em grupos. A seleção pode ser feita pela linha de comando ou pela TUI.
+O instalador Bash organiza **65 etapas** em grupos. A seleção pode ser feita pela linha de comando ou pela TUI.
 
 | Área | Exemplos de etapas | O que faz |
 | --- | --- | --- |
 | Sistema e repositórios | `pacman_conf`, `mirrors`, `repo_xlibre`, `repo_sonicde`, `repo_chaotic`, `sysupgrade` | Ajustes do pacman, espelhos, repositórios e atualização |
 | Base | `base`, `aur_helper`, `fonts`, `hardware` | Ferramentas essenciais, AUR, fontes e hardware |
-| Desktop | `xlibre`, `sonicde`, `desktop_extras`, `bluetooth` | Servidor gráfico, ambiente de desktop e integração |
+| Desktop | `xlibre`, `sonicde`, `desktop_extras`, `bluetooth`, `icons` | Servidor gráfico, ambiente de desktop e integração |
 | Terminal e desenvolvimento | `cli_tools`, `dev_tools`, `pkg_managers`, `shells`, `git_setup` | Fish, Zsh, Starship, ferramentas CLI e desenvolvimento |
 | Rede e serviços | `zerotier`, `hamachi`, `syncthing`, `docker` | Rede virtual, sincronização e containers |
 | Aplicativos e jogos | `flatpak`, `apps`, `gaming`, `browser` | Flathub, aplicativos, Steam e ferramentas para jogos |
@@ -150,7 +150,7 @@ python3 DarfinOSInstallScript-TUI.py --resume
 O instalador continua independente da interface:
 
 ```bash
-# Consultar as 64 etapas
+# Consultar as 65 etapas
 bash DarfinOSInstallScript.sh --list
 
 # Para uma instalação interativa e seleção segura, use a TUI
@@ -193,6 +193,8 @@ sobrescrever arquivos de tema. Saiba como interpretar os estados:
 Na TUI, **W** abre a [Oficina de Temas](docs/pt-BR/CUSTOMIZATION.md) com o perfil SonicDE + Kvantum e prévia das mudanças.
 
 O [perfil i3 Notebook](docs/pt-BR/CUSTOMIZATION.md#i3-notebook-720p) adiciona uma barra Powerline de 720p com sliders de áudio, controles de rede e Bluetooth, calendário e Fastfetch temático, sem mudar o i3 Compacto.
+
+**Papirus Yellow** é o tema de ícones padrão dos presets desktop, i3 e gaming. Numa instalação existente, rode `bash DarfinOSInstallScript.sh --only icons` com seu usuário e entre novamente na sessão. A etapa usa as pastas amarelas oficiais do Papirus sem modificar o pacote do Arch nem mudar a paleta dos aplicativos.
 
 ## ⚡ DarfinOS Labs · 28 projetos independentes + i3 Notebook
 
@@ -383,7 +385,7 @@ O DarfinOS possui testes automatizados com **`unittest`**, sem dependências Pyt
 
 Os testes cobrem, entre outros pontos:
 
-- Parser das **64 etapas** e resolução de dependências.
+- Parser das **65 etapas** e resolução de dependências.
 - Perfis, presets e exportação do manifesto.
 - Registros de execução, recuperação e proteção contra Bash diferente.
 - Eventos de progresso e confirmações do Bash em cenários isolados.

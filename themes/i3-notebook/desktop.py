@@ -166,7 +166,8 @@ def apply_cursor():
             return
         with tempfile.NamedTemporaryFile(mode="w", dir=PROFILE, prefix=".cursor-", delete=False) as temp:
             if theme_installed:
-                temp.write('Net/ThemeName "DarfinOS-Notebook"\nNet/IconThemeName "Adwaita"\n')
+                icons = "Papirus-Yellow" if (HOME / ".icons/Papirus-Yellow/index.theme").is_file() else "Adwaita"
+                temp.write(f'Net/ThemeName "DarfinOS-Notebook"\nNet/IconThemeName "{icons}"\n')
             if preference:
                 temp.write(f'Gtk/CursorThemeName "{theme}"\nGtk/CursorThemeSize {size}\n')
         # xsettingsd reads this file at startup; keep it until the session ends or the next run.

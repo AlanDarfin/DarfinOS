@@ -75,5 +75,5 @@ convencionais e exclui todos os `lab_*`.
 
 O sexto preset, `retro`, adiciona `xfce` e `lab_chicago95` com confirmação
 e cópia de tema/ícones para o HOME. O catálogo Labs soma 29 entradas e o Bash
-64 etapas; o `full` continua excluindo `lab_*`.
+65 etapas; o `full` continua excluindo `lab_*`.
 Ver [MODULOS.md](MODULOS.md) para a checagem automática de instalações.

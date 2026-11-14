@@ -2,7 +2,7 @@
 
 **[🇺🇸 English (default)](../README.md) · 🇧🇷 Português (Brasil)**
 
-O DarfinOS é um projeto de personalização e pós-instalação do Arch Linux com **64 etapas**, **sete presets** e um catálogo de **29 entradas no Labs**. Não é uma distribuição com ISO própria.
+O DarfinOS é um projeto de personalização e pós-instalação do Arch Linux com **65 etapas**, **sete presets** e um catálogo de **29 entradas no Labs**. Não é uma distribuição com ISO própria.
 
 Leia o [README completo em português](../../README.pt-BR.md) e os guias:
 

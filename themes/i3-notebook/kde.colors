@@ -1,0 +1,59 @@
+[General]
+Name=DarfinOS Notebook
+ColorScheme=DarfinOSNotebook
+
+[ColorEffects:Inactive]
+Enable=false
+ChangeSelectionColor=false
+
+[ColorEffects:Disabled]
+Enable=true
+IntensityEffect=0
+ColorEffect=0
+ContrastEffect=1
+ContrastAmount=0.5
+
+[Colors:Window]
+BackgroundNormal=32,36,43
+BackgroundAlternate=37,41,48
+ForegroundNormal=242,242,242
+ForegroundInactive=168,173,183
+ForegroundActive={{ .accent }}
+ForegroundLink={{ .accent }}
+DecorationFocus={{ .accent }}
+DecorationHover={{ .accent }}
+
+[Colors:View]
+BackgroundNormal=23,26,31
+BackgroundAlternate=37,41,48
+ForegroundNormal=242,242,242
+ForegroundInactive=168,173,183
+ForegroundActive={{ .accent }}
+ForegroundLink={{ .accent }}
+DecorationFocus={{ .accent }}
+DecorationHover={{ .accent }}
+
+[Colors:Button]
+BackgroundNormal=44,49,58
+BackgroundAlternate=53,60,70
+ForegroundNormal=242,242,242
+ForegroundInactive=168,173,183
+ForegroundActive={{ .accent }}
+ForegroundLink={{ .accent }}
+DecorationFocus={{ .accent }}
+DecorationHover={{ .accent }}
+
+[Colors:Selection]
+BackgroundNormal={{ .accent }}
+BackgroundAlternate={{ .accent }}
+ForegroundNormal=23,26,31
+ForegroundInactive=23,26,31
+ForegroundActive=23,26,31
+ForegroundLink=23,26,31
+DecorationFocus=23,26,31
+DecorationHover=23,26,31
+
+[Colors:Tooltip]
+BackgroundNormal=37,41,48
+ForegroundNormal=242,242,242
+ForegroundInactive=168,173,183

@@ -65,7 +65,7 @@ class CustomizationTests(unittest.TestCase):
         dunst.write_bytes(b"my global dunst\n")
         with self.fake_chezmoi():
             plan, preview = control.style_preview("i3-notebook", "#aacc33", self.home)
-            self.assertEqual(len(plan), 1 + len(control.NOTEBOOK_STYLE_FILES) + len(control.NOTEBOOK_APPEARANCE) + 2 + int((control.KVANTUM_BASE / "KvDark.svg").is_file()))
+            self.assertEqual(len(plan), 1 + len(control.NOTEBOOK_STYLE_FILES) + len(control.NOTEBOOK_APPEARANCE) + len(control.NOTEBOOK_KDE_PATHS) + 2 + int((control.KVANTUM_BASE / "KvDark.svg").is_file()))
             self.assertIn(f"{control.NOTEBOOK_STYLE_DIR}/polybar.ini", plan)
             self.assertIn(f"{control.NOTEBOOK_STYLE_DIR}/wallpaper.svg", plan)
             self.assertIn(control.NOTEBOOK_FILES_THEME, plan)
@@ -73,6 +73,10 @@ class CustomizationTests(unittest.TestCase):
             for name, (_, content) in plan.items():
                 if name.endswith(("fastfetch.jsonc", "config.jsonc")):
                     self.assertIn(b"38;2;170;204;51", content)
+                elif name in (control.NOTEBOOK_KDE_GLOBALS, control.NOTEBOOK_KDE_SCHEME):
+                    self.assertIn(b"170,204,51", content)
+                elif name == control.NOTEBOOK_DOLPHIN_CONFIG:
+                    self.assertIn(b"DarfinOSNotebook", content)
                 elif not name.endswith(("session.sh", "desktop.py", "media.py", "switcher.py", "settings.py", ".png",
                                         "/Kvantum/kvantum.kvconfig", "DarfinOS-Notebook.svg")):
                     self.assertIn(b"#aacc33", content)
@@ -115,6 +119,17 @@ class CustomizationTests(unittest.TestCase):
             self.assertIn(b"#aacc33", plan[control.NOTEBOOK_THEME_HOME + "/gtk-2.0/gtkrc"][1])
             control.style_apply("i3-notebook", plan, list(plan), self.home)
         self.assertEqual(user_config.read_text(), "[General]\ntheme=UserOwnTheme\n")
+
+    def test_kvantum_tints_only_active_artwork(self):
+        svg = b"""<svg xmlns="http://www.w3.org/2000/svg">
+            <path id="progress-normal" style="fill:url(#old);stroke:#555"/>
+            <path id="itemview-normal" style="fill:url(#old)"/>
+            <g id="tab-toggled-top"><path style="fill:url(#old);opacity:.4"/></g>
+        </svg>"""
+        recolored = control._notebook_kvantum_svg(svg, "#ffcb2e")
+        self.assertIn(b'fill:#ffcb2e;stroke:#555', recolored)
+        self.assertIn(b'itemview-normal" style="fill:url(#old)', recolored)
+        self.assertIn(b'fill:#ffcb2e;opacity:.4', recolored)
 
     def test_i3_notebook_preserves_existing_fastfetch_but_has_its_own_preset(self):
         global_config = self.home / ".config/fastfetch/config.jsonc"

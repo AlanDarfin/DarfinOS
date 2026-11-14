@@ -16,10 +16,10 @@ SPEC.loader.exec_module(TUI)
 BASH = ROOT / 'DarfinOSInstallScript.sh'
 
 class ParserTests(unittest.TestCase):
-    def test_64_steps_and_unique_names(self):
+    def test_65_steps_and_unique_names(self):
         steps = TUI.parse_script(BASH)
-        self.assertEqual(len(steps), 64)
-        self.assertEqual(len({s.name for s in steps}), 64)
+        self.assertEqual(len(steps), 65)
+        self.assertEqual(len({s.name for s in steps}), 65)
         self.assertEqual(steps[0].name, 'pacman_conf')
         self.assertEqual(steps[-1].name, 'lab_i3_notebook')
 
@@ -35,13 +35,13 @@ class ParserTests(unittest.TestCase):
 
     def test_modules_json_matches_bash_checker(self):
         report = TUI.module_checks(BASH)
-        self.assertEqual(len(report), 64)
+        self.assertEqual(len(report), 65)
         self.assertEqual(set(report), {x.name for x in TUI.parse_script(BASH)})
         self.assertIn(report['xfce']['status'], ('installed','partial','missing','unknown'))
         import subprocess
         out = subprocess.run([sys.executable, str(ROOT / 'DarfinOSInstallScript-TUI.py'),
                              '--check-modules'], capture_output=True, text=True, check=True)
-        self.assertEqual(len(json.loads(out.stdout)['modules']), 64)
+        self.assertEqual(len(json.loads(out.stdout)['modules']), 65)
 
     def test_force_reinstall_option(self):
         st = TUI.State(TUI.parse_script(BASH), 'test', selected={'i3'})
@@ -93,7 +93,7 @@ class ParserTests(unittest.TestCase):
 
     def test_doctor_is_read_only_and_checks_all_functions(self):
         report = TUI.diagnose_script(BASH)
-        self.assertEqual(report['steps'], 64)
+        self.assertEqual(report['steps'], 65)
         self.assertTrue(report['ready'], report['errors'])
         self.assertEqual(report['errors'], [])
 
@@ -323,4 +323,4 @@ class CliTests(unittest.TestCase):
         proc = subprocess.run(['bash', str(BASH), '--list'], capture_output=True,
                               text=True, timeout=10)
         self.assertEqual(proc.returncode, 0, proc.stderr)
-        self.assertEqual(len([line for line in proc.stdout.splitlines() if line.strip()]), 64)
+        self.assertEqual(len([line for line in proc.stdout.splitlines() if line.strip()]), 65)
