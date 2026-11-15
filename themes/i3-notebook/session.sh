@@ -63,7 +63,7 @@ fi
 # find cursors installed by Labs in XDG_DATA_HOME/icons, including in pop-ups.
 # Only graphical launchers need this, not the bar's periodic status commands.
 case "${1:-}" in
-    desktop-start|start|bar-start|audio|brightness|calendar|network|bluetooth|system|desktop-menu|settings|display|wallpaper|monitors|appearance|screenshot|mixer|network-terminal|network-editor|terminal|fastfetch-window|browser|notebook-files|dolphin|qt4|qt-themed|themed|files|apps|windows|shortcuts|pocket)
+    desktop-start|start|bar-start|audio|brightness|calendar|network|bluetooth|system|desktop-menu|notifications|tray-popup|settings|display|wallpaper|monitors|appearance|screenshot|mixer|network-terminal|network-editor|terminal|fastfetch-window|browser|notebook-files|dolphin|qt4|qt-themed|themed|files|apps|windows|shortcuts|pocket)
         if [ -r "$profile_dir/desktop.py" ] &&
             cursor=$(/usr/bin/python3 "$profile_dir/desktop.py" cursor-env) && [ -n "$cursor" ]; then
             {
@@ -160,6 +160,7 @@ case "${1:-}" in
         # Existing switcher instances retain the X11 grabs across i3 reloads.
         /usr/bin/python3 "$profile_dir/switcher.py" &
         /usr/bin/python3 "$profile_dir/mouse.py" &
+        /usr/bin/python3 "$profile_dir/tray.py" daemon &
         exec sh "$0" bar-start
         ;;
     display|wallpaper|window-title)
@@ -207,7 +208,15 @@ case "${1:-}" in
         fi
         exec xss-lock --transfer-sleep-lock -- i3lock --nofork -c 171a1f
         ;;
-    audio|brightness|calendar|system|network|bluetooth|sink|source|desktop-menu|brightness-status)
+    tray-daemon|tray-status|tray-popup)
+        case "$1" in
+            tray-daemon) action=daemon ;;
+            tray-status) action=watch ;;
+            tray-popup) action=popup ;;
+        esac
+        exec /usr/bin/python3 "$profile_dir/tray.py" "$action"
+        ;;
+    audio|brightness|calendar|system|network|bluetooth|sink|source|desktop-menu|brightness-status|notifications|notifications-status)
         exec /usr/bin/python3 "$profile_dir/panel.py" "$@"
         ;;
     window-*)
@@ -398,6 +407,8 @@ case "${1:-}" in
             'Super+F5 · Calendário' \
             'Super+F6 · Encerrar sessão, suspender, reiniciar e desligar' \
             'Super+F7 · Preferências gráficas do i3' \
+            'Super+F8 · Aplicativos em segundo plano (Steam, KDE Connect…)' \
+            'Super+F9 · Central de notificações' \
             'Super+Shift+P · Escolher papel de parede' \
             'Super+Shift+B · Mostrar ou ocultar a barra' \
             'Super+N · Recuperar última notificação' \

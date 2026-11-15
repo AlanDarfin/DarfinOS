@@ -202,6 +202,7 @@ esac
 info() { :; }
 notebook_install_cursor() { [[ "$approved" == 1 ]]; }
 notebook_papirus() { [[ "$1" == --assets-only && "$approved" == 1 ]]; }
+notebook_adwaita() { [[ "$approved" == 1 ]]; }
 install_pkgs() { darfinos_event "PKG:pacman:$*"; }
 lab_confirm() { [[ "$1" == i3_notebook && "$approved" == 1 ]]; }
 approved=0
@@ -319,6 +320,8 @@ module_probe lab_i3_notebook
 [[ "$MODULE_STATUS" == partial ]] || exit 62
 mkdir -p "$HOME/.icons/Papirus-Yellow"
 touch "$HOME/.icons/Papirus-Yellow/index.theme"
+mkdir -p "$HOME/.themes/Adwaita-yellow-dark/gtk-3.0"
+touch "$HOME/.themes/Adwaita-yellow-dark/gtk-3.0/gtk.css"
 module_probe lab_i3_notebook
 [[ "$MODULE_STATUS" == installed ]]
 '''

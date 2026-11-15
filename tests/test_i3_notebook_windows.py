@@ -1,5 +1,6 @@
 """Verify i3 workflow logic without an X display or active window manager."""
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -68,6 +69,18 @@ class NotebookPreferencesTests(unittest.TestCase):
                                       "smart_gaps off\nworkspace_layout tabbed\nexec not-part-of-the-form\n")
         self.assertEqual(values, dict(inner=32, outer=14, mouse=False, smart=False, layout="tabbed"))
         self.assertEqual(settings.preferences(settings.render(values)), values)
+
+    def test_apply_reports_i3_acknowledgement_and_preserves_saved_preferences_on_reload_failure(self):
+        cases = ((0, '[{"success": true}]', True), (0, '[{"success": false, "error": "bad config"}]', False),
+                 (0, '[]', False), (0, 'not JSON', False), (1, '[{"success": true}]', False))
+        for code, output, expected in cases:
+            with self.subTest(code=code, output=output), \
+                 patch.object(settings, "write_preferences") as write, \
+                 patch.object(settings.subprocess, "run", return_value=subprocess.CompletedProcess(
+                     [], code, stdout=output)) as run:
+                self.assertEqual(settings.apply_preferences("gaps inner 12\n"), expected)
+                write.assert_called_once_with("gaps inner 12\n")
+                self.assertEqual(run.call_args.args[0], ["i3-msg", "reload"])
 
     def test_invalid_candidate_does_not_replace_live_preferences(self):
         with tempfile.TemporaryDirectory(prefix="Notebook settings ") as tmp:

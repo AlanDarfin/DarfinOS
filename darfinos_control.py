@@ -409,12 +409,13 @@ STYLE_PROFILES = {
     "workstation-1995": "Window Maker grafite e amarelo",
     "sonicde-kvantum": "Kvantum com KvDark em grafite e amarelo, sem mudar o painel",
     "i3-notebook": "DarfinOS Notebook 720p · painel, áudio, rede, calendário e Fastfetch",
+    "adwaita-yellow": "Adwaita Yellow global · GTK escuro, fontes e ícones DarfinOS",
 }
 STYLE_ROOT = ".local/state/darfinos-customization"
 DEFAULT_ACCENT = "#ffcb2e"
 NOTEBOOK_I3_CONFIG = ".config/i3/config"
 NOTEBOOK_STYLE_DIR = ".config/darfinos/i3-notebook"
-NOTEBOOK_STYLE_FILES = ("session.sh", "desktop.py", "panel.py", "media.py", "windows.py", "switcher.py", "settings.py", "mouse.py", "flatpak.py",
+NOTEBOOK_STYLE_FILES = ("session.sh", "desktop.py", "panel.py", "media.py", "windows.py", "switcher.py", "settings.py", "mouse.py", "flatpak.py", "tray.py",
                         "rofi.rasi", "dunstrc", "status.toml",
                         "polybar.ini", "wallpaper.svg", "fastfetch.jsonc", "logo.png")
 NOTEBOOK_THEME_HOME = ".themes/DarfinOS-Notebook"
@@ -438,6 +439,14 @@ NOTEBOOK_KVANTUM_SELECTOR = ".config/Kvantum/kvantum.kvconfig"
 NOTEBOOK_KVANTUM_SVG = f"{NOTEBOOK_THEME_HOME}/Kvantum/DarfinOS-Notebook.svg"
 NOTEBOOK_FASTFETCH_DEFAULTS = (".config/fastfetch/config.jsonc", ".config/fastfetch/logo.png")
 FASTFETCH_DEFAULT_ACCENT = "38;2;255;203;46"
+GLOBAL_STYLE_DIR = ".config/darfinos/global-appearance"
+GLOBAL_THEME_ASSETS = {
+    f"{GLOBAL_STYLE_DIR}/gtk-3.0/gtk.css": "files.css",
+    f"{GLOBAL_STYLE_DIR}/gtk-4.0/gtk.css": "gtk4.css",
+    f"{GLOBAL_STYLE_DIR}/gtk-2.0/gtkrc": "gtk2.rc",
+}
+GLOBAL_GTK_FILES = (".config/gtk-3.0/settings.ini", ".config/gtk-4.0/settings.ini",
+                    ".config/gtk-3.0/gtk.css", ".config/gtk-4.0/gtk.css", ".gtkrc-2.0")
 
 
 def _style_path(root: Path, relative: str) -> Path:
@@ -519,6 +528,7 @@ def _style_paths(profile: str) -> tuple[str, ...]:
         "terminal": (".config/fish/conf.d/90-darfinos.fish", ".config/starship.toml",
                      ".config/fastfetch/config.jsonc", ".config/fastfetch/logo.png"),
         "i3-compacto": (".config/i3/config",),
+        "adwaita-yellow": (*GLOBAL_THEME_ASSETS, *GLOBAL_GTK_FILES),
         "i3-notebook": (NOTEBOOK_I3_CONFIG, *(f"{NOTEBOOK_STYLE_DIR}/{name}" for name in NOTEBOOK_STYLE_FILES),
                         *NOTEBOOK_APPEARANCE, *NOTEBOOK_KDE_PATHS, NOTEBOOK_KVANTUM_SELECTOR, NOTEBOOK_KVANTUM_SVG, *NOTEBOOK_FASTFETCH_DEFAULTS),
         "workstation-1995": ("GNUstep/Library/WindowMaker/Styles/DarfinOS-1995.style",),
@@ -531,27 +541,124 @@ def _style_paths(profile: str) -> tuple[str, ...]:
 KVANTUM_BASE = Path("/usr/share/Kvantum/KvDark")
 
 
+def _global_gtk_plan(root, current, source, accent):
+    upstream = _style_path(root, ".themes/Adwaita-yellow-dark/gtk-3.0/gtk.css")
+    if not upstream.is_file():
+        raise ValueError("Instale o Adwaita Yellow com python3 scripts/adwaita_yellow.py antes de aplicar este perfil.")
+    files = []
+    for template in GLOBAL_THEME_ASSETS.values():
+        text = (source / "themes/i3-notebook" / template).read_text(encoding="utf-8")
+        if template == "gtk2.rc":
+            # The cursor remains the session's selected theme and size.
+            text = "\n".join(line for line in text.splitlines() if not line.startswith("gtk-cursor-")) + "\n"
+        files.append(_render_style(text, accent))
+    for version, relative in zip((3, 4), GLOBAL_GTK_FILES[:2]):
+        data = current[relative]
+        # Upstream supplies GTK3; GTK4 is our explicit compatibility layer.
+        for key, value in (("gtk-theme-name", "Adwaita-yellow-dark" if version == 3 else "Adwaita"),
+                           ("gtk-font-name", "DejaVu Sans 10"),
+                           ("gtk-icon-theme-name", "Papirus-Yellow"),
+                           ("gtk-application-prefer-dark-theme", "true")):
+            data = _edit_ini(data, "Settings", key, value)
+        files.append(data)
+    for version, relative in zip((3, 4), GLOBAL_GTK_FILES[2:4]):
+        text = (current[relative] or b"").decode()
+        # Replace only our managed block, preserving the user's other CSS.
+        text = re.sub(r"(?ms)^/\* DarfinOS global appearance \*/\n.*?^/\* End DarfinOS global appearance \*/\n?", "", text)
+        asset = _style_path(root, f"{GLOBAL_STYLE_DIR}/gtk-{version}.0/gtk.css").as_uri()
+        block = f'/* DarfinOS global appearance */\n@import url("{asset}");\n/* End DarfinOS global appearance */\n'
+        files.append((text + ("\n" if text and not text.endswith("\n") else "") + block).encode())
+    text = (current[GLOBAL_GTK_FILES[-1]] or b"").decode()
+    text = re.sub(r"(?ms)^# DarfinOS global appearance\n.*?^# End DarfinOS global appearance\n?", "", text)
+    asset = str(_style_path(root, f"{GLOBAL_STYLE_DIR}/gtk-2.0/gtkrc"))
+    asset = asset.replace("\\", "\\\\").replace('"', '\\"')
+    block = f'# DarfinOS global appearance\ninclude "{asset}"\n# End DarfinOS global appearance\n'
+    files.append((text + ("\n" if text and not text.endswith("\n") else "") + block).encode())
+    return tuple(files)
+
+
 def _notebook_kvantum_svg(data: bytes, accent: str) -> bytes:
-    """Tint active KvDark artwork, leaving normal widgets and transparent edges intact."""
+    """Replace KvDark's glossy widget paints with the Notebook's flat palette.
+
+    Geometry, opacity, masks and indicator drawings stay upstream. Recoloring
+    QPalette alone leaves these SVG gradients visible in Dolphin and Qt apps.
+    """
     tree = ET.fromstring(data)
     ET.register_namespace("", "http://www.w3.org/2000/svg")
     ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
-    # KvDark defines the active slider frame but omits its center. Kvantum
-    # otherwise paints that center from its embedded default blue artwork.
-    if not any(node.get("id") == "slider-toggled" for node in tree):
-        ET.SubElement(tree, "{http://www.w3.org/2000/svg}rect",
-                      {"id": "slider-toggled", "width": "16", "height": "16", "fill": accent})
+    for identifier, color in (("slider-normal", "#303641"), ("slider-toggled", accent)):
+        if not any(node.get("id") == identifier for node in tree):
+            # Missing centers otherwise use embedded glossy/blue artwork.
+            ET.SubElement(tree, "{http://www.w3.org/2000/svg}rect",
+                          {"id": identifier, "width": "16", "height": "16", "fill": color})
+
+    def paints(name):
+        if name.startswith(("progress-", "expand-progress-", "slider-toggled", "itemview-toggled", "itemview-pressed")):
+            return accent, accent
+        if name.startswith(("tab-toggled-top", "floating-tab-toggled-top")):
+            return accent, accent
+        if name.startswith(("button-", "tbutton-")):
+            state = name.split("-", 2)[1]
+            surface = {"focused": "#39404b", "pressed": "#4b4333", "toggled": "#4b4333"}.get(state, "#2c313a")
+            return surface, accent if state in ("focused", "pressed", "toggled") else "#454a54"
+        if name.startswith(("lineedit-", "border-lineedit-", "expand-lineedit-")):
+            return "#171a1f", accent if "-focused" in name else "#454a54"
+        if name.startswith("slidercursor-"):
+            color = "#454a54" if "-disabled" in name else accent if any(state in name for state in ("-focused", "-pressed")) else "#c0c4cd"
+            return color, "#454a54"
+        if name.startswith("scrollbarslider-"):
+            color = accent if "-pressed" in name else "#9299a5" if "-focused" in name else "#626c7b"
+            return color, color
+        if name.startswith(("slider-", "scrollbargroove-")):
+            return "#303641", "#454a54"
+        if name.startswith(("checkbox-", "radio-")):
+            return "#2c313a", accent if any(state in name for state in ("-focused", "-checked", "-tristate")) else "#454a54"
+        if name.startswith(("tab-", "floating-tab-")):
+            return "#2c313a" if "-toggled" in name else "#20242b", "#454a54"
+        if name.startswith(("toolbar-", "tabframe-", "tabBarFrame-", "group-")):
+            return "#20242b", "#454a54"
+        if name.startswith(("header-", "splitter-grip-", "resize-grip-")):
+            return "#454a54", "#454a54"
+        return None
+
+    gradient = re.compile(r"(?<![\w-])(fill|stroke)\s*:\s*url\(#[^)]+\)")
     for node in tree:
         name = node.get("id", "")
-        if not name.startswith(("progress-normal", "progress-pattern-normal", "slider-toggled",
-                                "itemview-toggled", "tab-toggled-top")):
+        colors = paints(name)
+        if colors is None:
             continue
+        surface, border = colors
+        checked = name.startswith(("checkbox-checked", "checkbox-tristate", "radio-checked"))
+        # KvDark also simulates bevels with translucent white/black bands.
+        # The same surface color under those bands keeps the existing alpha
+        # and rounded geometry without retaining the metallic highlight.
+        flat_surface = not name.startswith(("checkbox-", "radio-", "slidercursor-",
+                                            "header-", "splitter-grip-", "resize-grip-"))
+        gradient_fills = 0
         for child in node.iter():
-            # These active pieces use pre-painted gradients instead of QPalette.
-            # Leave flat highlights, strokes and transparent geometry untouched.
-            style = child.get("style")
+            style = child.get("style", "")
+            fill = surface
+            if checked and ("fill:url(" in style or "fill: url(" in style):
+                # Keep the checked glyph distinct from its flat background.
+                fill = surface if gradient_fills == 0 else accent
+                gradient_fills += 1
             if style:
-                child.set("style", re.sub(r"(?<![\w-])fill:url\(#[^)]+\)", f"fill:{accent}", style))
+                child.set("style", gradient.sub(lambda match: match[1] + ":" + (fill if match[1] == "fill" else border), style))
+            if flat_surface:
+                style = child.get("style", "")
+                # Keep explicit empty fills and masks; normalize only the
+                # rendered widget shapes, including their implicit black fill.
+                style = re.sub(r"(?<![\w-])fill\s*:\s*([^;]+)",
+                               lambda match: match[0] if match[1].strip() == "none" else "fill:" + surface,
+                               style)
+                if style:
+                    child.set("style", style)
+                if child.tag.rsplit("}", 1)[-1] in ("path", "rect", "circle", "ellipse", "polygon", "polyline"):
+                    if child.get("fill") != "none" and not re.search(r"(?<![\w-])fill\s*:\s*none\b", style):
+                        child.set("fill", surface)
+            for attribute, color in (("fill", fill), ("stroke", border)):
+                if child.get(attribute, "").strip().startswith("url(#"):
+                    child.set(attribute, color)
     return ET.tostring(tree, encoding="utf-8")
 
 
@@ -583,7 +690,9 @@ def _style_plan(profile: str, root: Path, accent: str) -> dict[str, tuple[bytes 
             paths = paths[:-len(NOTEBOOK_FASTFETCH_DEFAULTS)]
     current = {rel: _style_read(_style_path(root, rel)) for rel in paths}
     source = Path(__file__).resolve().parent
-    if profile == "terminal":
+    if profile == "adwaita-yellow":
+        files = _global_gtk_plan(root, current, source, accent)
+    elif profile == "terminal":
         files = (
             b"if status is-interactive; and type -q starship\n    starship init fish | source\nend\n",
             _render_style('add_newline = false\n[character]\nsuccess_symbol = "[❯]({{ .accent }})"\nerror_symbol = "[❯](bold red)"\n', accent),
@@ -713,6 +822,8 @@ def _style_hash(data: bytes | None) -> str | None:
 
 
 def _style_apply_report(profile: str, message: str) -> str:
+    if profile == "adwaita-yellow":
+        return message + "\nAparência GTK global salva. Reabra os aplicativos ou entre novamente na sessão para carregar o tema."
     if profile != "i3-notebook":
         return message
     return (message + "\nAtive o visual com Super+Shift+C na sessão i3 (barra, fundo e cursor)."
@@ -725,6 +836,10 @@ def style_apply(profile: str, plan: dict, selected: list[str], home: Path | None
     allowed = set(_style_paths(profile))
     if not selected or not set(selected) <= set(plan) <= allowed:
         raise ValueError("Selecione apenas arquivos do perfil.")
+    if profile == "adwaita-yellow" and set(selected).intersection(GLOBAL_GTK_FILES):
+        for rel in GLOBAL_THEME_ASSETS:
+            if rel not in selected and _style_read(_style_path(root, rel)) != plan[rel][1]:
+                raise ValueError("Aplique também os recursos do tema global Adwaita Yellow.")
     if profile == "i3-notebook" and NOTEBOOK_I3_CONFIG in selected:
         required = (f"{NOTEBOOK_STYLE_DIR}/{name}" for name in NOTEBOOK_STYLE_FILES)
         for rel in (*required, *NOTEBOOK_APPEARANCE, *NOTEBOOK_KDE_PATHS, NOTEBOOK_KVANTUM_SELECTOR):
