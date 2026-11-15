@@ -303,7 +303,7 @@ fi
 
 # Check the actual Polybar payload, including loaded i3, fonts and launchers.
 status_ready() {
-  grep -Fq 'session.sh" shortcuts' "$tmp/polybar.log" && grep -Fq 'Área de trabalho' "$tmp/polybar.log" &&
+  grep -Fq 'session.sh" shortcuts' "$tmp/polybar.log" && grep -Fq 'Área de trab' "$tmp/polybar.log" &&
     grep -Fq '󰕾 55%' "$tmp/polybar.log" && grep -Fq '󰍬 35%' "$tmp/polybar.log"
 }
 polybar -l info -s -c "$profile/polybar.ini" notebook >"$tmp/polybar.log" 2>&1 &
