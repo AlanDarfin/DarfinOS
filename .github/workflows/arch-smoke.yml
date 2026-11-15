@@ -47,3 +47,14 @@ jobs:
           name: i3-notebook-preview
           path: i3-notebook-preview/*.png
           if-no-files-found: ignore
+      - name: Validar Adwaita Yellow global com GTK3 e GTK4
+        env:
+          DARFINOS_PREVIEW_DIR: ${{ github.workspace }}/adwaita-yellow-preview
+        run: bash tests/integration_adwaita_yellow.sh --download
+      - name: Guardar prévias do tema global
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: adwaita-yellow-preview
+          path: adwaita-yellow-preview/*.png
+          if-no-files-found: ignore

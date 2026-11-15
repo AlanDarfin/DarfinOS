@@ -1,4 +1,6 @@
 """Graphical, profile-only settings. The Workshop never replaces the overrides."""
+import hashlib
+import json
 import os
 from pathlib import Path
 import re
@@ -67,19 +69,22 @@ def write_preferences(data):
             path.unlink(missing_ok=True)
 
 
-def main():
-    import gi
-    gi.require_version("Gtk", "3.0")
-    gi.require_version("Gdk", "3.0")
-    from gi.repository import Gdk, Gtk
+def apply_preferences(data):
+    write_preferences(data)
+    proc = subprocess.run(["i3-msg", "reload"], text=True, capture_output=True, timeout=4)
+    try:
+        result = json.loads(proc.stdout)
+    except (TypeError, ValueError):
+        return False
+    return (proc.returncode == 0 and isinstance(result, list) and bool(result)
+            and all(isinstance(part, dict) and part.get("success") is True for part in result))
 
-    if not Gtk.init_check(None)[0]:
-        return 1
-    window = Gtk.Window(title="Preferências do i3 Notebook")
+
+def settings_window(Gtk, Gdk, application):
+    window = Gtk.ApplicationWindow(application=application, title="Preferências do i3 Notebook")
     window.set_wmclass("darfinos-notebook-settings", "DarfinOSNotebookSettings")
     window.set_default_size(438, -1)
     window.set_position(Gtk.WindowPosition.CENTER)
-    window.connect("destroy", lambda *_: Gtk.main_quit())
     window.connect("key-press-event", lambda w, e: (w.destroy() or True) if e.keyval == Gdk.KEY_Escape else False)
     root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12, margin=16)
     window.add(root)
@@ -93,11 +98,11 @@ def main():
                 "smart": Gtk.Switch(halign=Gtk.Align.START), "layout": Gtk.ComboBoxText()}
     for key, text in LAYOUTS.items():
         controls["layout"].append(key, text)
-    for i, (key, title) in enumerate((("inner", "Espaço entre janelas (px)"),
-                                     ("outer", "Margem externa (px)"),
-                                     ("mouse", "Foco segue o mouse"),
-                                     ("smart", "Sem margens com uma janela"),
-                                     ("layout", "Layout de novas áreas"))):
+    for i, (key, title) in enumerate((("inner", "_Espaço entre janelas (px)"),
+                                     ("outer", "_Margem externa (px)"),
+                                     ("mouse", "_Foco segue o mouse"),
+                                     ("smart", "Sem margens com _uma janela"),
+                                     ("layout", "_Layout de novas áreas"))):
         label = Gtk.Label.new_with_mnemonic(title)
         label.set_xalign(0)
         label.set_hexpand(True)
@@ -122,15 +127,14 @@ def main():
                    "mouse": controls["mouse"].get_active(), "smart": controls["smart"].get_active(),
                    "layout": controls["layout"].get_active_id()}
         try:
-            write_preferences(render(current))
-            proc = subprocess.run(["i3-msg", "reload"], capture_output=True, timeout=4)
-            note("Preferências aplicadas." if proc.returncode == 0
+            applied = apply_preferences(render(current))
+            note("Preferências aplicadas." if applied
                  else "Preferências salvas. Recarregue o i3 para aplicar.")
         except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
             note(str(exc))
 
     def button(container, label, callback):
-        item = Gtk.Button(label=label)
+        item = Gtk.Button.new_with_mnemonic(label)
         item.connect("clicked", callback)
         container.add(item)
 
@@ -138,16 +142,17 @@ def main():
         subprocess.Popen(["sh", str(PROFILE / "session.sh"), action], stdin=subprocess.DEVNULL)
 
     common = Gtk.Box(spacing=8, homogeneous=True)
-    button(common, "Monitores · ARandR", lambda *_: helper("monitors"))
-    button(common, "Aparência GTK", lambda *_: helper("appearance"))
+    button(common, "Monitores · A_RandR", lambda *_: helper("monitors"))
+    button(common, "Aparência _GTK", lambda *_: helper("appearance"))
     root.add(common)
     tools = Gtk.Box(spacing=8, homogeneous=True)
-    button(tools, "Papel de parede", lambda *_: helper("wallpaper"))
-    button(tools, "Lista de atalhos", lambda *_: helper("shortcuts"))
+    button(tools, "Papel de _parede", lambda *_: helper("wallpaper"))
+    button(tools, "Lista de a_talhos", lambda *_: helper("shortcuts"))
     root.add(tools)
     bottom = Gtk.Box(spacing=8, homogeneous=True)
-    button(bottom, "Preencher padrões", lambda *_: fill(DEFAULTS))
-    button(bottom, "Aplicar", save)
+    button(bottom, "Preencher pa_drões", lambda *_: fill(DEFAULTS))
+    button(bottom, "_Aplicar", save)
+    button(bottom, "Fe_char", lambda *_: window.close())
     root.add(bottom)
     feedback = Gtk.Label(xalign=0, wrap=True, max_width_chars=45)
     root.add(feedback)
@@ -157,8 +162,38 @@ def main():
         fill(DEFAULTS)
         note(str(exc))
     window.show_all()
-    Gtk.main()
-    return 0
+    return window
+
+
+def main():
+    import gi
+    gi.require_version("Gtk", "3.0")
+    gi.require_version("Gdk", "3.0")
+    from gi.repository import Gdk, Gtk
+
+    if not Gtk.init_check(None)[0]:
+        return 1
+    # D-Bus activation makes F7 present the existing window. Keep two separate
+    # X displays on the same user bus from borrowing each other's window.
+    display = hashlib.sha256(os.environ.get("DISPLAY", "").encode()).hexdigest()[:12]
+    application = Gtk.Application(application_id=f"org.darfinos.Notebook.Settings.d{display}")
+
+    def activate(app):
+        windows = app.get_windows()
+        window = windows[0] if windows else settings_window(Gtk, Gdk, app)
+        window.present()
+        if windows:
+            # i3's focus-stealing policy may ignore a D-Bus activation across
+            # workspaces. This explicit user action should reveal the window.
+            try:
+                subprocess.Popen(["i3-msg", '[class="^DarfinOSNotebookSettings$"] focus'],
+                                 stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                 stderr=subprocess.DEVNULL)
+            except OSError:
+                pass
+
+    application.connect("activate", activate)
+    return application.run([])
 
 
 if __name__ == "__main__":

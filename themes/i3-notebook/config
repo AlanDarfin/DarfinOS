@@ -28,9 +28,12 @@ bindsym $mod+F4 exec --no-startup-id sh "$profile/session.sh" fastfetch-window
 bindsym $mod+F5 exec --no-startup-id sh "$profile/session.sh" calendar
 bindsym $mod+F6 exec --no-startup-id sh "$profile/session.sh" system
 bindsym $mod+F7 exec --no-startup-id sh "$profile/session.sh" settings
+bindsym $mod+F8 exec --no-startup-id sh "$profile/session.sh" tray-popup
+bindsym $mod+F9 exec --no-startup-id sh "$profile/session.sh" notifications
 for_window [class="^DarfinOSNotebookSettings$"] floating enable, move position center
 for_window [class="(?i)^(Arandr|Lxappearance)$"] floating enable, move position center
 for_window [class="^DarfinOSNotebookPopup$"] floating enable, border pixel 0
+for_window [class="^DarfinOSNotebookTray$"] floating enable, border pixel 0
 for_window [instance="^darfinos-(network|fastfetch)$"] floating enable, move position center
 for_window [class="^(Pavucontrol|Nm-connection-editor)$"] floating enable, move position center
 for_window [class="(?i)^blueman-manager$"] floating enable, resize set 72 ppt 72 ppt, move position center

@@ -2,6 +2,8 @@
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 import fcntl
+import html
+import json
 import os
 from pathlib import Path
 import re
@@ -63,6 +65,55 @@ def audio_label(kind):
     if state is None:
         return f"{off} —"
     return f"{off if state.muted else on} {'Mudo' if state.muted else str(state.volume) + '%'}"
+
+
+
+def notification_state():
+    paused = command("dunstctl", "is-paused")
+    if paused is None or paused.strip() not in ("true", "false"):
+        return None
+    counts = {}
+    for kind in ("displayed", "waiting"):
+        value = (command("dunstctl", "count", kind) or "").strip()
+        counts[kind] = min(int(value), 999) if value.isdecimal() else 0
+    return dict(paused=paused.strip() == "true", **counts)
+
+
+def notification_label():
+    state = notification_state()
+    if state is None:
+        return "󰂛 —"
+    icon = "󰂛" if state["paused"] else "󰂚"
+    count = state["displayed"] + state["waiting"]
+    return f"{icon} {min(count, 99)}" if count else icon
+
+
+def notification_history(payload):
+    """Dunst history uses the dbus-send JSON representation of aa{sv}."""
+    try:
+        value = json.loads(payload) if isinstance(payload, str) else payload
+        value = value.get("data", []) if isinstance(value, dict) else value
+        if isinstance(value, list) and len(value) == 1 and isinstance(value[0], list):
+            value = value[0]
+        if not isinstance(value, list):
+            return []
+        entries = []
+        for record in value[:25]:
+            if not isinstance(record, dict):
+                continue
+            def plain(key, limit):
+                item = record.get(key, "")
+                if isinstance(item, dict):
+                    item = item.get("data", "")
+                if not isinstance(item, str):
+                    return ""
+                return html.unescape(re.sub(r"<[^>]*>", "", item))[:limit]
+            summary, body = plain("summary", 160), plain("body", 600)
+            if summary or body:
+                entries.append({"app": plain("appname", 80), "summary": summary, "body": body})
+        return entries
+    except (ValueError, TypeError):
+        return []
 
 
 def bluetooth_state():
@@ -145,7 +196,7 @@ def popup(page, anchor=None):
         import gi
         gi.require_version("Gtk", "3.0")
         gi.require_version("Gdk", "3.0")
-        from gi.repository import Gdk, GLib, Gtk
+        from gi.repository import Gdk, GLib, Gtk, Pango
     except (ImportError, ValueError):
         command("notify-send", "DarfinOS", "Atualize as dependências do i3 Notebook nos Labs.")
         return 1
@@ -177,7 +228,8 @@ def popup(page, anchor=None):
     """.replace("@ACCENT@", ACCENT).encode())
     Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(), style, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
     window = Gtk.Window(title={"audio": "Áudio", "brightness": "Brilho", "desktop-menu": "Área de trabalho", "calendar": "Calendário",
-                               "network": "Wi-Fi e rede", "bluetooth": "Bluetooth", "system": "Sessão"}[page])
+                               "network": "Wi-Fi e rede", "bluetooth": "Bluetooth", "system": "Sessão",
+                               "notifications": "Notificações"}[page])
     window.set_name("notebook-popup")
     window.set_wmclass("darfinos-notebook-popup", "DarfinOSNotebookPopup")
     window.set_decorated(False)
@@ -201,7 +253,7 @@ def popup(page, anchor=None):
     window.set_default_size(width_limit, -1)
 
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin=14)
-    if page in ("bluetooth", "desktop-menu"):
+    if page in ("bluetooth", "desktop-menu", "notifications", "system"):
         scroll = Gtk.ScrolledWindow()
         scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scroll.set_propagate_natural_height(True)
@@ -236,7 +288,8 @@ def popup(page, anchor=None):
     if page == "desktop-menu":
         for label, action in (("Aplicativos", "apps"), ("Terminal", "terminal"),
                               ("Arquivos", "notebook-files"), ("Papel de parede", "wallpaper"),
-                              ("Tela e resolução", "display"), ("Preferências do i3", "settings")):
+                              ("Tela e resolução", "display"), ("Em segundo plano", "tray-popup"),
+                              ("Notificações", "notifications"), ("Preferências do i3", "settings")):
             button(label, lambda a=action: launch("sh", str(PROFILE / "session.sh"), a))
     elif page == "brightness":
         value = brightness_level()
@@ -276,6 +329,79 @@ def popup(page, anchor=None):
 
             scale.connect("value-changed", changed)
             window.connect("show", lambda *_: scale.grab_focus())
+    elif page == "notifications":
+        worker = ThreadPoolExecutor(max_workers=1)
+        status = Gtk.Label(label="Carregando notificações…", xalign=0, wrap=True, max_width_chars=38)
+        box.add(status)
+        current = None
+        busy = False
+        last_entries = None
+
+        def refresh(action=None):
+            nonlocal busy
+            if busy:
+                return True
+            busy = True
+            for control in (toggle, dismiss, restore):
+                control.set_sensitive(False)
+
+            def load():
+                failed = action is not None and command("dunstctl", *action) is None
+                state = notification_state()
+                history = notification_history(command("dunstctl", "history")) if state else []
+                return state, history, failed
+
+            def paint(result):
+                nonlocal current, busy, last_entries
+                busy = False
+                if not window.get_visible():
+                    return False
+                current, entries, failed = result
+                for control in (toggle, dismiss, restore):
+                    control.set_sensitive(current is not None)
+                if current is None:
+                    status.set_text("Serviço de notificações indisponível. Entre novamente na sessão i3.")
+                else:
+                    mode = "Não perturbe ativo" if current["paused"] else "Notificações ativas"
+                    status.set_text(f"{mode} · {current['displayed']} na tela, {current['waiting']} aguardando."
+                                    if not failed else "Não consegui executar a ação. Tente novamente.")
+                    toggle.set_label("Desativar Não perturbe" if current["paused"] else "Ativar Não perturbe")
+                    dismiss.set_sensitive(current["displayed"] > 0)
+                    restore.set_sensitive(bool(entries))
+                if entries != last_entries:
+                    last_entries = entries
+                    for child in history_box.get_children():
+                        history_box.remove(child)
+                    if not entries:
+                        history_box.add(Gtk.Label(label="Sem notificações no histórico.", xalign=0))
+                    for entry in entries:
+                        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, margin_top=6)
+                        source = Gtk.Label(label=entry['app'] or "Aplicativo", xalign=0, ellipsize=3)
+                        source.get_style_context().add_class("hint")
+                        card.add(source)
+                        card.add(Gtk.Label(label=entry['summary'], xalign=0, wrap=True, max_width_chars=35, wrap_mode=Pango.WrapMode.WORD_CHAR))
+                        if entry['body']:
+                            card.add(Gtk.Label(label=entry['body'], xalign=0, wrap=True, max_width_chars=35, wrap_mode=Pango.WrapMode.WORD_CHAR,
+                                               selectable=True))
+                        card.add(Gtk.Separator())
+                        history_box.add(card)
+                    history_box.show_all()
+                return False
+
+            future = worker.submit(load)
+            future.add_done_callback(lambda task: GLib.idle_add(paint, task.result()))
+            return True
+
+        toggle = button("Ativar Não perturbe", lambda: refresh(("set-paused", "false" if current and current['paused'] else "true")))
+        dismiss = button("Dispensar notificações visíveis", lambda: refresh(("close-all",)))
+        restore = button("Reexibir última notificação", lambda: refresh(("history-pop",)))
+        label = Gtk.Label(label="Histórico recente", xalign=0)
+        label.get_style_context().add_class("heading")
+        box.add(label)
+        history_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        box.add(history_box)
+        refresh()
+        GLib.timeout_add_seconds(3, refresh)
     elif page == "calendar":
         calendar = Gtk.Calendar()
         calendar.set_display_options(Gtk.CalendarDisplayOptions.SHOW_HEADING |
@@ -519,6 +645,7 @@ def popup(page, anchor=None):
         box.add(Gtk.Separator())
         for label, action in (("Bloquear tela", "lock"), ("Não perturbe · alternar", "dnd"),
                               ("Wi-Fi e rede", "network"), ("Dispositivos Bluetooth", "bluetooth"),
+                              ("Em segundo plano", "tray-popup"), ("Notificações", "notifications"),
                               ("Tela e resolução", "display"), ("Papel de parede", "wallpaper"),
                               ("Preferências do i3", "settings"), ("Sobre o sistema · Fastfetch", "fastfetch-window")):
             button(label, lambda a=action: launch("sh", str(PROFILE / "session.sh"), a))
@@ -565,11 +692,14 @@ def main():
         state = bluetooth_state()
         print({"on": "󰂯 BT", "off": "󰂲 Off"}.get(state, "󰂲 —"))
         return 0
+    if action == "notifications-status":
+        print(notification_label())
+        return 0
     if action == "brightness-status":
         if (level := brightness_level()) is not None:
             print(f"󰃠 {level}%")
         return 0
-    if action not in ("audio", "brightness", "calendar", "network", "bluetooth", "system", "desktop-menu"):
+    if action not in ("audio", "brightness", "calendar", "network", "bluetooth", "system", "desktop-menu", "notifications"):
         return 2
     if runtime := os.environ.get("XDG_RUNTIME_DIR"):
         display = re.sub(r"[^A-Za-z0-9_.-]", "_", os.environ.get("DISPLAY", ""))

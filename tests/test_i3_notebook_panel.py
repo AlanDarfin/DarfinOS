@@ -1,5 +1,6 @@
 """No GUI or sound server is needed for these backend tests."""
 import importlib.util
+import json
 from pathlib import Path
 from types import SimpleNamespace
 import unittest
@@ -13,6 +14,35 @@ spec.loader.exec_module(panel)
 
 
 class NotebookPanelTests(unittest.TestCase):
+    def test_notification_state_reports_pause_and_visible_queued_counts(self):
+        with patch.object(panel, "command", side_effect=["true\n", "2\n", "5\n"]):
+            self.assertEqual(panel.notification_state(), {"paused": True, "displayed": 2, "waiting": 5})
+        with patch.object(panel, "command", return_value=None) as command:
+            self.assertIsNone(panel.notification_state())
+            self.assertEqual(command.call_count, 1)
+        for state, expected in ((None, "󰂛 —"),
+                                ({"paused": True, "displayed": 0, "waiting": 7}, "󰂛 7"),
+                                ({"paused": False, "displayed": 0, "waiting": 0}, "󰂚")):
+            with self.subTest(state=state), patch.object(panel, "notification_state", return_value=state):
+                self.assertEqual(panel.notification_label(), expected)
+
+    def test_notification_history_unwraps_dbus_variants_as_bounded_plain_text(self):
+        history = {"type": "aa{sv}", "data": [[
+            {"appname": {"type": "s", "data": "Steam"},
+             "summary": {"type": "s", "data": "<b>Download</b> &amp; pronto"},
+             "body": {"type": "s", "data": "Texto\n" + "x" * 900}},
+            {"summary": "Mensagem simples", "body": "Olá"},
+            {"summary": {"data": ["wrong type"]}},
+        ]]}
+        result = panel.notification_history(json.dumps(history))
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["app"], "Steam")
+        self.assertEqual(result[0]["summary"], "Download & pronto")
+        self.assertEqual(len(result[0]["body"]), 600)
+        self.assertEqual(result[1]["body"], "Olá")
+        for malformed in (None, "invalid", "{}", '{"data":false}', '["invalid"]'):
+            self.assertEqual(panel.notification_history(malformed), [])
+
     def test_popup_bounds_intersect_the_current_output_and_clear_top_bar(self):
         screen = SimpleNamespace(x=-1280, y=0, width=1280, height=720)
         shared = SimpleNamespace(x=-1280, y=0, width=3200, height=720)

@@ -718,9 +718,9 @@ module_probe() {
     MODULE_REASON="pacman -Qq indisponível; não pular por precaução."
   elif module_packages_ready "${required[@]}"; then
     if [[ "$name" == lab_i3_notebook ]] &&
-       { ! notebook_cursor_ready || [[ ! -r "$HOME/.icons/Papirus-Yellow/index.theme" ]]; }; then
+       { ! notebook_cursor_ready || [[ ! -r "$HOME/.icons/Papirus-Yellow/index.theme" || ! -r "$HOME/.themes/Adwaita-yellow-dark/gtk-3.0/gtk.css" ]]; }; then
       MODULE_STATUS=partial
-      MODULE_REASON="Pacotes Notebook instalados; falta o cursor Bibata ou o tema Papirus Yellow."
+      MODULE_REASON="Pacotes Notebook instalados; falta Bibata, Papirus Yellow ou Adwaita Yellow."
     else
       MODULE_STATUS=installed
       MODULE_REASON="Todos os ${#required[@]} pacotes esperados já instalados."
@@ -1883,14 +1883,16 @@ notebook_install_cursor() {
 }
 
 step_lab_i3_notebook() {
-  lab_confirm i3_notebook "Instala i3, ferramentas Notebook e Bibata Modern Ice v2.0.7 (SHA-256 fixo) no HOME: https://github.com/ful1e5/Bibata_Cursor. Não aplica o perfil nem troca sua sessão." || return 1
+  lab_confirm i3_notebook "Instala i3, ferramentas Notebook, Bibata Modern Ice e Adwaita Yellow no HOME, com revisões/SHA-256 fixos: https://github.com/ful1e5/Bibata_Cursor · https://github.com/merechinn/Adwaita-yellow-theme. Não aplica o perfil nem troca sua sessão." || return 1
   install_pkgs i3-wm i3status i3lock dmenu xorg-xinit chezmoi rofi dunst i3status-rust \
     brightnessctl xss-lock flameshot xterm ttf-dejavu libpulse libnotify feh zenity xorg-xrandr xorg-xrdb xorg-xsetroot xsettingsd \
     polybar xdotool ttf-jetbrains-mono-nerd powerline-fonts librsvg xdg-utils gtk3 python-gobject \
     pavucontrol network-manager-applet bluez-utils blueman polkit-gnome fastfetch chafa python-xlib playerctl arandr lxappearance thunar gvfs adwaita-icon-theme papirus-icon-theme kvantum kvantum-qt5 curl tar xz || return 1
   notebook_install_cursor || return 1
   notebook_papirus --assets-only || return 1
+  notebook_adwaita || return 1
   info "Abra a Oficina de Temas (W) e selecione i3-notebook. Entre novamente na sessão i3 para ativar."
+  info "Para a aparência GTK global, selecione também o perfil adwaita-yellow na Oficina (com prévia e desfazer)."
   info "O perfil usa o áudio existente (wpctl ou pactl); não troca o servidor de áudio."
   info "Os controles usam NetworkManager e BlueZ quando ativos. Os Labs não trocam seu serviço de rede."
   info "Para ativar o BlueZ, use a etapa Bluetooth do DarfinOS."
@@ -1899,6 +1901,27 @@ step_lab_i3_notebook() {
 step_icons() {
   install_pkgs python curl papirus-icon-theme || return 1
   notebook_papirus
+}
+
+notebook_adwaita() {
+  local script_dir helper
+  script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd) || return 1
+  helper="$script_dir/scripts/adwaita_yellow.py"
+  if [[ ! -r "$helper" ]]; then
+    local revision=788572b8373f62b0c68de5816082636fb29a5f6c
+    local checksum=95f3d46e2dfa68fbe7ce8de6c6bad545f7c622bc87304871424294d9630f2577
+    helper="$TMP_DIR/adwaita_yellow.py"
+    if ! curl --proto '=https' --proto-redir '=https' -fsSL --retry 2 --connect-timeout 10 --max-time 30 \
+      -o "$helper" "https://raw.githubusercontent.com/AlanDarfin/DarfinOS/$revision/scripts/adwaita_yellow.py"; then
+      warn "Não foi possível obter o assistente Adwaita Yellow. Use o repositório completo."
+      return 1
+    fi
+    if ! printf '%s  %s\n' "$checksum" "$helper" | sha256sum --check --status; then
+      warn "O assistente Adwaita Yellow não corresponde ao SHA-256 esperado."
+      return 1
+    fi
+  fi
+  python3 "$helper" "$@"
 }
 
 notebook_papirus() {

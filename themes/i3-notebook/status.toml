@@ -56,6 +56,26 @@ button = "left"
 cmd = 'sh "$HOME/.config/darfinos/i3-notebook/session.sh" wallpaper'
 
 [[block]]
+block = "custom"
+command = "echo Bandeja"
+interval = "once"
+[block.theme_overrides]
+idle_fg = "{{ .accent }}"
+[[block.click]]
+button = "left"
+cmd = 'sh "$HOME/.config/darfinos/i3-notebook/session.sh" tray-popup'
+
+[[block]]
+block = "custom"
+command = "echo Notificações"
+interval = "once"
+[block.theme_overrides]
+idle_fg = "{{ .accent }}"
+[[block.click]]
+button = "left"
+cmd = 'sh "$HOME/.config/darfinos/i3-notebook/session.sh" notifications'
+
+[[block]]
 block = "battery"
 driver = "sysfs"
 format = " BAT $percentage "

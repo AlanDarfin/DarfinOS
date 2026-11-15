@@ -1032,11 +1032,12 @@ def styles_screen(win, st: State, allow_changes: bool) -> None:
             if not allow_changes:
                 st.message = '--dry-run ativo. A prévia não alterou arquivos.'
                 return
-            if profile == "i3-notebook":
+            if profile in ("i3-notebook", "adwaita-yellow"):
                 count = sum(old != new for old, new in plan.values())
-                if count and (prompt(win, f"Digite APLICAR para atualizar {count} arquivos do i3 Notebook:") or "").lower() == "aplicar":
+                label = "i3 Notebook" if profile == "i3-notebook" else "Adwaita Yellow global"
+                if count and (prompt(win, f"Digite APLICAR para atualizar {count} arquivos de {label}:") or "").lower() == "aplicar":
                     report = control.style_apply(profile, plan, list(plan))
-                    scroll_screen(win, "PERSONALIZAÇÃO", report + "\nEntre novamente na sessão i3. Super+F2: Tela · F3: Áudio · F4: Fastfetch · F5: Calendário · F6: Sessão (com Super).")
+                    scroll_screen(win, "PERSONALIZAÇÃO", report)
                 return
             selected = []
             for rel, (old, new) in plan.items():

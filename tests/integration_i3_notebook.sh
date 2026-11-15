@@ -83,13 +83,15 @@ cp /usr/share/icons/Adwaita/cursors/left_ptr "$test_cursor/cursors/left_ptr"
 ln -s left_ptr "$test_cursor/cursors/default"
 printf '[Icon Theme]\nName=Notebook cursor fixture\nInherits=Adwaita\n' > "$test_cursor/index.theme"
 printf "[Mouse]\ncursorTheme=Bibata-NotebookTest\ncursorSize=32\n" >"$XDG_CONFIG_HOME/kcminputrc"
-x_pid= i3_pid= status_pid= mpris_pid=
+x_pid= i3_pid= status_pid= mpris_pid= tray_steam_pid= tray_connect_pid=
 cleanup() {
   local status=$?
   if (( status )); then
     tail -n 80 "$tmp/i3.log" "$tmp/xvfb.log" "$tmp/polybar.log" "$tmp/dolphin.log" "$tmp"/gtk-*.log "$tmp"/qt-*.log >&2 || :
     if [[ -f "$tmp/widgets.hist" ]]; then sort -nr "$tmp/widgets.hist" | head -20 >&2 || :; fi
   fi
+  [[ -z "$tray_steam_pid" ]] || kill "$tray_steam_pid" 2>/dev/null || :
+  [[ -z "$tray_connect_pid" ]] || kill "$tray_connect_pid" 2>/dev/null || :
   [[ -z "$mpris_pid" ]] || kill "$mpris_pid" 2>/dev/null || :
   [[ -z "$status_pid" ]] || kill "$status_pid" 2>/dev/null || :
   [[ -z "$i3_pid" ]] || kill "$i3_pid" 2>/dev/null || :
@@ -301,7 +303,7 @@ fi
 
 # Check the actual Polybar payload, including loaded i3, fonts and launchers.
 status_ready() {
-  grep -Fq 'session.sh" shortcuts' "$tmp/polybar.log" && grep -Fq 'Área de trabalho' "$tmp/polybar.log" &&
+  grep -Fq 'session.sh" shortcuts' "$tmp/polybar.log" && grep -Fq 'Área de trab' "$tmp/polybar.log" &&
     grep -Fq '󰕾 55%' "$tmp/polybar.log" && grep -Fq '󰍬 35%' "$tmp/polybar.log"
 }
 polybar -l info -s -c "$profile/polybar.ini" notebook >"$tmp/polybar.log" 2>&1 &
@@ -752,4 +754,10 @@ dunstctl close-all
 dunstctl set-paused true
 [[ "$(dunstctl is-paused)" == true ]]
 dunstctl set-paused false
+
+# Shared notification center uses the same Dunst state as the bar and shortcuts.
+source tests/integration_i3_notebook_notifications.sh
+
+# Background apps remain accessible even when they have no i3 window.
+source tests/integration_i3_notebook_tray.sh
 echo 'i3 Notebook: X11 720p, Polybar geometry and toggling, cursor image, desktop menu and right-click pass-through, wallpaper, Rofi click, audio and backlight wheel, audio sliders, calendar, session, Fastfetch, XDG launchers, workspace keys, Alt+Tab, media dock, GTK3/GTK4 rendered accents, Qt5/Qt6, themed Dolphin and Thunar, contained Bluetooth popup, window dock, minimize/maximize, graphical preferences, scratchpad and Dunst verified.'
